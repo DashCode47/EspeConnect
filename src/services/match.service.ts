@@ -1,0 +1,107 @@
+import api from './api';
+import { AxiosRequestConfig } from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export interface User {
+  id: string;
+  name: string;
+  career: string;
+  gender: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  interests: string[];
+}
+
+interface MatchesResponse {
+  status: string;
+  data: {
+    users: User[];
+  };
+}
+
+interface RequestHeaders {
+  headers: Record<string, string>;
+}
+
+const getAuthHeaders = async (): Promise<RequestHeaders> => {
+  try {
+    const token = await AsyncStorage.getItem('token');
+    return {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    };
+  } catch (error) {
+    console.error('Error getting headers:', error);
+    throw error;
+  }
+};
+
+const logCurl = (config: AxiosRequestConfig) => {
+  const { method, url, headers, data } = config;
+  let curlCommand = `curl -X ${method?.toUpperCase()} '${url}'`;
+
+  Object.entries(headers || {}).forEach(([key, value]) => {
+    curlCommand += ` -H '${key}: ${value}'`;
+  });
+
+  if (data) {
+    curlCommand += ` -d '${JSON.stringify(data)}'`;
+  }
+
+  console.log('cURL command:', curlCommand);
+};
+
+export const matchService = {
+  async getPotentialMatches() {
+    try {
+      const headers = await getAuthHeaders();
+      const requestConfig: AxiosRequestConfig = {
+        method: 'GET',
+        url: `${api.defaults.baseURL}/users/potential-matches`,
+        headers: headers.headers
+      };
+
+      logCurl(requestConfig);
+
+      const response = await api.get<MatchesResponse>('/users/potential-matches', headers);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        await AsyncStorage.removeItem('token');
+      }
+      throw error;
+    }
+  },
+
+  async likeUser(userId: string) {
+    try {
+      const headers = await getAuthHeaders();
+      const response = await api.post<{ status: string; message: string }>(`/users/${userId}/like`, {}, headers);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async dislikeUser(userId: string) {
+    try {
+      const headers = await getAuthHeaders();
+      const response = await api.post<{ status: string; message: string }>(`/users/${userId}/dislike`, {}, headers);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getMatches() {
+    try {
+      const headers = await getAuthHeaders();
+      const response = await api.get<{ status: string; data: { matches: User[] } }>('/users/matches', headers);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+}; 
