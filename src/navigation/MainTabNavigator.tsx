@@ -1,10 +1,12 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { MainTabParamList } from './types';
 import { HomeStack } from './HomeStack';
 import MatchesScreen from '../screens/MatchesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import { AnimatedNavigator } from '../components/AnimatedNavigator';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Placeholder components - we'll create these later
 const NotificationsScreen = () => null;
@@ -12,49 +14,44 @@ const NotificationsScreen = () => null;
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export const MainTabNavigator = () => {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#6200ee',
-        tabBarInactiveTintColor: '#757575',
         headerShown: false,
+        tabBarStyle: { display: 'none' }
       }}
+      tabBar={props => (
+        <View style={{ 
+          position: 'absolute', 
+          bottom: 0, 
+          left: 0, 
+          right: 0,
+          paddingBottom: insets.bottom
+        }}>
+          <AnimatedNavigator
+            currentRoute={props.state.routeNames[props.state.index]}
+            onNavigate={(route) => props.navigation.navigate(route)}
+          />
+        </View>
+      )}
     >
       <Tab.Screen
-        name="Home"
+        name="home"
         component={HomeStack}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home" color={color} size={size} />
-          ),
-        }}
       />
       <Tab.Screen
-        name="Matches"
+        name="matches"
         component={MatchesScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account-multiple" color={color} size={size} />
-          ),
-        }}
       />
       <Tab.Screen
-        name="Notifications"
+        name="posts"
         component={NotificationsScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="bell" color={color} size={size} />
-          ),
-        }}
       />
       <Tab.Screen
-        name="Profile"
+        name="profile"
         component={ProfileScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account" color={color} size={size} />
-          ),
-        }}
       />
     </Tab.Navigator>
   );

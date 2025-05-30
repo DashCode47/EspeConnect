@@ -78,17 +78,7 @@ export const matchService = {
   async likeUser(userId: string) {
     try {
       const headers = await getAuthHeaders();
-      const response = await api.post<{ status: string; message: string }>(`/users/${userId}/like`, {}, headers);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  async dislikeUser(userId: string) {
-    try {
-      const headers = await getAuthHeaders();
-      const response = await api.post<{ status: string; message: string }>(`/users/${userId}/dislike`, {}, headers);
+      const response = await api.post<{ status: string; message: string }>(`/matches/like/${userId}`, {}, headers);
       return response.data;
     } catch (error) {
       throw error;
@@ -98,7 +88,17 @@ export const matchService = {
   async getMatches() {
     try {
       const headers = await getAuthHeaders();
-      const response = await api.get<{ status: string; data: { matches: User[] } }>('/users/matches', headers);
+      const response = await api.get<{ status: string; data: { matches: User[] } }>('/matches', headers);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async checkMatch(userId: string) {
+    try {
+      const headers = await getAuthHeaders();
+      const response = await api.get<{ status: string; data: { isMatch: boolean } }>(`/matches/check/${userId}`, headers);
       return response.data;
     } catch (error) {
       throw error;

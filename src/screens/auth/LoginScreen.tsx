@@ -11,7 +11,6 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { authService } from '../../services/auth.service';
 import { AuthStackParamList } from '../../navigation/types';
-import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
@@ -22,25 +21,6 @@ export const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const { login } = useAuth();
-
-  useEffect(() => {
-    // Test API connection
-    const testConnection = async () => {
-      try {
-        console.log('Testing API connection...');
-        // Use the health check endpoint or any other valid endpoint
-        const response = await api.get('/auth/health');
-        console.log('API connection successful:', response.data);
-      } catch (error: any) {
-        console.error('API connection failed:', {
-          message: error.message,
-          config: error.config,
-          response: error.response?.data,
-        });
-      }
-    };
-    testConnection();
-  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {

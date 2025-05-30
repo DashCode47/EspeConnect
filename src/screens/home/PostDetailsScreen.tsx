@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Dimensions } from 'react-native';
-import { Appbar, Card, Text, IconButton, Divider, useTheme, Chip } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Image, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
+import { Appbar, Card, Text, IconButton, Divider, useTheme, Chip, TextInput, Button } from 'react-native-paper';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../navigation/types';
 import { Post, postService } from '../../services/post.service';
+import { Comment, commentService } from '../../services/comment.service';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { CommentList } from '../../components/CommentList';
 
 type PostDetailsScreenNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'PostDetails'>;
 type PostDetailsScreenRouteProp = RouteProp<HomeStackParamList, 'PostDetails'>;
@@ -39,10 +41,64 @@ const getPostTypeLabel = (type: string) => {
 export const PostDetailsScreen = () => {
   const [post, setPost] = useState<Post | null>(null);
   const [isLiked, setIsLiked] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [newComment, setNewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  
   const navigation = useNavigation<PostDetailsScreenNavigationProp>();
   const route = useRoute<PostDetailsScreenRouteProp>();
   const { postData } = route.params;
   const theme = useTheme();
+
+  useEffect(() => {
+    fetchComments();
+  }, []);
+
+  const fetchComments = async (pageToLoad = 1) => {
+    if (!postData) return;
+
+    try {
+      setLoading(true);
+      const response = await commentService.getComments(postData.id, pageToLoad);
+      
+      if (pageToLoad === 1) {
+        setComments(response.data.comments);
+      } else {
+        setComments(prev => [...prev, ...response.data.comments]);
+      }
+      
+      setHasMore(pageToLoad < response.data.pagination.pages);
+      setPage(pageToLoad);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!loading && hasMore) {
+      fetchComments(page + 1);
+    }
+  };
+
+  const handleSubmitComment = async () => {
+    if (!postData || !newComment.trim() || submitting) return;
+
+    try {
+      setSubmitting(true);
+      const response = await commentService.createComment(postData.id, newComment.trim());
+      setComments(prev => [response.data.comment, ...prev]);
+      setNewComment('');
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleLike = async () => {
     if (!postData) return;
@@ -71,7 +127,10 @@ export const PostDetailsScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title="Detalles del Post" />
@@ -147,8 +206,38 @@ export const PostDetailsScreen = () => {
             <Text>{postData.comments || 0}</Text>
           </Card.Actions>
         </Card>
+
+        <CommentList
+          comments={comments}
+          loading={loading}
+          hasMore={hasMore}
+          onLoadMore={handleLoadMore}
+        />
       </ScrollView>
-    </View>
+
+      <Card style={styles.commentInput} mode="outlined">
+        <Card.Content style={styles.commentInputContent}>
+          <TextInput
+            mode="outlined"
+            placeholder="Escribe un comentario..."
+            value={newComment}
+            onChangeText={setNewComment}
+            multiline
+            style={styles.input}
+            disabled={submitting}
+          />
+          <Button
+            mode="contained"
+            onPress={handleSubmitComment}
+            loading={submitting}
+            disabled={!newComment.trim() || submitting}
+            style={styles.submitButton}
+          >
+            Enviar
+          </Button>
+        </Card.Content>
+      </Card>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -198,5 +287,22 @@ const styles = StyleSheet.create({
   },
   divider: {
     marginVertical: 8,
+  },
+  commentInput: {
+    borderRadius: 0,
+    margin: 0,
+  },
+  commentInputContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  input: {
+    flex: 1,
+    maxHeight: 100,
+  },
+  submitButton: {
+    borderRadius: 20,
   },
 }); 

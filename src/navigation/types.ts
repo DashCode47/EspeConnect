@@ -11,10 +11,10 @@ export type AuthStackParamList = {
 };
 
 export type MainTabParamList = {
-  Home: undefined;
-  Profile: undefined;
-  Matches: undefined;
-  Notifications: undefined;
+  home: undefined;
+  profile: undefined;
+  matches: undefined;
+  posts: undefined;
 };
 
 export type HomeStackParamList = {
