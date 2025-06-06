@@ -1,57 +1,53 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  Dimensions,
   ActivityIndicator,
-  Image,
-  Animated,
-  PanResponder,
+  Text,
   TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  Dimensions,
+  ImageBackground,
 } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { matchService, User } from '../services/match.service';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+  interpolate,
+  Extrapolate,
+  useAnimatedGestureHandler,
+  runOnJS,
+} from 'react-native-reanimated';
+import { PanGestureHandler } from 'react-native-gesture-handler';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
-const SWIPE_OUT_DURATION = 250;
+const { width, height } = Dimensions.get('window');
+const CARD_WIDTH = width * 0.9;
+const CARD_HEIGHT = height * 0.6;
+const SWIPE_THRESHOLD = width * 0.3;
 
 export default function MatchesScreen() {
   const theme = useTheme();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const position = useRef(new Animated.ValueXY()).current;
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gesture) => {
-        position.setValue({ x: gesture.dx, y: gesture.dy });
-      },
-      onPanResponderRelease: (_, gesture) => {
-        if (gesture.dx > SWIPE_THRESHOLD) {
-          forceSwipe('right');
-        } else if (gesture.dx < -SWIPE_THRESHOLD) {
-          forceSwipe('left');
-        } else {
-          resetPosition();
-        }
-      }
-    })
-  ).current;
+  // Animated values
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const rotation = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const nextCardScale = useSharedValue(0.95);
+  const nextCardOpacity = useSharedValue(0.5);
 
   useEffect(() => {
     fetchPotentialMatches();
   }, []);
-
-  useEffect(() => {
-    console.log('usersFET', users);
-  }, [users]);
 
   const fetchPotentialMatches = async () => {
     try {
@@ -60,7 +56,6 @@ export default function MatchesScreen() {
       const response = await matchService.getPotentialMatches();
       if (response.status === 'success' && response.data.users) {
         setUsers(response.data.users);
-        setCurrentIndex(0); // Reset index when new users are fetched
       } else {
         setError('Failed to fetch matches');
       }
@@ -72,170 +67,136 @@ export default function MatchesScreen() {
     }
   };
 
-  const onSwipeComplete = async (direction: 'right' | 'left') => {
-    console.log('onSwipeCompleteFET', users);
-    // Get the current user directly from the users array using currentIndex
-    const currentUser = users[currentIndex];
+  const resetCardPosition = () => {
+    translateX.value = withSpring(0);
+    translateY.value = withSpring(0);
+    rotation.value = withSpring(0);
+    scale.value = withSpring(1);
+  };
 
-    if (!currentUser) {
-      console.warn('No user found at current index:', currentIndex);
-      return;
-    }
-
-    if (direction === 'right') {
-      try {
-        console.log('Attempting to like user with ID:', currentUser.id);
-        const response = await matchService.likeUser(currentUser.id);
-        const matchCheck = await matchService.checkMatch(currentUser.id);
-        if (matchCheck.data.isMatch) {
-          console.log("It's a match!");
-        }
-      } catch (err) {
-        console.error('Error liking user:', err);
+  const handleLike = async (userId: string) => {
+    try {
+      const response = await matchService.likeUser(userId);
+      const matchCheck = await matchService.checkMatch(userId);
+      if (matchCheck.data.isMatch) {
+        console.log("It's a match!");
       }
+    } catch (err) {
+      console.error('Error liking user:', err);
     }
+    setCurrentIndex(prev => prev + 1);
+    resetCardPosition();
+    if (currentIndex >= users.length - 2) {
+      fetchPotentialMatches();
+    }
+  };
 
-    // First update position
-    position.setValue({ x: 0, y: 0 });
+  const handleSkip = () => {
+    setCurrentIndex(prev => prev + 1);
+    resetCardPosition();
+    if (currentIndex >= users.length - 2) {
+      fetchPotentialMatches();
+    }
+  };
 
-    // Then update the index
-    setCurrentIndex(prevIndex => {
-      const nextIndex = prevIndex + 1;
-      console.log('Moving to next index:', nextIndex);
+  const gestureHandler = useAnimatedGestureHandler({
+    onStart: (_, ctx: any) => {
+      ctx.startX = translateX.value;
+      ctx.startY = translateY.value;
+    },
+    onActive: (event, ctx) => {
+      translateX.value = ctx.startX + event.translationX;
+      translateY.value = ctx.startY + event.translationY;
+      rotation.value = interpolate(
+        translateX.value,
+        [-width / 2, 0, width / 2],
+        [-15, 0, 15],
+        Extrapolate.CLAMP
+      );
+    },
+    onEnd: (event) => {
+      const shouldSwipe = Math.abs(translateX.value) > SWIPE_THRESHOLD;
       
-      // If we're at the end of the list, fetch more matches
-      if (nextIndex >= users.length) {
-        console.log('Reached end of users, fetching more...');
-        fetchPotentialMatches();
+      if (shouldSwipe) {
+        translateX.value = withSpring(
+          Math.sign(translateX.value) * width * 1.5,
+          { velocity: event.velocityX }
+        );
+        translateY.value = withSpring(
+          Math.sign(translateY.value) * height,
+          { velocity: event.velocityY }
+        );
+        if (translateX.value > 0) {
+          runOnJS(handleLike)(users[currentIndex].id);
+        } else {
+          runOnJS(handleSkip)();
+        }
+      } else {
+        resetCardPosition();
       }
-      return nextIndex;
-    });
-  };
+    },
+  });
 
-  const forceSwipe = (direction: 'right' | 'left') => {
-    console.log('forceSwipeFET', users);
-    // Get current user directly from users array
-    const currentUser = users[currentIndex];
-
-    if (!currentUser) {
-      console.warn('No user found at current index:', currentIndex);
-      return;
-    }
-
-    const x = direction === 'right' ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5;
-    Animated.timing(position, {
-      toValue: { x, y: 0 },
-      duration: SWIPE_OUT_DURATION,
-      useNativeDriver: true
-    }).start(() => onSwipeComplete(direction));
-  };
-
-  const resetPosition = () => {
-    Animated.spring(position, {
-      toValue: { x: 0, y: 0 },
-      useNativeDriver: true,
-      friction: 4
-    }).start();
-  };
-
-  const handleManualSwipe = (direction: 'right' | 'left') => {
-    if (currentIndex >= users.length) {
-      console.warn('No more users to swipe');
-      return;
-    }
-    forceSwipe(direction);
-  };
-
-  const getCardStyle = (index: number) => {
-    if (index === currentIndex) {
-      const rotate = position.x.interpolate({
-        inputRange: [-SCREEN_WIDTH * 1.5, 0, SCREEN_WIDTH * 1.5],
-        outputRange: ['-30deg', '0deg', '30deg'],
-        extrapolate: 'clamp'
-      });
-
-      const opacity = position.x.interpolate({
-        inputRange: [-SCREEN_WIDTH * 1.5, 0, SCREEN_WIDTH * 1.5],
-        outputRange: [0.5, 1, 0.5]
-      });
-
-      return {
-        ...styles.card,
-        zIndex: users.length - index,
-        transform: [
-          { translateX: position.x },
-          { translateY: position.y },
-          { rotate }
-        ],
-        opacity
-      };
-    }
-
-    // Calculate scale and translation based on position in stack
-    const scale = Math.max(0.85, 0.95 - 0.05 * (index - currentIndex));
-    const translateY = 10 * (index - currentIndex);
-
+  const cardStyle = useAnimatedStyle(() => {
     return {
-      ...styles.card,
-      zIndex: users.length - index,
       transform: [
-        { scale },
-        { translateY }
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { rotate: `${rotation.value}deg` },
+        { scale: scale.value },
       ],
-      opacity: Math.max(0.5, 1 - 0.2 * (index - currentIndex))
     };
-  };
+  });
 
-  const renderCard = (user: User, index: number) => {
-    if (index < currentIndex) return null;
-    if (index > currentIndex + 3) return null;
+  const nextCardStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: nextCardScale.value }],
+      opacity: nextCardOpacity.value,
+    };
+  });
 
-    const isTopCard = index === currentIndex;
-    
-    // Add like/nope indicators for the top card
-    const likeOpacity = position.x.interpolate({
-      inputRange: [0, SCREEN_WIDTH * 0.25],
-      outputRange: [0, 1],
-      extrapolate: 'clamp'
-    });
-
-    const nopeOpacity = position.x.interpolate({
-      inputRange: [-SCREEN_WIDTH * 0.25, 0],
-      outputRange: [1, 0],
-      extrapolate: 'clamp'
-    });
-
+  const renderCard = (user: User, isNext = false) => {
     return (
       <Animated.View
-        key={user.id}
-        {...(isTopCard ? panResponder.panHandlers : {})}
-        style={getCardStyle(index)}
-      >
-        {isTopCard && (
-          <>
-            <Animated.View style={[
-              styles.choiceContainer, 
-              styles.likeContainer,
-              { opacity: likeOpacity }
-            ]}>
-              <Text style={[styles.choiceText, styles.likeText]}>LIKE</Text>
-            </Animated.View>
+        style={[
+          styles.cardContainer,
+          isNext ? nextCardStyle : cardStyle,
+        ]}>
+        <ImageBackground
+          source={{ uri: user.avatarUrl || 'https://via.placeholder.com/400' }}
+          style={styles.cardImage}
+          imageStyle={styles.cardImageStyle}>
+          <View style={styles.gradientOverlay} />
+          <View style={styles.cardContent}>
+            <View style={styles.userInfo}>
+              <Text style={styles.name}>{user.name}</Text>
+              <Text style={styles.career}>{user.career}</Text>
+            </View>
 
-            <Animated.View style={[
-              styles.choiceContainer,
-              styles.nopeContainer,
-              { opacity: nopeOpacity }
-            ]}>
-              <Text style={[styles.choiceText, styles.nopeText]}>NOPE</Text>
-            </Animated.View>
-          </>
-        )}
-        <CardContent user={user} />
+            {user.bio && (
+              <View style={styles.bioContainer}>
+                <Text style={styles.bio} numberOfLines={3}>
+                  {user.bio}
+                </Text>
+              </View>
+            )}
+
+            {user.interests && (
+              <View style={styles.interests}>
+                {user.interests.slice(0, 4).map((interest, i) => (
+                  <View key={i} style={styles.interestTag}>
+                    <Text style={styles.interestText}>{interest}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </ImageBackground>
       </Animated.View>
     );
   };
 
-  if (loading) {
+  if (loading && users.length === 0) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -243,10 +204,17 @@ export default function MatchesScreen() {
     );
   }
 
-  if (error) {
+  if (error && users.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
+        <Text style={[styles.errorText, { color: theme.colors.error }]}>
+          {error}
+        </Text>
+        <TouchableOpacity
+          style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
+          onPress={fetchPotentialMatches}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -254,102 +222,100 @@ export default function MatchesScreen() {
   if (users.length === 0 || currentIndex >= users.length) {
     return (
       <View style={styles.centerContainer}>
+        <MaterialCommunityIcons
+          name="cards-heart"
+          size={64}
+          color={theme.colors.primary}
+        />
         <Text style={styles.noMatchesText}>No more potential matches</Text>
-        <TouchableOpacity 
-          style={[styles.refreshButton, { backgroundColor: theme.colors.primary }]}
-          onPress={fetchPotentialMatches}
-        >
-          <Text style={[styles.refreshButtonText, { color: theme.colors.onPrimary }]}>
-            Refresh Matches
-          </Text>
+        <TouchableOpacity
+          style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
+          onPress={fetchPotentialMatches}>
+          <Text style={styles.retryButtonText}>Find More Matches</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.cardsContainer}>
-        {users.map((user, index) => renderCard(user, index)).reverse()}
-      </View>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
       
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Discover</Text>
+        <Text style={styles.headerSubtitle}>
+          {users.length - currentIndex} potential matches
+        </Text>
+      </View>
+
+      <View style={styles.cardWrapper}>
+        {currentIndex + 1 < users.length && renderCard(users[currentIndex + 1], true)}
+        <PanGestureHandler onGestureEvent={gestureHandler}>
+          <Animated.View style={styles.cardWrapper}>
+            {renderCard(users[currentIndex])}
+          </Animated.View>
+        </PanGestureHandler>
+      </View>
+
       <View style={styles.buttonsContainer}>
         <TouchableOpacity
-          style={[styles.button, styles.nopeButton]}
-          onPress={() => handleManualSwipe('left')}
-        >
-          <MaterialCommunityIcons name="close" size={30} color="white" />
+          style={[styles.button, styles.skipButton]}
+          onPress={handleSkip}>
+          <MaterialCommunityIcons name="close" size={30} color="#FF3B30" />
+          <Text style={[styles.buttonText, styles.skipButtonText]}>Skip</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.button, styles.likeButton]}
-          onPress={() => handleManualSwipe('right')}
-        >
-          <MaterialCommunityIcons name="heart" size={30} color="white" />
+          onPress={() => handleLike(users[currentIndex].id)}>
+          <MaterialCommunityIcons name="heart" size={30} color="#4CD964" />
+          <Text style={[styles.buttonText, styles.likeButtonText]}>Like</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
-
-const CardContent = ({ user }: { user: User }) => (
-  <>
-    <View style={styles.imageContainer}>
-      <Image
-        source={{ uri: user.avatarUrl || undefined }}
-        style={styles.avatar}
-        resizeMode="cover"
-      />
-    </View>
-    <View style={styles.cardContent}>
-      <Text style={styles.name}>{user.name}</Text>
-      <Text style={styles.career}>{user.career}</Text>
-      {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
-      {user.interests && user.interests.length > 0 && (
-        <View style={styles.interestsContainer}>
-          <Text style={styles.interestsTitle}>Interests:</Text>
-          <View style={styles.interestsTags}>
-            {user.interests.map((interest, index) => (
-              <View key={index} style={styles.interestTag}>
-                <Text style={styles.interestText}>{interest}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-    </View>
-  </>
-);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F5F7FA',
   },
-  cardsContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-    marginBottom: 100, // Add space for buttons
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
     padding: 20,
   },
-  card: {
+  cardWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  cardContainer: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: 16,
+    overflow: 'hidden',
     position: 'absolute',
-    width: SCREEN_WIDTH * 0.9,
-    height: SCREEN_HEIGHT * 0.65,
-    top: 0,
-    left: SCREEN_WIDTH * 0.05,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#E8E8E8',
-    backgroundColor: 'white',
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: {
@@ -358,57 +324,107 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    overflow: 'hidden',
   },
-  imageContainer: {
-    height: '60%',
-    width: '100%',
-    backgroundColor: '#f0f0f0',
-  },
-  avatar: {
+  cardImage: {
     width: '100%',
     height: '100%',
+    justifyContent: 'flex-end',
+  },
+  cardImageStyle: {
+    borderRadius: 16,
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   cardContent: {
-    padding: 20,
+    padding: 16,
+  },
+  userInfo: {
+    marginBottom: 15,
   },
   name: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 5,
+    color: 'white',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   career: {
-    fontSize: 18,
-    color: '#6200ee',
-    marginBottom: 15,
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 2,
+  },
+  bioContainer: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
   },
   bio: {
-    fontSize: 16,
-    color: '#757575',
-    marginBottom: 20,
+    fontSize: 14,
+    color: 'white',
+    lineHeight: 20,
   },
-  interestsContainer: {
-    marginTop: 10,
-  },
-  interestsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  interestsTags: {
+  interests: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
   interestTag: {
-    backgroundColor: '#E8E8E8',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   interestText: {
-    color: '#424242',
+    color: 'white',
+    fontSize: 12,
+  },
+  buttonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    paddingVertical: 16,
+    paddingBottom: 24,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 6,
+  },
+  buttonText: {
     fontSize: 14,
+    fontWeight: '600',
+  },
+  skipButton: {
+    borderColor: '#FF3B30',
+    backgroundColor: 'rgba(255,59,48,0.1)',
+  },
+  skipButtonText: {
+    color: '#FF3B30',
+  },
+  likeButton: {
+    borderColor: '#4CD964',
+    backgroundColor: 'rgba(76,217,100,0.1)',
+  },
+  likeButtonText: {
+    color: '#4CD964',
   },
   errorText: {
     fontSize: 16,
@@ -416,75 +432,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   noMatchesText: {
-    fontSize: 16,
-    color: '#757575',
+    fontSize: 18,
+    color: '#666',
     textAlign: 'center',
-    marginBottom: 20,
+    marginTop: 16,
+    marginBottom: 24,
   },
-  refreshButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 25,
     elevation: 2,
   },
-  refreshButtonText: {
+  retryButtonText: {
+    color: 'white',
     fontSize: 16,
     fontWeight: '600',
-  },
-  buttonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    paddingVertical: 20,
-  },
-  button: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  nopeButton: {
-    backgroundColor: '#FF3B30',
-  },
-  likeButton: {
-    backgroundColor: '#4CD964',
-  },
-  choiceContainer: {
-    position: 'absolute',
-    top: 50,
-    zIndex: 1000,
-    padding: 10,
-    borderWidth: 3,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-  },
-  likeContainer: {
-    right: 20,
-    borderColor: '#4CD964',
-    transform: [{ rotate: '15deg' }],
-  },
-  nopeContainer: {
-    left: 20,
-    borderColor: '#FF3B30',
-    transform: [{ rotate: '-15deg' }],
-  },
-  choiceText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  likeText: {
-    color: '#4CD964',
-  },
-  nopeText: {
-    color: '#FF3B30',
   },
 });

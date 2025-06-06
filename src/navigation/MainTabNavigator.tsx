@@ -7,6 +7,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import { AnimatedNavigator } from '../components/AnimatedNavigator';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PostStack } from './PostStack';
 
 // Placeholder components - we'll create these later
 const NotificationsScreen = () => null;
@@ -47,7 +48,7 @@ export const MainTabNavigator = () => {
       />
       <Tab.Screen
         name="posts"
-        component={NotificationsScreen}
+        component={PostStack}
       />
       <Tab.Screen
         name="profile"

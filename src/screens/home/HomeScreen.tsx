@@ -1,192 +1,356 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
   Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  Dimensions,
+  ImageBackground,
 } from 'react-native';
-import { Appbar, Chip, useTheme } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { HomeStackParamList } from '../../navigation/types';
-import { Post, postService } from '../../services/post.service';
-import { PostCard } from '../../components/PostCard';
+import { useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useAuth } from '../../contexts/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { HomeStackParamList } from '../../navigation/types';
+import { bannerService, Banner } from '../../services/bannerService';
+import Carousel, { ICarouselInstance } from 'react-native-reanimated-carousel';
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'Feed'>;
+type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
-type PostType = 'CONFESSION' | 'MARKETPLACE' | 'LOST_AND_FOUND';
+interface NewsCardProps {
+  title: string;
+  description: string;
+  icon: string;
+  backgroundColor?: string;
+  imageUrl: string;
+}
 
-export const HomeScreen = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedType, setSelectedType] = useState<PostType>('CONFESSION');
-  const navigation = useNavigation<HomeScreenNavigationProp>();
+interface DealCardProps {
+  icon: string;
+  title: string;
+  backgroundColor: string;
+}
+
+const NewsCard: React.FC<NewsCardProps> = ({
+  title,
+  description,
+  icon,
+  backgroundColor = '#4169E1',
+  imageUrl,
+}) => (
+  <ImageBackground
+    source={{ uri: imageUrl }}
+    style={[styles.newsCard]}
+    imageStyle={styles.newsCardImage}
+  >
+    <View style={styles.newsCardOverlay}>
+      <View style={styles.newsContent}>
+        <View>
+          <Text style={styles.newsTitle}>{title}</Text>
+          <Text style={styles.newsDescription}>{description}</Text>
+        </View>
+        <View style={styles.iconContainer}>
+          <MaterialCommunityIcons name={icon} size={32} color="rgba(255,255,255,0.8)" />
+        </View>
+      </View>
+    </View>
+  </ImageBackground>
+);
+
+const DealCard: React.FC<DealCardProps> = ({ icon, title, backgroundColor }) => (
+  <TouchableOpacity style={[styles.dealCard, { backgroundColor }]}>
+    <MaterialCommunityIcons name={icon} size={40} color="rgba(255,255,255,0.9)" />
+    <Text style={styles.dealText}>{title}</Text>
+  </TouchableOpacity>
+);
+
+const ExtraItem: React.FC<{ icon: string; title: string }> = ({ icon, title }) => (
+  <TouchableOpacity style={styles.extraItem}>
+    <View style={styles.extraIconContainer}>
+      <MaterialCommunityIcons name={icon} size={24} color="#666" />
+    </View>
+    <Text style={styles.extraTitle}>{title}</Text>
+  </TouchableOpacity>
+);
+
+export const HomeScreen: React.FC = () => {
   const theme = useTheme();
-  const { isAuthenticated } = useAuth();
+  const navigation = useNavigation<NavigationProp>();
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const carouselRef = useRef<ICarouselInstance>(null);
+  const width = Dimensions.get('window').width;
 
   useEffect(() => {
-    // Verify token on component mount
-    const verifyToken = async () => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        console.log('Current token:', token);
-        if (!token) {
-          console.warn('No token found in storage');
-        }
-      } catch (error) {
-        console.error('Error checking token:', error);
-      }
-    };
-    verifyToken();
+    fetchBanners();
   }, []);
 
-  const fetchPosts = async (type: PostType, shouldRefresh = false) => {
+  const fetchBanners = async () => {
     try {
-      setLoading(true);
-      const response = await postService.getPosts(type);
-      setPosts(response.data.posts);
-    } catch (error: any) {
-      console.error('Error fetching posts:', error);
-      // Check if the error is due to authentication
-      if (error.response?.status === 401) {
-        console.error('Authentication error fetching posts');
-        // You might want to handle the unauthorized error here
-      }
-    } finally {
+      const data = await bannerService.getAll();
+      setBanners(data);
       setLoading(false);
-      setRefreshing(false);
+    } catch (err) {
+      setError('Failed to fetch banners');
+      setLoading(false);
+      console.error('Error fetching banners:', err);
     }
   };
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchPosts(selectedType);
-    }
-  }, [selectedType, isAuthenticated]);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchPosts(selectedType, true);
-  };
-
-  const handleCreatePost = () => {
-    navigation.navigate('CreatePost');
-  };
-
-  const renderItem = ({ item }: { item: Post }) => (
-    <PostCard
-      post={item}
-      onPress={() => navigation.navigate('PostDetails', { postData: item })}
+  const renderBanner = ({ item }: { item: Banner }) => (
+    <NewsCard
+      key={item.id}
+      title={item.title}
+      description={item.description}
+      icon="bullhorn"
+      imageUrl={item.imageUrl}
     />
   );
 
-  const renderPostTypeChips = () => (
-    <View style={styles.chipContainer}>
-      <Chip
-        selected={selectedType === 'CONFESSION'}
-        onPress={() => setSelectedType('CONFESSION')}
-        style={styles.chip}
-        icon={({ size, color }) => (
-          <MaterialCommunityIcons name="message-text" size={size} color={color} />
-        )}
-      >
-        Confessions
-      </Chip>
-      <Chip
-        selected={selectedType === 'MARKETPLACE'}
-        onPress={() => setSelectedType('MARKETPLACE')}
-        style={styles.chip}
-        icon={({ size, color }) => (
-          <MaterialCommunityIcons name="account-group" size={size} color={color} />
-        )}
-      >
-        Social
-      </Chip>
-      <Chip
-        selected={selectedType === 'LOST_AND_FOUND'}
-        onPress={() => setSelectedType('LOST_AND_FOUND')}
-        style={styles.chip}
-        icon={({ size, color }) => (
-          <MaterialCommunityIcons name="school" size={size} color={color} />
-        )}
-      >
-        Academic
-      </Chip>
-    </View>
-  );
+  const handleProgressChange = (progress: number) => {
+    const newIndex = Math.round(progress);
+    if (newIndex !== activeIndex) {
+      setActiveIndex(newIndex);
+    }
+  };
+
+  const handleDotPress = (index: number) => {
+    setActiveIndex(index);
+    carouselRef.current?.scrollTo({ index, animated: true });
+  };
 
   return (
-    <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.Content title="ESPE Connect" />
-        <Appbar.Action icon="plus" onPress={handleCreatePost} />
-      </Appbar.Header>
-
-      {renderPostTypeChips()}
-
-      <FlatList
-        data={posts}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        ListEmptyComponent={
-          loading ? (
-            <ActivityIndicator style={styles.loader} size="large" />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#4169E1" />
+      
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* University News Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>ESPE Connect</Text>
+          {loading ? (
+            <Text>Loading banners...</Text>
+          ) : error ? (
+            <Text style={styles.errorText}>{error}</Text>
           ) : (
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons
-                name="post-outline"
-                size={64}
-                color={theme.colors.primary}
+            <View>
+              <Carousel
+                ref={carouselRef}
+                loop={false}
+                width={width - 40}
+                height={200}
+                data={banners}
+                renderItem={renderBanner}
+                onProgressChange={handleProgressChange}
+                mode="parallax"
+                modeConfig={{
+                  parallaxScrollingScale: 0.9,
+                  parallaxScrollingOffset: 50,
+                }}
+                enabled={banners.length > 1}
+                defaultIndex={0}
               />
-              <Text style={styles.emptyText}>No posts yet</Text>
+              {banners.length > 1 && (
+                <View style={styles.paginationContainer}>
+                  {banners.map((_, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => handleDotPress(index)}
+                      style={styles.paginationDotWrapper}
+                    >
+                      <View
+                        style={[
+                          styles.paginationDot,
+                          index === activeIndex && styles.paginationDotActive,
+                        ]}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
-          )
-        }
-      />
-    </View>
+          )}
+        </View>
+
+        {/* Deals Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Promociones</Text>
+          <View style={styles.dealsContainer}>
+            <DealCard
+              icon="shopping"
+              title="-20% OFF"
+              backgroundColor="#FF9F43"
+            />
+            <DealCard
+              icon="coffee"
+              title="BUY 1 GET 1 FREE"
+              backgroundColor="#8C52FF"
+            />
+          </View>
+        </View>
+
+        {/* Extras Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Extras</Text>
+          <ExtraItem icon="clipboard-text" title="Surveys" />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F5F7FA',
   },
-  chipContainer: {
-    flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#fff',
-    justifyContent: 'space-around',
+  header: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
   },
-  chip: {
-    marginRight: 8,
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '600',
+    color: 'white',
   },
-  listContent: {
-    padding: 16,
-    paddingBottom: 80, // Add extra padding at the bottom
-  },
-  loader: {
-    marginTop: 20,
-  },
-  emptyContainer: {
+  content: {
     flex: 1,
+  },
+  section: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#1A1A1A',
+  },
+  newsCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    height: 200,
+  },
+  newsCardImage: {
+    borderRadius: 16,
+  },
+  newsCardOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    padding: 20,
+  },
+  newsContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flex: 1,
+  },
+  newsTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 8,
+    maxWidth: '80%',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
+  },
+  newsDescription: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    maxWidth: '80%',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dealsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  dealCard: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    aspectRatio: 1,
   },
-  emptyText: {
-    marginTop: 16,
+  dealText: {
+    marginTop: 12,
+    fontSize: 20,
+    fontWeight: '700',
+    color: 'white',
+    textAlign: 'center',
+  },
+  extraItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  extraIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#F5F7FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  extraTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  errorText: {
+    color: 'red',
     fontSize: 16,
-    color: '#666',
+    textAlign: 'center',
+    marginVertical: 10,
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  paginationDotWrapper: {
+    padding: 4,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D1D1D1',
+    marginHorizontal: 4,
+  },
+  paginationDotActive: {
+    backgroundColor: '#4169E1',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
 }); 

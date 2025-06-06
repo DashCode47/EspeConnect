@@ -1,5 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Animated } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+  Animated,
+  Platform,
+} from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -25,134 +32,196 @@ const navigationItems: NavigationItem[] = [
 ];
 
 const ITEM_WIDTH = width / navigationItems.length;
+const INDICATOR_SIZE = 40;
+const INDICATOR_OFFSET = (ITEM_WIDTH - INDICATOR_SIZE) / 2;
 
 export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigatorProps) => {
   const theme = useTheme();
   const translateX = useRef(new Animated.Value(0)).current;
-  const scaleY = useRef(new Animated.Value(1)).current;
-  const itemScale = useRef(navigationItems.map(() => new Animated.Value(1))).current;
+  const itemScales = useRef(navigationItems.map(() => new Animated.Value(1))).current;
+  const itemTranslateY = useRef(navigationItems.map(() => new Animated.Value(0))).current;
+  const labelOpacity = useRef(navigationItems.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
     const index = navigationItems.findIndex(item => item.key === currentRoute);
-    Animated.spring(translateX, {
-      toValue: index * ITEM_WIDTH,
-      useNativeDriver: true,
-      tension: 50,
-      friction: 10
-    }).start();
+    Animated.parallel([
+      Animated.spring(translateX, {
+        toValue: index * ITEM_WIDTH,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 10,
+      }),
+      ...navigationItems.map((_, i) =>
+        Animated.parallel([
+          Animated.spring(itemScales[i], {
+            toValue: i === index ? 1.2 : 1,
+            useNativeDriver: true,
+            tension: 50,
+            friction: 10,
+          }),
+          Animated.spring(itemTranslateY[i], {
+            toValue: i === index ? -8 : 0,
+            useNativeDriver: true,
+            tension: 50,
+            friction: 10,
+          }),
+          Animated.timing(labelOpacity[i], {
+            toValue: i === index ? 1 : 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ])
+      ),
+    ]).start();
   }, [currentRoute]);
 
   const handlePress = (route: string, index: number) => {
-    // Animate the indicator
-    Animated.spring(translateX, {
-      toValue: index * ITEM_WIDTH,
-      useNativeDriver: true,
-      tension: 50,
-      friction: 10
-    }).start();
-
-    // Animate the pressed item
     Animated.sequence([
-      Animated.timing(itemScale[index], {
-        toValue: 0.8,
-        duration: 100,
-        useNativeDriver: true
-      }),
-      Animated.timing(itemScale[index], {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true
-      })
+      Animated.parallel([
+        Animated.spring(itemScales[index], {
+          toValue: 0.8,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }),
+        Animated.spring(itemTranslateY[index], {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.spring(itemScales[index], {
+          toValue: 1.2,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }),
+        Animated.spring(itemTranslateY[index], {
+          toValue: -8,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 10,
+        }),
+      ]),
     ]).start();
 
     onNavigate(route);
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.elevation.level2 }]}>
-      <Animated.View 
-        style={[
-          styles.indicator, 
-          { 
-            width: ITEM_WIDTH,
-            backgroundColor: theme.colors.primary,
-            transform: [{ translateX }]
-          }
-        ]} 
-      />
-      
-      {navigationItems.map((item, index) => (
-        <TouchableOpacity
-          key={item.key}
-          style={styles.item}
-          onPress={() => handlePress(item.key, index)}
-        >
-          <Animated.View 
-            style={[
-              styles.itemContent,
-              {
-                transform: [{ scale: itemScale[index] }]
-              }
-            ]}
-          >
-            <MaterialCommunityIcons
-              name={item.icon as any}
-              size={24}
-              color={currentRoute === item.key ? theme.colors.primary : theme.colors.onSurfaceDisabled}
-            />
-            <Text
-              variant="labelSmall"
-              style={[
-                styles.label,
+    <View style={styles.wrapper}>
+      <View style={[styles.container, { backgroundColor: theme.colors.elevation.level2 }]}>
+        <Animated.View
+          style={[
+            styles.indicator,
+            {
+              transform: [
                 {
-                  color: currentRoute === item.key 
-                    ? theme.colors.primary 
-                    : theme.colors.onSurfaceDisabled
-                }
+                  translateX: translateX.interpolate({
+                    inputRange: [0, (navigationItems.length - 1) * ITEM_WIDTH],
+                    outputRange: [INDICATOR_OFFSET, (navigationItems.length - 1) * ITEM_WIDTH ],
+                  }),
+                },
+              ],
+              backgroundColor: theme.colors.primaryContainer,
+            },
+          ]}
+        />
+
+        {navigationItems.map((item, index) => (
+          <TouchableOpacity
+            key={item.key}
+            style={styles.item}
+            onPress={() => handlePress(item.key, index)}
+          >
+            <Animated.View
+              style={[
+                styles.itemContent,
+                {
+                  transform: [
+                    { scale: itemScales[index] },
+                    { translateY: itemTranslateY[index] },
+                  ],
+                },
               ]}
             >
-              {item.label}
-            </Text>
-            
-            {item.badge && (
-              <Animated.View 
+              <MaterialCommunityIcons
+                name={item.icon as any}
+                size={24}
+                color={currentRoute === item.key ? theme.colors.primary : theme.colors.onSurfaceVariant}
+              />
+              <Animated.View
                 style={[
-                  styles.badge, 
-                  { 
-                    backgroundColor: theme.colors.error,
-                    transform: [{ scale: itemScale[index] }]
-                  }
+                  styles.labelContainer,
+                  {
+                    opacity: labelOpacity[index],
+                  },
                 ]}
               >
-                <Text style={styles.badgeText}>{item.badge}</Text>
+                <Text
+                  variant="labelSmall"
+                  style={[
+                    styles.label,
+                    {
+                      color: theme.colors.primary,
+                    },
+                  ]}
+                >
+                  {item.label}
+                </Text>
               </Animated.View>
-            )}
-          </Animated.View>
-        </TouchableOpacity>
-      ))}
+
+              {item.badge && (
+                <Animated.View
+                  style={[
+                    styles.badge,
+                    {
+                      backgroundColor: theme.colors.error,
+                      transform: [{ scale: itemScales[index] }],
+                    },
+                  ]}
+                >
+                  <Text style={styles.badgeText}>{item.badge}</Text>
+                </Animated.View>
+              )}
+            </Animated.View>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    paddingHorizontal: 16,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    backgroundColor: 'transparent',
+  },
   container: {
     flexDirection: 'row',
     height: 64,
+    borderRadius: 32,
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: -2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    position: 'relative',
   },
   indicator: {
     position: 'absolute',
-    bottom: 0,
-    height: 3,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
+    width: INDICATOR_SIZE,
+    height: INDICATOR_SIZE,
+    borderRadius: INDICATOR_SIZE / 2,
+    top: '35%',
+    marginTop: -INDICATOR_SIZE / 2,
+    zIndex: -1,
   },
   item: {
     flex: 1,
@@ -163,8 +232,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  labelContainer: {
+    position: 'absolute',
+    top: 28,
+    backgroundColor: 'white',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
   label: {
-    marginTop: 4,
+    marginTop: 0,
+    fontSize: 10,
+    fontWeight: '600',
   },
   badge: {
     position: 'absolute',
@@ -176,6 +263,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: 'white',
   },
   badgeText: {
     color: 'white',

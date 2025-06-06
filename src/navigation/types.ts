@@ -28,3 +28,9 @@ export type ProfileStackParamList = {
   EditProfile: undefined;
   Settings: undefined;
 }; 
+
+export type PostStackParamList = {
+  Feed: undefined;
+  PostDetails: { postData: Post };
+  CreatePost: undefined;
+};
