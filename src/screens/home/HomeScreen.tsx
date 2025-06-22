@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,14 @@ import {
   Dimensions,
   ImageBackground,
 } from 'react-native';
-import { useTheme } from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { HomeStackParamList } from '../../navigation/types';
-import { bannerService, Banner } from '../../services/bannerService';
-import Carousel, { ICarouselInstance } from 'react-native-reanimated-carousel';
+import {useTheme} from 'react-native-paper';
+import {Icon} from '../../components/Icon';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {HomeStackParamList} from '../../navigation/types';
+import {bannerService, Banner} from '../../services/bannerService';
+import Carousel, {ICarouselInstance} from 'react-native-reanimated-carousel';
+import useHome from './Hooks/useHome';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -42,10 +43,9 @@ const NewsCard: React.FC<NewsCardProps> = ({
   imageUrl,
 }) => (
   <ImageBackground
-    source={{ uri: imageUrl }}
+    source={{uri: imageUrl}}
     style={[styles.newsCard]}
-    imageStyle={styles.newsCardImage}
-  >
+    imageStyle={styles.newsCardImage}>
     <View style={styles.newsCardOverlay}>
       <View style={styles.newsContent}>
         <View>
@@ -53,24 +53,48 @@ const NewsCard: React.FC<NewsCardProps> = ({
           <Text style={styles.newsDescription}>{description}</Text>
         </View>
         <View style={styles.iconContainer}>
-          <MaterialCommunityIcons name={icon} size={32} color="rgba(255,255,255,0.8)" />
+          <Icon
+            library="MaterialCommunityIcons"
+            name={icon}
+            size={32}
+            color="rgba(255,255,255,0.8)"
+          />
         </View>
       </View>
     </View>
   </ImageBackground>
 );
 
-const DealCard: React.FC<DealCardProps> = ({ icon, title, backgroundColor }) => (
-  <TouchableOpacity style={[styles.dealCard, { backgroundColor }]}>
-    <MaterialCommunityIcons name={icon} size={40} color="rgba(255,255,255,0.9)" />
-    <Text style={styles.dealText}>{title}</Text>
+const DealCard: React.FC<DealCardProps> = ({icon, title, backgroundColor}) => (
+  <TouchableOpacity style={[styles.dealCard, {backgroundColor}]}>
+    <View style={styles.dealCardContent}>
+      <View style={styles.dealIconContainer}>
+        <Icon
+          library="MaterialCommunityIcons"
+          name={icon}
+          size={32}
+          color="rgba(255,255,255,0.95)"
+        />
+      </View>
+      <View style={styles.dealTextContainer}>
+        <Text style={styles.dealText} numberOfLines={2}>{title}</Text>
+      </View>
+      <View style={styles.dealArrowContainer}>
+        <Icon
+          library="MaterialCommunityIcons"
+          name="chevron-right"
+          size={20}
+          color="rgba(255,255,255,0.7)"
+        />
+      </View>
+    </View>
   </TouchableOpacity>
 );
 
-const ExtraItem: React.FC<{ icon: string; title: string }> = ({ icon, title }) => (
+const ExtraItem: React.FC<{icon: string; title: string}> = ({icon, title}) => (
   <TouchableOpacity style={styles.extraItem}>
     <View style={styles.extraIconContainer}>
-      <MaterialCommunityIcons name={icon} size={24} color="#666" />
+      <Icon library="MaterialCommunityIcons" name={icon} size={24} color="#666" />
     </View>
     <Text style={styles.extraTitle}>{title}</Text>
   </TouchableOpacity>
@@ -85,8 +109,10 @@ export const HomeScreen: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const carouselRef = useRef<ICarouselInstance>(null);
   const width = Dimensions.get('window').width;
-
+  const {allPromotions, fetchPromotions, handleIcon} = useHome();
   useEffect(() => {
+    console.log(allPromotions);
+    fetchPromotions();
     fetchBanners();
   }, []);
 
@@ -102,7 +128,7 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const renderBanner = ({ item }: { item: Banner }) => (
+  const renderBanner = ({item}: {item: Banner}) => (
     <NewsCard
       key={item.id}
       title={item.title}
@@ -121,13 +147,13 @@ export const HomeScreen: React.FC = () => {
 
   const handleDotPress = (index: number) => {
     setActiveIndex(index);
-    carouselRef.current?.scrollTo({ index, animated: true });
+    carouselRef.current?.scrollTo({index, animated: true});
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4169E1" />
-      
+
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* University News Section */}
         <View style={styles.section}>
@@ -160,8 +186,7 @@ export const HomeScreen: React.FC = () => {
                     <TouchableOpacity
                       key={index}
                       onPress={() => handleDotPress(index)}
-                      style={styles.paginationDotWrapper}
-                    >
+                      style={styles.paginationDotWrapper}>
                       <View
                         style={[
                           styles.paginationDot,
@@ -179,18 +204,21 @@ export const HomeScreen: React.FC = () => {
         {/* Deals Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Promociones</Text>
-          <View style={styles.dealsContainer}>
-            <DealCard
-              icon="shopping"
-              title="-20% OFF"
-              backgroundColor="#FF9F43"
-            />
-            <DealCard
-              icon="coffee"
-              title="BUY 1 GET 1 FREE"
-              backgroundColor="#8C52FF"
-            />
-          </View>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.promotionsScrollContent}
+          >
+            {allPromotions.length > 0 &&
+              allPromotions.map(promotion => (  
+                <DealCard
+                  icon={handleIcon(promotion.category) || ''}
+                  title={promotion.title}
+                  backgroundColor="#5aa651"
+                  key={promotion.id}
+                />
+              ))}
+          </ScrollView>
         </View>
 
         {/* Extras Section */}
@@ -255,7 +283,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     maxWidth: '80%',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
+    textShadowOffset: {width: -1, height: 1},
     textShadowRadius: 10,
   },
   newsDescription: {
@@ -263,7 +291,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
     maxWidth: '80%',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
+    textShadowOffset: {width: -1, height: 1},
     textShadowRadius: 10,
   },
   iconContainer: {
@@ -280,24 +308,49 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   dealCard: {
-    flex: 1,
+    width: 280,
+    height: 80,
     borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2,
+    padding: 16,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    aspectRatio: 1,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    marginRight: 16,
+  },
+  dealCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
+  },
+  dealIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dealTextContainer: {
+    flex: 1,
+    marginHorizontal: 12,
   },
   dealText: {
-    marginTop: 12,
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: 'white',
-    textAlign: 'center',
+    textAlign: 'left',
+    lineHeight: 20,
+  },
+  dealArrowContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   extraItem: {
     flexDirection: 'row',
@@ -307,7 +360,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
@@ -353,4 +406,7 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
   },
-}); 
+  promotionsScrollContent: {
+    padding: 20,
+  },
+});
