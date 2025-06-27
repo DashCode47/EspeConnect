@@ -197,7 +197,7 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 0,
     backgroundColor: 'transparent',
   },
   container: {

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import {useTheme} from 'react-native-paper';
 import {Icon} from '../../components/Icon';
+import {Header} from '../../components/Header';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {HomeStackParamList} from '../../navigation/types';
@@ -77,7 +78,9 @@ const DealCard: React.FC<DealCardProps> = ({icon, title, backgroundColor}) => (
         />
       </View>
       <View style={styles.dealTextContainer}>
-        <Text style={styles.dealText} numberOfLines={2}>{title}</Text>
+        <Text style={styles.dealText} numberOfLines={2}>
+          {title}
+        </Text>
       </View>
       <View style={styles.dealArrowContainer}>
         <Icon
@@ -94,7 +97,12 @@ const DealCard: React.FC<DealCardProps> = ({icon, title, backgroundColor}) => (
 const ExtraItem: React.FC<{icon: string; title: string}> = ({icon, title}) => (
   <TouchableOpacity style={styles.extraItem}>
     <View style={styles.extraIconContainer}>
-      <Icon library="MaterialCommunityIcons" name={icon} size={24} color="#666" />
+      <Icon
+        library="MaterialCommunityIcons"
+        name={icon}
+        size={24}
+        color="#666"
+      />
     </View>
     <Text style={styles.extraTitle}>{title}</Text>
   </TouchableOpacity>
@@ -109,7 +117,7 @@ export const HomeScreen: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const carouselRef = useRef<ICarouselInstance>(null);
   const width = Dimensions.get('window').width;
-  const {allPromotions, fetchPromotions, handleIcon} = useHome();
+  const {allPromotions, fetchPromotions, handleIcon, profile} = useHome();
   useEffect(() => {
     console.log(allPromotions);
     fetchPromotions();
@@ -153,7 +161,9 @@ export const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4169E1" />
-
+      
+      <Header userName={profile?.name} />
+    
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* University News Section */}
         <View style={styles.section}>
@@ -204,13 +214,12 @@ export const HomeScreen: React.FC = () => {
         {/* Deals Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Promociones</Text>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.promotionsScrollContent}
-          >
+            contentContainerStyle={styles.promotionsScrollContent}>
             {allPromotions.length > 0 &&
-              allPromotions.map(promotion => (  
+              allPromotions.map(promotion => (
                 <DealCard
                   icon={handleIcon(promotion.category) || ''}
                   title={promotion.title}
@@ -221,11 +230,66 @@ export const HomeScreen: React.FC = () => {
           </ScrollView>
         </View>
 
-        {/* Extras Section */}
+        {/* Quick Actions Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Extras</Text>
-          <ExtraItem icon="clipboard-text" title="Surveys" />
+          <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
+          <View style={styles.quickActionsContainer}>
+            <TouchableOpacity 
+              style={styles.quickActionCard}
+              onPress={() => navigation.navigate('matches' as any)}>
+              <View style={styles.quickActionContent}>
+                <View style={[styles.quickActionIcon, {backgroundColor: '#FF6B6B'}]}>
+                  <Icon
+                    library="MaterialCommunityIcons"
+                    name="heart-multiple"
+                    size={32}
+                    color="white"
+                  />
+                </View>
+                <View style={styles.quickActionTextContainer}>
+                  <Text style={styles.quickActionTitle}>Matches</Text>
+                  <Text style={styles.quickActionSubtitle}>Encuentra tu pareja ideal</Text>
+                </View>
+                <View style={styles.quickActionArrow}>
+                  <Icon
+                    library="MaterialCommunityIcons"
+                    name="chevron-right"
+                    size={24}
+                    color="#666"
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.quickActionCard}
+              onPress={() => navigation.navigate('posts' as any)}>
+              <View style={styles.quickActionContent}>
+                <View style={[styles.quickActionIcon, {backgroundColor: '#4ECDC4'}]}>
+                  <Icon
+                    library="MaterialCommunityIcons"
+                    name="post-outline"
+                    size={32}
+                    color="white"
+                  />
+                </View>
+                <View style={styles.quickActionTextContainer}>
+                  <Text style={styles.quickActionTitle}>Posts</Text>
+                  <Text style={styles.quickActionSubtitle}>Comparte y descubre</Text>
+                </View>
+                <View style={styles.quickActionArrow}>
+                  <Icon
+                    library="MaterialCommunityIcons"
+                    name="chevron-right"
+                    size={24}
+                    color="#666"
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -408,5 +472,58 @@ const styles = StyleSheet.create({
   },
   promotionsScrollContent: {
     padding: 20,
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  quickActionCard: {
+    flex: 1,
+    height: 120,
+    borderRadius: 16,
+    padding: 16,
+    backgroundColor: 'white',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
+  quickActionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickActionTextContainer: {
+    flex: 1,
+    marginHorizontal: 12,
+  },
+  quickActionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 4,
+  },
+  quickActionSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 18,
+  },
+  quickActionArrow: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#F5F7FA',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -9,26 +9,51 @@ import {
   StatusBar,
   Dimensions,
   ImageBackground,
+  Image,
 } from 'react-native';
-import { useTheme } from 'react-native-paper';
+import {useTheme} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { matchService, User } from '../services/match.service';
+import {matchService, User} from '../services/match.service';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
-  interpolate,
-  Extrapolate,
-  useAnimatedGestureHandler,
   runOnJS,
 } from 'react-native-reanimated';
-import { PanGestureHandler } from 'react-native-gesture-handler';
+import LinearGradient from 'react-native-linear-gradient';
 
-const { width, height } = Dimensions.get('window');
+const {width, height} = Dimensions.get('window');
 const CARD_WIDTH = width * 0.9;
-const CARD_HEIGHT = height * 0.6;
+const CARD_HEIGHT = height * 0.7;
 const SWIPE_THRESHOLD = width * 0.3;
+
+const getInterestIcon = (interest: string): string => {
+  switch (interest.toLowerCase()) {
+    case 'nature':
+      return 'leaf';
+    case 'travel':
+      return 'airplane';
+    case 'writing':
+      return 'pencil';
+    case 'music':
+      return 'music-note';
+    case 'dancing':
+      return 'human-female-dance';
+    case 'sports':
+      return 'soccer';
+    case 'movies':
+      return 'movie';
+    case 'art':
+      return 'palette';
+    case 'gaming':
+      return 'gamepad-variant';
+    case 'cooking':
+      return 'chef-hat';
+    default:
+      return 'star';
+  }
+};
 
 export default function MatchesScreen() {
   const theme = useTheme();
@@ -36,18 +61,30 @@ export default function MatchesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [detailsVisible, setDetailsVisible] = useState(false);
 
-  // Animated values
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const rotation = useSharedValue(0);
-  const scale = useSharedValue(1);
+  const cardOpacity = useSharedValue(1);
+  const cardScale = useSharedValue(1);
+  const detailsTranslateY = useSharedValue(CARD_HEIGHT);
   const nextCardScale = useSharedValue(0.95);
-  const nextCardOpacity = useSharedValue(0.5);
+  const nextCardOpacity = useSharedValue(1);
 
   useEffect(() => {
     fetchPotentialMatches();
   }, []);
+
+  useEffect(() => {
+    if (!detailsVisible) {
+      detailsTranslateY.value = withSpring(CARD_HEIGHT, {damping: 15});
+    }
+  }, [detailsVisible]);
+
+  useEffect(() => {
+    cardOpacity.value = 1;
+    cardScale.value = 1;
+    detailsTranslateY.value = withSpring(CARD_HEIGHT);
+    setDetailsVisible(false);
+  }, [currentIndex]);
 
   const fetchPotentialMatches = async () => {
     try {
@@ -56,10 +93,13 @@ export default function MatchesScreen() {
       const response = await matchService.getPotentialMatches();
       if (response.status === 'success' && response.data.users) {
         setUsers(response.data.users);
+        setCurrentIndex(0);
       } else {
+        setUsers([]);
         setError('Failed to fetch matches');
       }
     } catch (err) {
+      setUsers([]);
       setError('Error connecting to the server');
       console.error('Fetch error:', err);
     } finally {
@@ -67,16 +107,18 @@ export default function MatchesScreen() {
     }
   };
 
-  const resetCardPosition = () => {
-    translateX.value = withSpring(0);
-    translateY.value = withSpring(0);
-    rotation.value = withSpring(0);
-    scale.value = withSpring(1);
+  const goToNextCard = () => {
+    if (currentIndex >= users.length - 1) {
+      setUsers([]);
+    } else {
+      setCurrentIndex(prev => prev + 1);
+    }
   };
 
   const handleLike = async (userId: string) => {
+    goToNextCard();
     try {
-      const response = await matchService.likeUser(userId);
+      await matchService.likeUser(userId);
       const matchCheck = await matchService.checkMatch(userId);
       if (matchCheck.data.isMatch) {
         console.log("It's a match!");
@@ -84,194 +126,91 @@ export default function MatchesScreen() {
     } catch (err) {
       console.error('Error liking user:', err);
     }
-    setCurrentIndex(prev => prev + 1);
-    resetCardPosition();
-    if (currentIndex >= users.length - 2) {
-      fetchPotentialMatches();
-    }
   };
 
   const handleSkip = () => {
-    setCurrentIndex(prev => prev + 1);
-    resetCardPosition();
-    if (currentIndex >= users.length - 2) {
-      fetchPotentialMatches();
-    }
+    goToNextCard();
   };
 
-  const gestureHandler = useAnimatedGestureHandler({
-    onStart: (_, ctx: any) => {
-      ctx.startX = translateX.value;
-      ctx.startY = translateY.value;
-    },
-    onActive: (event, ctx) => {
-      translateX.value = ctx.startX + event.translationX;
-      translateY.value = ctx.startY + event.translationY;
-      rotation.value = interpolate(
-        translateX.value,
-        [-width / 2, 0, width / 2],
-        [-15, 0, 15],
-        Extrapolate.CLAMP
-      );
-    },
-    onEnd: (event) => {
-      const shouldSwipe = Math.abs(translateX.value) > SWIPE_THRESHOLD;
-      
-      if (shouldSwipe) {
-        translateX.value = withSpring(
-          Math.sign(translateX.value) * width * 1.5,
-          { velocity: event.velocityX }
-        );
-        translateY.value = withSpring(
-          Math.sign(translateY.value) * height,
-          { velocity: event.velocityY }
-        );
-        if (translateX.value > 0) {
-          runOnJS(handleLike)(users[currentIndex].id);
-        } else {
-          runOnJS(handleSkip)();
-        }
-      } else {
-        resetCardPosition();
-      }
-    },
-  });
-
-  const cardStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-        { rotate: `${rotation.value}deg` },
-        { scale: scale.value },
-      ],
-    };
-  });
-
-  const nextCardStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: nextCardScale.value }],
-      opacity: nextCardOpacity.value,
-    };
-  });
-
-  const renderCard = (user: User, isNext = false) => {
-    return (
-      <Animated.View
-        style={[
-          styles.cardContainer,
-          isNext ? nextCardStyle : cardStyle,
-        ]}>
-        <ImageBackground
-          source={{ uri: user.avatarUrl || 'https://via.placeholder.com/400' }}
-          style={styles.cardImage}
-          imageStyle={styles.cardImageStyle}>
-          <View style={styles.gradientOverlay} />
-          <View style={styles.cardContent}>
-            <View style={styles.userInfo}>
-              <Text style={styles.name}>{user.name}</Text>
-              <Text style={styles.career}>{user.career}</Text>
-            </View>
-
-            {user.bio && (
-              <View style={styles.bioContainer}>
-                <Text style={styles.bio} numberOfLines={3}>
-                  {user.bio}
-                </Text>
-              </View>
-            )}
-
-            {user.interests && (
-              <View style={styles.interests}>
-                {user.interests.slice(0, 4).map((interest, i) => (
-                  <View key={i} style={styles.interestTag}>
-                    <Text style={styles.interestText}>{interest}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </ImageBackground>
-      </Animated.View>
-    );
-  };
-
-  if (loading && users.length === 0) {
+  if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={'#cc2b5e'} />
       </View>
     );
   }
 
-  if (error && users.length === 0) {
+  if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={[styles.errorText, { color: theme.colors.error }]}>
-          {error}
-        </Text>
-        <TouchableOpacity
-          style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
-          onPress={fetchPotentialMatches}>
+        <Text style={[styles.errorText]}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchPotentialMatches}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  if (users.length === 0 || currentIndex >= users.length) {
+  if (users.length === 0) {
     return (
-      <View style={styles.centerContainer}>
-        <MaterialCommunityIcons
-          name="cards-heart"
-          size={64}
-          color={theme.colors.primary}
-        />
-        <Text style={styles.noMatchesText}>No more potential matches</Text>
-        <TouchableOpacity
-          style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
-          onPress={fetchPotentialMatches}>
-          <Text style={styles.retryButtonText}>Find More Matches</Text>
-        </TouchableOpacity>
-      </View>
+      <LinearGradient colors={['#1a001a', '#1a001a']} style={styles.container}>
+        <View style={styles.emptyStateContainer}>
+          <View style={styles.cardPlaceholder}>
+            <Text style={styles.noMatchesText}>No more potential matches</Text>
+          </View>
+        </View>
+      </LinearGradient>
     );
   }
 
+  const currentUser = users[currentIndex];
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={{flex: 1}}>
       <StatusBar barStyle="light-content" />
-      
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Discover</Text>
-        <Text style={styles.headerSubtitle}>
-          {users.length - currentIndex} potential matches
-        </Text>
-      </View>
+      <LinearGradient colors={['#1a001a', '#1a001a']} style={styles.container}>
+        <Image
+          source={{uri: currentUser.avatarUrl || 'https://dummyimage.com/600x400/000/fff'}}
+          style={styles.image}
+        />
+        <LinearGradient
+          colors={[
+            'rgba(52, 0, 84, 0)',
+            'rgba(52, 0, 84, 0.5)',
+            'rgba(52, 0, 84, 0.5)',
+            'rgba(52, 0, 84, 0)',
+          ]}
+          locations={[0, 0.2, 0.8, 1]}
+          style={styles.overlay}>
+          <Text style={styles.match}>80% Match</Text>
+          <Text style={styles.name}>{currentUser.name}</Text>
+          <Text style={styles.location}>{currentUser.career}</Text>
+          <View style={styles.buttons}>
+            <TouchableOpacity style={styles.buttonX} onPress={handleSkip}>
+              <Text style={styles.buttonText}>✕</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.buttonHeart}
+              onPress={() => handleLike(currentUser.id)}>
+              <Text style={styles.buttonText}>❤</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+        <View style={styles.aboutSection}>
+          <Text style={styles.aboutTitle}>About</Text>
+          <Text style={styles.aboutText}>
+            {currentUser.bio || 'No bio available.'}
+          </Text>
 
-      <View style={styles.cardWrapper}>
-        {currentIndex + 1 < users.length && renderCard(users[currentIndex + 1], true)}
-        <PanGestureHandler onGestureEvent={gestureHandler}>
-          <Animated.View style={styles.cardWrapper}>
-            {renderCard(users[currentIndex])}
-          </Animated.View>
-        </PanGestureHandler>
-      </View>
-
-      <View style={styles.buttonsContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.skipButton]}
-          onPress={handleSkip}>
-          <MaterialCommunityIcons name="close" size={30} color="#FF3B30" />
-          <Text style={[styles.buttonText, styles.skipButtonText]}>Skip</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.likeButton]}
-          onPress={() => handleLike(users[currentIndex].id)}>
-          <MaterialCommunityIcons name="heart" size={30} color="#4CD964" />
-          <Text style={[styles.buttonText, styles.likeButtonText]}>Like</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.interests}>
+            {currentUser.interests.map((interest, index) => (
+              <Text key={index} style={styles.interestTag}>
+                {interest}
+              </Text>
+            ))}
+          </View>
+        </View>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -279,99 +218,80 @@ export default function MatchesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
     backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  cardWrapper: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  cardContainer: {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
-    borderRadius: 16,
-    overflow: 'hidden',
-    position: 'absolute',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  cardImage: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'flex-end',
-  },
-  cardImageStyle: {
-    borderRadius: 16,
-  },
-  gradientOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  image: {
     height: '60%',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    width: '100%',
   },
-  cardContent: {
-    padding: 16,
+  overlay: {
+    position: 'absolute',
+    top: 80,
+    height: '60%',
+    width: '100%',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingBottom: 100,
   },
-  userInfo: {
-    marginBottom: 15,
+  match: {
+    backgroundColor: '#8a2be2',
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 20,
+    color: 'white',
+    fontWeight: '600',
+    marginBottom: 8,
   },
   name: {
-    fontSize: 28,
-    fontWeight: 'bold',
     color: 'white',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    fontSize: 22,
+    fontWeight: '700',
   },
-  career: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 2,
-  },
-  bioContainer: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 12,
-  },
-  bio: {
+  location: {
+    color: 'white',
     fontSize: 14,
-    color: 'white',
-    lineHeight: 20,
+    marginBottom: 20,
+  },
+  buttons: {
+    flexDirection: 'row',
+    marginTop: 10,
+    gap: 30,
+  },
+  buttonX: {
+    backgroundColor: 'white',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonHeart: {
+    backgroundColor: '#f28bce',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: 26,
+  },
+  aboutSection: {
+    backgroundColor: 'white',
+    padding: 20,
+    height: '40%',
+    marginTop:'auto',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+  },
+  aboutTitle: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    marginBottom: 6,
+  },
+  aboutText: {
+    fontSize: 14,
+    marginBottom: 16,
   },
   interests: {
     flexDirection: 'row',
@@ -379,74 +299,52 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   interestTag: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  interestText: {
-    color: 'white',
+    backgroundColor: '#e6f0e6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     fontSize: 12,
+    color: '#4b4b4b',
   },
-  buttonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    paddingVertical: 16,
-    paddingBottom: 24,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-  },
-  button: {
-    flexDirection: 'row',
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#1a001a',
+  },
+  errorText: {
+    color: 'white',
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#8a2be2',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    borderWidth: 1,
-    gap: 6,
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  skipButton: {
-    borderColor: '#FF3B30',
-    backgroundColor: 'rgba(255,59,48,0.1)',
-  },
-  skipButtonText: {
-    color: '#FF3B30',
-  },
-  likeButton: {
-    borderColor: '#4CD964',
-    backgroundColor: 'rgba(76,217,100,0.1)',
-  },
-  likeButtonText: {
-    color: '#4CD964',
-  },
-  errorText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  noMatchesText: {
-    fontSize: 18,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  retryButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
-    elevation: 2,
   },
   retryButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardPlaceholder: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  noMatchesText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
