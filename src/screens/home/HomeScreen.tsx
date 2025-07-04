@@ -10,7 +10,6 @@ import {
   Dimensions,
   ImageBackground,
 } from 'react-native';
-import {useTheme} from 'react-native-paper';
 import {Icon} from '../../components/Icon';
 import {Header} from '../../components/Header';
 import {useNavigation} from '@react-navigation/native';
@@ -19,6 +18,9 @@ import type {HomeStackParamList} from '../../navigation/types';
 import {bannerService, Banner} from '../../services/bannerService';
 import Carousel, {ICarouselInstance} from 'react-native-reanimated-carousel';
 import useHome from './Hooks/useHome';
+import ThemedSvgIcon from '../../components/ThemedSvgIcon';
+import { FONT_WEIGHT } from '../../config/globalStyles';
+import { PostCard } from '../../components/PostCard';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -31,7 +33,8 @@ interface NewsCardProps {
 }
 
 interface DealCardProps {
-  icon: string;
+  icon: any;
+  imagePromo?: React.ReactNode;
   title: string;
   backgroundColor: string;
 }
@@ -66,50 +69,22 @@ const NewsCard: React.FC<NewsCardProps> = ({
   </ImageBackground>
 );
 
-const DealCard: React.FC<DealCardProps> = ({icon, title, backgroundColor}) => (
+const DealCard: React.FC<DealCardProps> = ({title, backgroundColor, icon}) => (
   <TouchableOpacity style={[styles.dealCard, {backgroundColor}]}>
     <View style={styles.dealCardContent}>
-      <View style={styles.dealIconContainer}>
-        <Icon
-          library="MaterialCommunityIcons"
-          name={icon}
-          size={32}
-          color="rgba(255,255,255,0.95)"
-        />
-      </View>
       <View style={styles.dealTextContainer}>
         <Text style={styles.dealText} numberOfLines={2}>
           {title}
         </Text>
       </View>
-      <View style={styles.dealArrowContainer}>
-        <Icon
-          library="MaterialCommunityIcons"
-          name="chevron-right"
-          size={20}
-          color="rgba(255,255,255,0.7)"
-        />
+      <View style={{position: 'absolute', right: 0, bottom: 0}}>
+        <ThemedSvgIcon IconComponent={icon} color="white" size={145} />
       </View>
     </View>
   </TouchableOpacity>
 );
 
-const ExtraItem: React.FC<{icon: string; title: string}> = ({icon, title}) => (
-  <TouchableOpacity style={styles.extraItem}>
-    <View style={styles.extraIconContainer}>
-      <Icon
-        library="MaterialCommunityIcons"
-        name={icon}
-        size={24}
-        color="#666"
-      />
-    </View>
-    <Text style={styles.extraTitle}>{title}</Text>
-  </TouchableOpacity>
-);
-
 export const HomeScreen: React.FC = () => {
-  const theme = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,11 +92,12 @@ export const HomeScreen: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const carouselRef = useRef<ICarouselInstance>(null);
   const width = Dimensions.get('window').width;
-  const {allPromotions, fetchPromotions, handleIcon, profile} = useHome();
+  const {allPromotions, fetchPromotions, handleIcon, profile, handleBackgroundColors, getConfessionHome, confessionHome} = useHome();
   useEffect(() => {
     console.log(allPromotions);
     fetchPromotions();
     fetchBanners();
+    getConfessionHome();
   }, []);
 
   const fetchBanners = async () => {
@@ -161,13 +137,10 @@ export const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4169E1" />
-      
       <Header userName={profile?.name} />
-    
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* University News Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ESPE Connect</Text>
           {loading ? (
             <Text>Loading banners...</Text>
           ) : error ? (
@@ -221,9 +194,9 @@ export const HomeScreen: React.FC = () => {
             {allPromotions.length > 0 &&
               allPromotions.map(promotion => (
                 <DealCard
-                  icon={handleIcon(promotion.category) || ''}
+                  icon={handleIcon(promotion.category)}
                   title={promotion.title}
-                  backgroundColor="#5aa651"
+                  backgroundColor={handleBackgroundColors(promotion.category)}
                   key={promotion.id}
                 />
               ))}
@@ -232,13 +205,24 @@ export const HomeScreen: React.FC = () => {
 
         {/* Quick Actions Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
+          <Text style={styles.sectionTitle}>Confesiones</Text>
+          {confessionHome && (
+            <PostCard
+              anonimous={true}
+              post={confessionHome}
+              onPress={() => navigation.navigate('PostDetails', { postData: confessionHome })}
+            />
+          )}
           <View style={styles.quickActionsContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.quickActionCard}
               onPress={() => navigation.navigate('matches' as any)}>
               <View style={styles.quickActionContent}>
-                <View style={[styles.quickActionIcon, {backgroundColor: '#FF6B6B'}]}>
+                <View
+                  style={[
+                    styles.quickActionIcon,
+                    {backgroundColor: '#FF6B6B'},
+                  ]}>
                   <Icon
                     library="MaterialCommunityIcons"
                     name="heart-multiple"
@@ -248,7 +232,9 @@ export const HomeScreen: React.FC = () => {
                 </View>
                 <View style={styles.quickActionTextContainer}>
                   <Text style={styles.quickActionTitle}>Matches</Text>
-                  <Text style={styles.quickActionSubtitle}>Encuentra tu pareja ideal</Text>
+                  <Text style={styles.quickActionSubtitle}>
+                    Encuentra tu pareja ideal
+                  </Text>
                 </View>
                 <View style={styles.quickActionArrow}>
                   <Icon
@@ -261,11 +247,15 @@ export const HomeScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.quickActionCard}
               onPress={() => navigation.navigate('posts' as any)}>
               <View style={styles.quickActionContent}>
-                <View style={[styles.quickActionIcon, {backgroundColor: '#4ECDC4'}]}>
+                <View
+                  style={[
+                    styles.quickActionIcon,
+                    {backgroundColor: '#4ECDC4'},
+                  ]}>
                   <Icon
                     library="MaterialCommunityIcons"
                     name="post-outline"
@@ -275,7 +265,9 @@ export const HomeScreen: React.FC = () => {
                 </View>
                 <View style={styles.quickActionTextContainer}>
                   <Text style={styles.quickActionTitle}>Posts</Text>
-                  <Text style={styles.quickActionSubtitle}>Comparte y descubre</Text>
+                  <Text style={styles.quickActionSubtitle}>
+                    Comparte y descubre
+                  </Text>
                 </View>
                 <View style={styles.quickActionArrow}>
                   <Icon
@@ -289,7 +281,6 @@ export const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -359,12 +350,8 @@ const styles = StyleSheet.create({
     textShadowRadius: 10,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
+    marginLeft: 20,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   dealsContainer: {
     flexDirection: 'row',
@@ -373,9 +360,9 @@ const styles = StyleSheet.create({
   },
   dealCard: {
     width: 280,
-    height: 80,
+    height: 180,
     borderRadius: 16,
-    padding: 16,
+    paddingTop: 16,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
@@ -402,11 +389,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   dealText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
+    fontSize: 34,
+    width: '45%',
+    fontWeight: FONT_WEIGHT.BOLD,
+    color: '#1F1F1F',
     textAlign: 'left',
-    lineHeight: 20,
   },
   dealArrowContainer: {
     width: 24,

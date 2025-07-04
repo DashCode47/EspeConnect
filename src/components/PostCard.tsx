@@ -3,13 +3,15 @@ import {StyleSheet} from 'react-native';
 import {Card, Text} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {Post, postService} from '../services/post.service';
+import { FONT_WEIGHT } from '../config/globalStyles';
 
 interface PostCardProps {
   post: Post;
   onPress: () => void;
+  anonimous?: boolean;
 }
 
-export const PostCard = ({post, onPress}: PostCardProps) => {
+export const PostCard = ({post, onPress, anonimous}: PostCardProps) => {
   const [likes, setLikes] = useState(post.likes);
   const [isLiked, setIsLiked] = useState(false);
 
@@ -31,11 +33,15 @@ export const PostCard = ({post, onPress}: PostCardProps) => {
   return (
     <Card style={styles.card} onPress={onPress}>
       <Card.Title
-        title={post.author.name}
+        title={anonimous ? 'Anonimo' : post.author.name}
         subtitle={
-          <Text style={{color: 'gray', marginBottom: 0, marginTop: -8, fontSize: 12}}>
-            {new Date(post.createdAt).toISOString().split('T')[0]}
-          </Text>
+          anonimous ? (
+            null
+          ) : (
+            <Text style={{color: 'gray', marginBottom: 0, marginTop: -8, fontSize: 12}}>
+              {new Date(post.createdAt).toISOString().split('T')[0]}
+            </Text>
+          )
         }
       />
       <Card.Content>
@@ -74,7 +80,8 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   content: {
-    color: '#666',
+    color: 'black',
     marginBottom: 10,
+    fontWeight: FONT_WEIGHT.BOLD,
   },
 });
