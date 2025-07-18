@@ -54,18 +54,24 @@ const logCurl = (config: AxiosRequestConfig) => {
 };
 
 export const matchService = {
-  async getPotentialMatches() {
+  async getPotentialMatches(filters?: { interest?: string; faculty?: string; search?: string }) {
     try {
       const headers = await getAuthHeaders();
+      let query = '';
+      if (filters) {
+        const params = [];
+        if (filters.interest) params.push(`interest=${encodeURIComponent(filters.interest)}`);
+        if (filters.faculty) params.push(`faculty=${encodeURIComponent(filters.faculty)}`);
+        if (filters.search) params.push(`search=${encodeURIComponent(filters.search)}`);
+        if (params.length > 0) query = '?' + params.join('&');
+      }
       const requestConfig: AxiosRequestConfig = {
         method: 'GET',
-        url: `${api.defaults.baseURL}/users/potential-matches`,
+        url: `${api.defaults.baseURL}/users/potential-matches${query}`,
         headers: headers.headers
       };
-
       logCurl(requestConfig);
-
-      const response = await api.get<MatchesResponse>('/users/potential-matches', headers);
+      const response = await api.get<MatchesResponse>(`/users/potential-matches${query}`, headers);
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 401) {
@@ -99,6 +105,36 @@ export const matchService = {
     try {
       const headers = await getAuthHeaders();
       const response = await api.get<{ status: string; data: { isMatch: boolean } }>(`/matches/check/${userId}`, headers);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async setUserVisibility(userId: string, visible: boolean) {
+    try {
+      const headers = await getAuthHeaders();
+      const response = await api.put(`/users/${userId}/visibility`, { visible }, headers);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getVisibleUsers() {
+    try {
+      const headers = await getAuthHeaders();
+      const response = await api.get<MatchesResponse>('/users/visible', headers);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getAllInterests() {
+    try {
+      const headers = await getAuthHeaders();
+      const response = await api.get<{ data: string[] }>('/users/interests', headers);
       return response.data;
     } catch (error) {
       throw error;

@@ -19,8 +19,8 @@ import {bannerService, Banner} from '../../services/bannerService';
 import Carousel, {ICarouselInstance} from 'react-native-reanimated-carousel';
 import useHome from './Hooks/useHome';
 import ThemedSvgIcon from '../../components/ThemedSvgIcon';
-import { FONT_WEIGHT } from '../../config/globalStyles';
-import { PostCard } from '../../components/PostCard';
+import {FONT_WEIGHT} from '../../config/globalStyles';
+import {PostCard} from '../../components/PostCard';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -92,7 +92,15 @@ export const HomeScreen: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const carouselRef = useRef<ICarouselInstance>(null);
   const width = Dimensions.get('window').width;
-  const {allPromotions, fetchPromotions, handleIcon, profile, handleBackgroundColors, getConfessionHome, confessionHome} = useHome();
+  const {
+    allPromotions,
+    fetchPromotions,
+    handleIcon,
+    profile,
+    handleBackgroundColors,
+    getConfessionHome,
+    confessionHome,
+  } = useHome();
   useEffect(() => {
     console.log(allPromotions);
     fetchPromotions();
@@ -205,12 +213,19 @@ export const HomeScreen: React.FC = () => {
 
         {/* Quick Actions Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Confesiones</Text>
+          <View style={styles.confessionContainer}>
+            <Text style={styles.sectionTitle}>Confesiones</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('posts' as any)}>
+              <Text style={styles.sectionTitleMore }>Ver todas</Text>
+            </TouchableOpacity>
+          </View>
           {confessionHome && (
             <PostCard
               anonimous={true}
               post={confessionHome}
-              onPress={() => navigation.navigate('PostDetails', { postData: confessionHome })}
+              onPress={() =>
+                navigation.navigate('PostDetails', {postData: confessionHome})
+              }
             />
           )}
           <View style={styles.quickActionsContainer}>
@@ -311,6 +326,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 16,
     color: '#1A1A1A',
+  },
+  sectionTitleMore: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffa500',
+  },
+  confessionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   newsCard: {
     borderRadius: 16,
