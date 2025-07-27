@@ -229,7 +229,7 @@ export const HomeScreen: React.FC = () => {
             />
           )}
           <View style={styles.quickActionsContainer}>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.quickActionCard}
               onPress={() => navigation.navigate('matches' as any)}>
               <View style={styles.quickActionContent}>
@@ -260,8 +260,8 @@ export const HomeScreen: React.FC = () => {
                   />
                 </View>
               </View>
-            </TouchableOpacity>
-
+            </TouchableOpacity> */}
+{/* 
             <TouchableOpacity
               style={styles.quickActionCard}
               onPress={() => navigation.navigate('posts' as any)}>
@@ -293,7 +293,7 @@ export const HomeScreen: React.FC = () => {
                   />
                 </View>
               </View>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </View>
       </ScrollView>
@@ -305,6 +305,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F7FA',
+    paddingBottom: 100,
   },
   header: {
     paddingVertical: 16,

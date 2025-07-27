@@ -32,7 +32,7 @@ const navigationItems: NavigationItem[] = [
 ];
 
 const ITEM_WIDTH = width / navigationItems.length;
-const INDICATOR_SIZE = 40;
+const INDICATOR_SIZE = 45; // Increased from 40
 const INDICATOR_OFFSET = (ITEM_WIDTH - INDICATOR_SIZE) / 2;
 
 export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigatorProps) => {
@@ -41,16 +41,25 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
   const itemScales = useRef(navigationItems.map(() => new Animated.Value(1))).current;
   const itemTranslateY = useRef(navigationItems.map(() => new Animated.Value(0))).current;
   const labelOpacity = useRef(navigationItems.map(() => new Animated.Value(0))).current;
+  const indicatorScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     const index = navigationItems.findIndex(item => item.key === currentRoute);
     Animated.parallel([
-      Animated.spring(translateX, {
-        toValue: index * ITEM_WIDTH,
-        useNativeDriver: true,
-        tension: 50,
-        friction: 10,
-      }),
+      // Animate with momentum and overshoot
+      Animated.sequence([
+        Animated.spring(translateX, {
+          toValue: index * ITEM_WIDTH,// Overshoot
+          useNativeDriver: true,
+          tension: 120,
+          friction: 4,
+        }),
+        Animated.timing(translateX, {
+          toValue: index * ITEM_WIDTH, // Back to center immediately
+          duration: 10,
+          useNativeDriver: true,
+        }),
+      ]),
       ...navigationItems.map((_, i) =>
         Animated.parallel([
           Animated.spring(itemScales[i], {
@@ -76,33 +85,51 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
   }, [currentRoute]);
 
   const handlePress = (route: string, index: number) => {
+    // Animate the pressed item with a bounce effect
     Animated.sequence([
+      // First, compress the icon (scale down)
       Animated.parallel([
         Animated.spring(itemScales[index], {
-          toValue: 0.8,
+          toValue: 0.5,
           useNativeDriver: true,
-          tension: 100,
-          friction: 10,
+          tension: 300,
+          friction: 3,
         }),
         Animated.spring(itemTranslateY[index], {
-          toValue: 0,
+          toValue: 8,
           useNativeDriver: true,
-          tension: 100,
-          friction: 10,
+          tension: 300,
+          friction: 3,
         }),
       ]),
+      // Then, bounce it back up with overshoot
+      Animated.parallel([
+        Animated.spring(itemScales[index], {
+          toValue: 1.5,
+          useNativeDriver: true,
+          tension: 80,
+          friction: 6,
+        }),
+        Animated.spring(itemTranslateY[index], {
+          toValue: -20,
+          useNativeDriver: true,
+          tension: 80,
+          friction: 6,
+        }),
+      ]),
+      // Finally, settle to normal size
       Animated.parallel([
         Animated.spring(itemScales[index], {
           toValue: 1.2,
           useNativeDriver: true,
-          tension: 100,
-          friction: 10,
+          tension: 40,
+          friction: 8,
         }),
         Animated.spring(itemTranslateY[index], {
           toValue: -8,
           useNativeDriver: true,
-          tension: 100,
-          friction: 10,
+          tension: 40,
+          friction: 8,
         }),
       ]),
     ]).start();
@@ -112,7 +139,7 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
 
   return (
     <View style={styles.wrapper}>
-      <View style={[styles.container, { backgroundColor: theme.colors.elevation.level2 }]}>
+      <View style={[styles.container, { backgroundColor: '#2d1863' }]}>
         <Animated.View
           style={[
             styles.indicator,
@@ -121,11 +148,11 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
                 {
                   translateX: translateX.interpolate({
                     inputRange: [0, (navigationItems.length - 1) * ITEM_WIDTH],
-                    outputRange: [INDICATOR_OFFSET, (navigationItems.length - 1) * ITEM_WIDTH ],
+                    outputRange: [INDICATOR_OFFSET, (navigationItems.length - 1) * ITEM_WIDTH],
                   }),
                 },
               ],
-              backgroundColor: theme.colors.primaryContainer,
+              backgroundColor: '#4CAF50',
             },
           ]}
         />
@@ -149,8 +176,8 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
             >
               <MaterialCommunityIcons
                 name={item.icon as any}
-                size={24}
-                color={currentRoute === item.key ? theme.colors.primary : theme.colors.onSurfaceVariant}
+                size={28}
+                color={currentRoute === item.key ? '#ffffff' : '#a8a8a8'}
               />
               <Animated.View
                 style={[
@@ -165,7 +192,7 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
                   style={[
                     styles.label,
                     {
-                      color: theme.colors.primary,
+                      color: '#ffffff',
                     },
                   ]}
                 >
@@ -178,7 +205,7 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
                   style={[
                     styles.badge,
                     {
-                      backgroundColor: theme.colors.error,
+                      backgroundColor: '#ff4757',
                       transform: [{ scale: itemScales[index] }],
                     },
                   ]}
@@ -196,22 +223,28 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
 
 const styles = StyleSheet.create({
   wrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 0,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
     backgroundColor: 'transparent',
   },
   container: {
     flexDirection: 'row',
-    height: 64,
-    borderRadius: 32,
-    elevation: 8,
+    height: 80,
+    borderRadius: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    elevation: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: -4,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
     position: 'relative',
   },
   indicator: {
@@ -219,7 +252,7 @@ const styles = StyleSheet.create({
     width: INDICATOR_SIZE,
     height: INDICATOR_SIZE,
     borderRadius: INDICATOR_SIZE / 2,
-    top: '35%',
+    top: '35%', // Moved up from 25%
     marginTop: -INDICATOR_SIZE / 2,
     zIndex: -1,
   },
@@ -234,11 +267,11 @@ const styles = StyleSheet.create({
   },
   labelContainer: {
     position: 'absolute',
-    top: 28,
-    backgroundColor: 'white',
+    top: 32,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: {
@@ -250,7 +283,7 @@ const styles = StyleSheet.create({
   },
   label: {
     marginTop: 0,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
   },
   badge: {
@@ -264,7 +297,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: '#2d1863',
   },
   badgeText: {
     color: 'white',
