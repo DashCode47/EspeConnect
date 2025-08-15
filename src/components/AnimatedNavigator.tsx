@@ -26,7 +26,7 @@ interface AnimatedNavigatorProps {
 
 const navigationItems: NavigationItem[] = [
   { key: 'home', icon: 'home', label: 'Inicio' },
-  { key: 'matches', icon: 'heart', label: 'Matches' },
+  { key: 'carreers', icon: 'heart', label: 'Carreers' },
   { key: 'posts', icon: 'account-group', label: 'Posts' },
   { key: 'profile', icon: 'account', label: 'Perfil' },
 ];

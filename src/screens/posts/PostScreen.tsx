@@ -16,12 +16,16 @@ import { Post, postService } from '../../services/post.service';
 import { PostCard } from '../../components/PostCard';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { globalStyles } from '../../config/globalStyles';
+import { colors } from '../../config/colors';
 
 type PostScreenNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'Feed'>;
 
 type PostType = 'CONFESSION' | 'MARKETPLACE' | 'LOST_AND_FOUND';
 
 export const PostScreen = () => {
+  const insets = useSafeAreaInsets();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -123,36 +127,28 @@ export const PostScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.Content title="ESPE Connect" />
+      <Appbar.Header style={styles.header}>
+        <Appbar.Content title="Posts" titleStyle={{color: colors.white}} />
         <Appbar.Action icon="plus" onPress={handleCreatePost} />
       </Appbar.Header>
-
+      
       {renderPostTypeChips()}
-
-      <FlatList
-        data={posts}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        ListEmptyComponent={
-          loading ? (
-            <ActivityIndicator style={styles.loader} size="large" />
-          ) : (
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons
-                name="post-outline"
-                size={64}
-                color={theme.colors.primary}
-              />
-              <Text style={styles.emptyText}>No posts yet</Text>
-            </View>
-          )
-        }
-      />
+      
+      {loading ? (
+        <ActivityIndicator size="large" style={styles.loader} />
+      ) : (
+        <FlatList
+          data={posts}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+          contentContainerStyle={{
+            paddingBottom: globalStyles.getBottomSafeArea(insets) + 20,
+          }}
+        />
+      )}
     </View>
   );
 };
@@ -160,12 +156,17 @@ export const PostScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.black,
+    paddingHorizontal: 16,
+  },
+  header: {
+    backgroundColor: colors.black,
+    elevation: 2,
   },
   chipContainer: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.black,
     justifyContent: 'space-around',
   },
   chip: {

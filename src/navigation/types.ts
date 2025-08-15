@@ -13,14 +13,16 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   home: undefined;
   profile: undefined;
-  matches: undefined;
+  carreers: undefined;
   posts: undefined;
+  benefits: undefined;
 };
 
 export type HomeStackParamList = {
   Feed: undefined;
   PostDetails: { postData: Post };
   CreatePost: undefined;
+  BenefitStack: undefined;
 };
 
 export type ProfileStackParamList = {
@@ -33,4 +35,13 @@ export type PostStackParamList = {
   Feed: undefined;
   PostDetails: { postData: Post };
   CreatePost: undefined;
+};
+
+export type ComunityStackParamList = {
+  Carreers: undefined;
+  CarreerDetails: { carreerId: string };
+};
+
+export type BenefitsStackParamList = {
+  BenefitDetails: { data: any };
 };

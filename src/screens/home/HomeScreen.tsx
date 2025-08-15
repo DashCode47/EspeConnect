@@ -21,6 +21,10 @@ import useHome from './Hooks/useHome';
 import ThemedSvgIcon from '../../components/ThemedSvgIcon';
 import {FONT_WEIGHT} from '../../config/globalStyles';
 import {PostCard} from '../../components/PostCard';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {globalStyles} from '../../config/globalStyles';
+import {navigationRef} from '../../navigation/RootNavigator';
+import {BENEFIT_DETAILS, BENEFIT_STACK} from '../../config/constants';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -37,6 +41,7 @@ interface DealCardProps {
   imagePromo?: React.ReactNode;
   title: string;
   backgroundColor: string;
+  data: any;
 }
 
 const NewsCard: React.FC<NewsCardProps> = ({
@@ -69,8 +74,22 @@ const NewsCard: React.FC<NewsCardProps> = ({
   </ImageBackground>
 );
 
-const DealCard: React.FC<DealCardProps> = ({title, backgroundColor, icon}) => (
-  <TouchableOpacity style={[styles.dealCard, {backgroundColor}]}>
+const DealCard: React.FC<DealCardProps> = ({
+  title,
+  backgroundColor,
+  icon,
+  data,
+}) => (
+  <TouchableOpacity
+    style={[styles.dealCard, {backgroundColor}]}
+    onPress={() =>
+      navigationRef.current?.navigate(BENEFIT_STACK, {
+        screen: BENEFIT_DETAILS,
+        params: {
+          data: data,
+        },
+      })
+    }>
     <View style={styles.dealCardContent}>
       <View style={styles.dealTextContainer}>
         <Text style={styles.dealText} numberOfLines={2}>
@@ -86,6 +105,7 @@ const DealCard: React.FC<DealCardProps> = ({title, backgroundColor, icon}) => (
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +127,7 @@ export const HomeScreen: React.FC = () => {
     fetchBanners();
     getConfessionHome();
   }, []);
-
+  console.log(allPromotions);
   const fetchBanners = async () => {
     try {
       const data = await bannerService.getAll();
@@ -144,9 +164,14 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4169E1" />
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
       <Header userName={profile?.name} />
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={{
+          paddingBottom: globalStyles.getBottomSafeArea(insets) + 20,
+        }}
+        showsVerticalScrollIndicator={false}>
         {/* University News Section */}
         <View style={styles.section}>
           {loading ? (
@@ -192,7 +217,7 @@ export const HomeScreen: React.FC = () => {
           )}
         </View>
 
-        {/* Deals Section */}
+        {/* Benefits Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Promociones</Text>
           <ScrollView
@@ -202,6 +227,7 @@ export const HomeScreen: React.FC = () => {
             {allPromotions.length > 0 &&
               allPromotions.map(promotion => (
                 <DealCard
+                  data={promotion}
                   icon={handleIcon(promotion.category)}
                   title={promotion.title}
                   backgroundColor={handleBackgroundColors(promotion.category)}
@@ -215,8 +241,9 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.section}>
           <View style={styles.confessionContainer}>
             <Text style={styles.sectionTitle}>Confesiones</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('posts' as any)}>
-              <Text style={styles.sectionTitleMore }>Ver todas</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('posts' as any)}>
+              <Text style={styles.sectionTitleMore}>Ver todas</Text>
             </TouchableOpacity>
           </View>
           {confessionHome && (
@@ -261,7 +288,7 @@ export const HomeScreen: React.FC = () => {
                 </View>
               </View>
             </TouchableOpacity> */}
-{/* 
+            {/* 
             <TouchableOpacity
               style={styles.quickActionCard}
               onPress={() => navigation.navigate('posts' as any)}>
@@ -538,5 +565,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollView: {
+    flex: 1,
   },
 });

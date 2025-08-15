@@ -9,6 +9,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+export const navigationRef: any = React.createRef()
+
 export const RootNavigator = () => {
   const { isAuthenticated, loading } = useAuth();
 
@@ -20,8 +22,9 @@ export const RootNavigator = () => {
     );
   }
 
+
   return (
-    <NavigationContainer>
+    <NavigationContainer  ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           <Stack.Screen name="Main" component={MainTabNavigator} />

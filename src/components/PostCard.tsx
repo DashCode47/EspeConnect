@@ -4,6 +4,7 @@ import {Card, Text} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {Post, postService} from '../services/post.service';
 import { FONT_WEIGHT } from '../config/globalStyles';
+import { colors } from '../config/colors';
 
 interface PostCardProps {
   post: Post;
@@ -34,11 +35,12 @@ export const PostCard = ({post, onPress, anonimous}: PostCardProps) => {
     <Card style={styles.card} onPress={onPress}>
       <Card.Title
         title={anonimous ? 'Anonimo' : post.author.name}
+        titleStyle={{color: colors.white}}
         subtitle={
           anonimous ? (
             null
           ) : (
-            <Text style={{color: 'gray', marginBottom: 0, marginTop: -8, fontSize: 12}}>
+            <Text style={{color: colors.white, marginBottom: 0, marginTop: -8, fontSize: 12}}>
               {new Date(post.createdAt).toISOString().split('T')[0]}
             </Text>
           )
@@ -75,12 +77,14 @@ export const PostCard = ({post, onPress, anonimous}: PostCardProps) => {
 const styles = StyleSheet.create({
   card: {
     marginBottom: 16,
+    backgroundColor: '#292929',
   },
   title: {
     marginBottom: 0,
+    color: colors.white,
   },
   content: {
-    color: 'black',
+    color: colors.white,
     marginBottom: 10,
     fontWeight: FONT_WEIGHT.BOLD,
   },
