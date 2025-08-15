@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {
   View,
   Text,
@@ -247,11 +247,37 @@ export default function CarreerDetails() {
               <Text style={styles.employmentValue}>{CAREER_DATA.employmentRate}</Text>
             </View>
           </Animated.View>
+
+          {/* Curriculum Tree Button */}
+          <Animated.View
+            style={[
+              styles.curriculumContainer,
+              {
+                opacity: contentOpacity,
+                transform: [{translateY: contentTranslateY}],
+              },
+            ]}>
+            <View style={styles.curriculumHeader}>
+              <MaterialCommunityIcons name="sitemap" size={24} color="#6d4aff" />
+              <Text style={styles.curriculumTitle}>Plan de Estudios</Text>
+              <Text style={styles.curriculumSubtitle}>Dependencias entre materias</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.curriculumButton}
+              onPress={() => navigation.navigate('CurriculumTree' as never)}>
+              <View style={styles.curriculumButtonContent}>
+                <MaterialCommunityIcons name="arrow-right" size={24} color="white" />
+                <Text style={styles.curriculumButtonText}>Ver Plan de Estudios Completo</Text>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   container: {
@@ -463,5 +489,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
+  },
+  curriculumContainer: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  curriculumHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  curriculumTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 12,
+  },
+  curriculumSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 12,
+  },
+
+  curriculumButton: {
+    backgroundColor: '#6d4aff',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 15,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  curriculumButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  curriculumButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });

@@ -40,6 +40,7 @@ export type PostStackParamList = {
 export type ComunityStackParamList = {
   Carreers: undefined;
   CarreerDetails: { carreerId: string };
+  CurriculumTree: undefined;
 };
 
 export type BenefitsStackParamList = {
