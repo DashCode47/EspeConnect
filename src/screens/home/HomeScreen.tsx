@@ -240,7 +240,7 @@ export const HomeScreen: React.FC = () => {
         {/* Quick Actions Section */}
         <View style={styles.section}>
           <View style={styles.confessionContainer}>
-            <Text style={styles.sectionTitle}>Confesiones</Text>
+            <Text style={styles.sectionTitle}>Destacado</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('posts' as any)}>
               <Text style={styles.sectionTitleMore}>Ver todas</Text>

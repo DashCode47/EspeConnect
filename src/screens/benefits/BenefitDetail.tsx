@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {useEffect, useRef, useState} from 'react';
 import {
   Text,
   View,
@@ -9,12 +9,13 @@ import {
   StatusBar,
   SafeAreaView,
   Animated,
-} from "react-native";
+  ImageBackground,
+} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
-import { BenefitsStackParamList } from "../../navigation/types";
+import {useRoute, useNavigation, RouteProp} from '@react-navigation/native';
+import {BenefitsStackParamList} from '../../navigation/types';
 
-const { width, height } = Dimensions.get('window');
+const {width, height} = Dimensions.get('window');
 
 interface PromotionData {
   id: string;
@@ -38,7 +39,7 @@ interface RouteParams {
 const BenefitDetail = () => {
   const route = useRoute<RouteProp<BenefitsStackParamList, 'BenefitDetails'>>();
   const navigation = useNavigation();
-  const { data: promotion } = route.params as RouteParams;
+  const {data: promotion} = route.params as RouteParams;
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -88,7 +89,7 @@ const BenefitDetail = () => {
   };
 
   const getCategoryIcon = (category: string) => {
-    const icons: { [key: string]: string } = {
+    const icons: {[key: string]: string} = {
       DRINKS: 'cup-water',
       FOOD: 'food-fork-drink',
       SHOPPING: 'shopping',
@@ -102,7 +103,7 @@ const BenefitDetail = () => {
   };
 
   const getCategoryColor = (category: string) => {
-    const colors: { [key: string]: string } = {
+    const colors: {[key: string]: string} = {
       DRINKS: '#4FC3F7',
       FOOD: '#FF9800',
       SHOPPING: '#9C27B0',
@@ -120,156 +121,184 @@ const BenefitDetail = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={categoryColor} translucent />
-      
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={categoryColor}
+        translucent
+      />
+
       {/* Header */}
-      <Animated.View 
+      <Animated.View
         style={[
-          styles.header, 
-          { backgroundColor: categoryColor },
-          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
-        ]}
-      >
+          styles.header,
+          {opacity: fadeAnim, transform: [{translateY: slideAnim}]},
+        ]}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+          onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detalle del Beneficio</Text>
         <View style={styles.headerSpacer} />
       </Animated.View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+        contentContainerStyle={styles.scrollContent}>
         {/* Hero Section */}
-        <Animated.View 
+        <Animated.View
           style={[
-            styles.heroSection, 
-            { backgroundColor: categoryColor },
-            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
-          ]}
-        >
-          <View style={styles.heroContent}>
-            <MaterialCommunityIcons
-              name={getCategoryIcon(promotion.category) as any}
-              size={80}
-              color="white"
-              style={styles.categoryIcon}
-            />
-            <Text style={styles.heroTitle}>{promotion.title}</Text>
-            <Text style={styles.heroDescription}>{promotion.description}</Text>
-          </View>
-        </Animated.View>
-
-        {/* Status Badge */}
-        <Animated.View 
-          style={[
-            styles.badgeContainer,
-            { transform: [{ scale: badgeScale }] }
-          ]}
-        >
-          <View style={[
-            styles.statusBadge,
-            { backgroundColor: isExpired ? '#FF5252' : '#4CAF50' }
+            styles.heroSection,
+            {opacity: fadeAnim, transform: [{scale: scaleAnim}]},
           ]}>
-            <MaterialCommunityIcons
-              name={isExpired ? 'clock-alert' : 'check-circle'}
-              size={16}
-              color="white"
-            />
-            <Text style={styles.statusText}>
-              {isExpired ? 'Expirado' : 'Activo'}
-            </Text>
-          </View>
-        </Animated.View>
+          <ImageBackground
+            source={{uri: promotion.imageUrl}}
+            style={styles.heroBackground}
+            imageStyle={styles.heroBackgroundImage}>
+            <View style={styles.heroOverlay}>
+                             <View style={styles.heroContent}>
+                 <Text style={styles.heroTitle}>{promotion.title}</Text>
+                 <Text style={styles.restaurantName}>Restaurante La Esquina Gourmet</Text>
+                 <Text style={styles.heroDescription}>{promotion.description}</Text>
+               </View>
+              
+              {/* Status Badge */}
+              <Animated.View
+                style={[styles.badgeContainer, {transform: [{scale: badgeScale}]}]}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {backgroundColor: isExpired ? '#FF5252' : '#4CAF50'},
+                  ]}>
+                  <MaterialCommunityIcons
+                    name={isExpired ? 'clock-alert' : 'check-circle'}
+                    size={16}
+                    color="white"
+                  />
+                  <Text style={styles.statusText}>
+                    {isExpired ? 'Expirado' : 'Activo'}
+                  </Text>
+                </View>
+              </Animated.View>
 
-        {/* Discount Badge */}
-        {promotion.discount > 0 && (
-          <Animated.View 
-            style={[
-              styles.discountContainer,
-              { transform: [{ scale: badgeScale }] }
-            ]}
-          >
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>{promotion.discount}%</Text>
-              <Text style={styles.discountLabel}>DESCUENTO</Text>
+              {/* Discount Badge */}
+              {promotion.discount > 0 && (
+                <Animated.View
+                  style={[
+                    styles.discountContainer,
+                    {transform: [{scale: badgeScale}]},
+                  ]}>
+                  <View style={styles.discountBadge}>
+                    <Text style={styles.discountText}>{promotion.discount}%</Text>
+                    <Text style={styles.discountLabel}>DESCUENTO</Text>
+                  </View>
+                </Animated.View>
+              )}
             </View>
-          </Animated.View>
-        )}
+          </ImageBackground>
+        </Animated.View>
 
         {/* Content */}
-        <Animated.View 
+        <Animated.View
           style={[
             styles.content,
-            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
-          ]}
-        >
-          {/* Location */}
-          <View style={styles.infoCard}>
-            <View style={[styles.infoIconContainer, { backgroundColor: `${categoryColor}20` }]}>
-              <MaterialCommunityIcons name="map-marker" size={24} color={categoryColor} />
-            </View>
-            <View style={styles.infoContent}>
+            {opacity: fadeAnim, transform: [{translateY: slideAnim}]},
+          ]}>
+          {/* Info Grid */}
+          <View style={styles.infoGrid}>
+            {/* Location Card */}
+            <View style={[styles.infoCard, styles.infoCardSmall]}>
+              <View style={[styles.infoIconContainer, { backgroundColor: `${categoryColor}15` }]}>
+                <MaterialCommunityIcons name="map-marker" size={28} color={categoryColor} />
+              </View>
               <Text style={styles.infoLabel}>Ubicación</Text>
               <Text style={styles.infoValue}>{promotion.location}</Text>
             </View>
-          </View>
 
-          {/* Category */}
-          <View style={styles.infoCard}>
-            <View style={[styles.infoIconContainer, { backgroundColor: `${categoryColor}20` }]}>
-              <MaterialCommunityIcons name="tag" size={24} color={categoryColor} />
-            </View>
-            <View style={styles.infoContent}>
+            {/* Category Card */}
+            <View style={[styles.infoCard, styles.infoCardSmall]}>
+              <View style={[styles.infoIconContainer, { backgroundColor: `${categoryColor}15` }]}>
+                <MaterialCommunityIcons name="tag" size={28} color={categoryColor} />
+              </View>
               <Text style={styles.infoLabel}>Categoría</Text>
               <Text style={styles.infoValue}>{promotion.category}</Text>
             </View>
-          </View>
 
-          {/* Start Date */}
-          <View style={styles.infoCard}>
-            <View style={[styles.infoIconContainer, { backgroundColor: `${categoryColor}20` }]}>
-              <MaterialCommunityIcons name="calendar-start" size={24} color={categoryColor} />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Fecha de Inicio</Text>
+            {/* Start Date Card */}
+            <View style={[styles.infoCard, styles.infoCardSmall]}>
+              <View style={[styles.infoIconContainer, { backgroundColor: `${categoryColor}15` }]}>
+                <MaterialCommunityIcons name="calendar-start" size={28} color={categoryColor} />
+              </View>
+              <Text style={styles.infoLabel}>Inicio</Text>
               <Text style={styles.infoValue}>{formatDate(promotion.startDate)}</Text>
             </View>
+
+            {/* End Date Card */}
+            <View style={[styles.infoCard, styles.infoCardSmall]}>
+              <View style={[styles.infoIconContainer, { backgroundColor: `${categoryColor}15` }]}>
+                <MaterialCommunityIcons name="calendar-end" size={28} color={categoryColor} />
+              </View>
+              <Text style={styles.infoLabel}>Finaliza</Text>
+              <Text style={styles.infoValue}>{formatDate(promotion.endDate)}</Text>
+            </View>
           </View>
 
-          {/* End Date */}
-          <View style={styles.infoCard}>
-            <View style={[styles.infoIconContainer, { backgroundColor: `${categoryColor}20` }]}>
-              <MaterialCommunityIcons name="calendar-end" size={24} color={categoryColor} />
+          {/* Timeline Section */}
+          <View style={styles.timelineContainer}>
+            <View style={styles.timelineHeader}>
+              <MaterialCommunityIcons name="clock-outline" size={24} color={categoryColor} />
+              <Text style={styles.timelineTitle}>Cronología del Beneficio</Text>
             </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Fecha de Finalización</Text>
-              <Text style={styles.infoValue}>{formatDate(promotion.endDate)}</Text>
+            
+            <View style={styles.timeline}>
+              <View style={styles.timelineItem}>
+                <View style={[styles.timelineDot, { backgroundColor: '#4CAF50' }]} />
+                <View style={styles.timelineContent}>
+                  <Text style={styles.timelineDate}>{formatDate(promotion.startDate)}</Text>
+                  <Text style={styles.timelineLabel}>Inicio de la promoción</Text>
+                </View>
+              </View>
+              
+              <View style={styles.timelineLine} />
+              
+              <View style={styles.timelineItem}>
+                <View style={[styles.timelineDot, { backgroundColor: isExpired ? '#FF5252' : '#FF9800' }]} />
+                <View style={styles.timelineContent}>
+                  <Text style={styles.timelineDate}>{formatDate(promotion.endDate)}</Text>
+                  <Text style={styles.timelineLabel}>
+                    {isExpired ? 'Promoción expirada' : 'Fecha de finalización'}
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
 
           {/* Validity Period */}
           <View style={styles.validityCard}>
-            <View style={[styles.validityContent, { backgroundColor: '#2d1863' }]}>
-              <MaterialCommunityIcons name="clock-outline" size={24} color="white" />
+            <View
+              style={[styles.validityContent, {backgroundColor: '#2d1863'}]}>
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={24}
+                color="white"
+              />
               <Text style={styles.validityText}>
-                {isExpired 
+                {isExpired
                   ? 'Esta promoción ha expirado'
-                  : 'Promoción válida hasta ' + formatDate(promotion.endDate)
-                }
+                  : 'Promoción válida hasta ' + formatDate(promotion.endDate)}
               </Text>
             </View>
           </View>
 
           {/* Action Button */}
           <TouchableOpacity style={styles.actionButton}>
-            <View style={[styles.actionContent, { backgroundColor: categoryColor }]}>
-              <MaterialCommunityIcons name="share-variant" size={20} color="white" />
+            <View
+              style={[styles.actionContent, {backgroundColor: categoryColor}]}>
+              <MaterialCommunityIcons
+                name="share-variant"
+                size={20}
+                color="white"
+              />
               <Text style={styles.actionButtonText}>Compartir Beneficio</Text>
             </View>
           </TouchableOpacity>
@@ -283,20 +312,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+    paddingTop: 30,
   },
   header: {
+    zIndex: 1000,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  headerBackground: {
+    width: '100%',
+    height: 120,
+  },
+  headerOverlay: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 10,
-    zIndex: 1000,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   backButton: {
     width: 40,
@@ -327,15 +365,28 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 12,
+    overflow: 'hidden',
+  },
+  heroBackground: {
+    width: '100%',
+    height: 280,
+  },
+  heroBackgroundImage: {
+    borderRadius: 24,
+  },
+  heroOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    padding: 24,
+    justifyContent: 'space-between',
   },
   heroContent: {
-    padding: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 200,
+    marginBottom: 20,
   },
   categoryIcon: {
     marginBottom: 16,
@@ -348,8 +399,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
+    textShadowOffset: {width: 0, height: 2},
     textShadowRadius: 4,
+  },
+  restaurantName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    marginBottom: 12,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: {width: 0, height: 1},
+    textShadowRadius: 2,
+    fontStyle: 'italic',
   },
   heroDescription: {
     fontSize: 16,
@@ -359,8 +421,8 @@ const styles = StyleSheet.create({
   },
   badgeContainer: {
     alignItems: 'center',
-    marginTop: -20,
-    zIndex: 10,
+    alignSelf: 'center',
+    marginBottom: 10,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -370,7 +432,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
@@ -392,7 +454,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: {width: 0, height: 3},
     shadowOpacity: 0.3,
     shadowRadius: 6,
   },
@@ -411,6 +473,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 30,
   },
+  infoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -420,9 +488,74 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  infoCardSmall: {
+    width: '48%',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: 16,
+    marginBottom: 12,
+  },
+  timelineContainer: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 24,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  timelineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  timelineTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginLeft: 12,
+  },
+  timeline: {
+    paddingLeft: 20,
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  timelineDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginTop: 4,
+    marginRight: 16,
+  },
+  timelineContent: {
+    flex: 1,
+  },
+  timelineDate: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 4,
+  },
+  timelineLabel: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  timelineLine: {
+    width: 2,
+    height: 30,
+    backgroundColor: '#E0E0E0',
+    marginLeft: 7,
+    marginBottom: 20,
   },
   infoIconContainer: {
     width: 50,
@@ -442,11 +575,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    textAlign: 'center',
   },
   infoValue: {
     fontSize: 16,
     color: '#333',
     fontWeight: '600',
+    textAlign: 'center',
   },
   validityCard: {
     marginTop: 20,
@@ -471,7 +606,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
@@ -491,3 +626,4 @@ const styles = StyleSheet.create({
 });
 
 export default BenefitDetail;
+

@@ -20,9 +20,11 @@ export default function CurriculumTree() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [selectedSemester, setSelectedSemester] = useState<number | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [collapsedSemesters, setCollapsedSemesters] = useState<Set<number>>(new Set());
   const [headerOpacity] = useState(new Animated.Value(0));
   const [contentOpacity] = useState(new Animated.Value(0));
+  const [dependencyLines] = useState(new Animated.Value(0));
 
   useEffect(() => {
     // Animate header
@@ -39,107 +41,122 @@ export default function CurriculumTree() {
       delay: 300,
       useNativeDriver: true,
     }).start();
+
+    // Animate dependency lines
+    Animated.timing(dependencyLines, {
+      toValue: 1,
+      duration: 1000,
+      delay: 800,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   const curriculumData = [
     {
       semester: 1,
-      color: '#4FC3F7', // 🔵 Blue
+      color: '#E3F2FD', // Azul muy claro
       subjects: [
-        'Cálculo Diferencial e Integral',
-        'Álgebra Lineal',
-        'Química I',
-        'Fundamentos de Programación',
-        'Metodología de la Investigación Científica'
+        { name: 'Matemática Básica', ht: 4, hpe: 4, ha: 0, hts: 8, dependency: null, id: '1.1' },
+        { name: 'Humanística', ht: 2, hpe: 0, ha: 4, hts: 6, dependency: null, id: '1.2' },
+        { name: 'Geometría Lineal', ht: 4, hpe: 4, ha: 0, hts: 8, dependency: null, id: '1.3' },
+        { name: 'Cálculo en una Variable', ht: 4, hpe: 4, ha: 0, hts: 8, dependency: null, id: '1.4' },
+        { name: 'Física Básica', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, id: '1.5' },
+        { name: 'Dibujo Asistido por Computadora', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, id: '1.6' },
+        { name: 'Fundamentos de Programación', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#FF9800', id: '1.7' }
       ]
     },
     {
       semester: 2,
-      color: '#4FC3F7', // 🔵 Blue
+      color: '#BBDEFB', // Azul claro
       subjects: [
-        'Cálculo Vectorial',
-        'Física I',
-        'Ecuaciones Diferenciales Ordinarias',
-        'Fundamentos de Circuitos Eléctricos'
+        { name: 'Cálculo en Varias Variables', ht: 4, hpe: 4, ha: 0, hts: 8, dependency: null, specialColor: '#81C784', id: '2.1' },
+        { name: 'Lenguaje y Comunicación', ht: 2, hpe: 0, ha: 4, hts: 6, dependency: null, specialColor: '#8BC34A', id: '2.2' },
+        { name: 'Ecuaciones Diferenciales Ordinarias', ht: 4, hpe: 4, ha: 0, hts: 8, dependency: null, specialColor: '#81C784', id: '2.3' },
+        { name: 'Estática', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#F44336', id: '2.4' },
+        { name: 'Fundamentos de Circuitos Eléctricos', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#9C27B0', id: '2.5' },
+        { name: 'Física para Ingenieros', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#4CAF50', id: '2.6' },
+        { name: 'Programación Avanzada', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '1.7', specialColor: '#FF9800', id: '2.7' },
+        { name: 'Fundamentos de Química para Ingenieros', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, id: '2.8' }
       ]
     },
     {
       semester: 3,
-      color: '#4CAF50', // 🟢 Green
+      color: '#90CAF9', // Azul medio
       subjects: [
-        'Estadística',
-        'Electrónica Fundamental',
-        'Métodos Numéricos',
-        'Matemática Superior'
+        { name: 'Señales y Sistemas', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '2.3', specialColor: '#81C784', id: '3.1' },
+        { name: 'Dinámica', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#1565C0', id: '3.2' },
+        { name: 'Metrología', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#FFC107', id: '3.3' },
+        { name: 'Métodos Numéricos para Computadora', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#1565C0', id: '3.4' },
+        { name: 'Estructura de Datos', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, id: '3.5' },
+        { name: 'Análisis de Circuitos Eléctricos', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '2.5', specialColor: '#9C27B0', id: '3.6' },
+        { name: 'Termodinámica', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '2.6', specialColor: '#4CAF50', id: '3.7' },
+        { name: 'Fundamentos de Electrónica Analógica', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '3.6', specialColor: '#9C27B0', id: '3.8' }
       ]
     },
     {
       semester: 4,
-      color: '#4CAF50', // 🟢 Green
+      color: '#64B5F6', // Azul
       subjects: [
-        'Dibujo Mecánico Asistido por Computador',
-        'Sistemas Digitales',
-        'Mecatrónica Básica',
-        'Ciencias de los Materiales',
-        'Estática',
-        'Máquinas Eléctricas'
+        { name: 'Lógica y Circuitos Digitales', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#C8E6C9', id: '4.1' },
+        { name: 'Resistencia de Materiales', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '2.4', specialColor: '#F44336', id: '4.2' },
+        { name: 'Procesos de Fabricación', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#E91E63', id: '4.3' },
+        { name: 'Termofluídos', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '3.7', specialColor: '#4CAF50', id: '4.4' },
+        { name: 'Electrónica de Potencia', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '3.8', specialColor: '#9C27B0', id: '4.5' },
+        { name: 'Teoría de Control I', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '3.1', specialColor: '#FF9800', id: '4.6' },
+        { name: 'Fundamentos de Control de Procesos', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#2E7D32', id: '4.7' },
+        { name: 'Circuitos Electrónicos I', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '3.8', specialColor: '#9C27B0', id: '4.8' }
       ]
     },
     {
       semester: 5,
-      color: '#FFC107', // 🟡 Yellow
+      color: '#42A5F5', // Azul más intenso
       subjects: [
-        'Dinámica',
-        'Instrumentación Aplicada a Mecatrónica',
-        'Mecánica de Materiales',
-        'Sistemas Embebidos MCT',
-        'Electrónica de Potencia',
-        'Termofluidos'
+        { name: 'Vibraciones Mecánicas', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '4.2', specialColor: '#F44336', id: '5.1' },
+        { name: 'Modelado y Simulación Mecatrónica', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '4.4', specialColor: '#4CAF50', id: '5.2' },
+        { name: 'Sistemas Mecánicos', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#9E9E9E', id: '5.3' },
+        { name: 'Instrumentación y Sensores', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '3.3', specialColor: '#FFC107', id: '5.4' },
+        { name: 'Circuitos Electrónicos II', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '4.8', specialColor: '#9C27B0', id: '5.5' },
+        { name: 'Introducción a los sistemas Microcontroladores', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#424242', id: '5.6' },
+        { name: 'Robótica', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#00BCD4', id: '5.7' },
+        { name: 'Teoría de Control II', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '4.6', specialColor: '#FF9800', id: '5.8' }
       ]
     },
     {
       semester: 6,
-      color: '#FFC107', // 🟡 Yellow
+      color: '#2196F3', // Azul principal
       subjects: [
-        'Sistemas de Control Automático',
-        'Mandos Oleoneumáticos',
-        'Mecanismos',
-        'Sistemas Ciberfísicos',
-        'Tecnología Mecánica',
-        'Termofluidos Aplicados'
+        { name: 'Sistemas Mecatrónicos I', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '5.3', specialColor: '#9E9E9E', id: '6.1' },
+        { name: 'Diseño de Máquinas', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '4.3', specialColor: '#E91E63', id: '6.2' },
+        { name: 'Control Digital', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '5.8', specialColor: '#FF9800', id: '6.3' },
+        { name: 'Sistemas de Actuación por Computador', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '4.7', specialColor: '#2E7D32', id: '6.4' },
+        { name: 'Ingeniería de Materiales y Manufactura', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '5.4', specialColor: '#FFC107', id: '6.5' },
+        { name: 'Termodinámica Aplicada', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '5.2', specialColor: '#4CAF50', id: '6.6' },
+        { name: 'HMI, PLC y Redes Industriales', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '6.4', specialColor: '#2E7D32', id: '6.7' }
       ]
     },
     {
       semester: 7,
-      color: '#FF9800', // 🟠 Orange
+      color: '#1976D2', // Azul oscuro
       subjects: [
-        'Diseño de Elementos de Máquinas',
-        'Manufactura Asistida',
-        'Realidad Nacional y Geopolítica',
-        'Control Industrial',
-        'Control Discreto',
-        'Ingeniería Asistida'
+        { name: 'Diseño y Simulación Mecatrónica', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '6.2', specialColor: '#E91E63', id: '7.1' },
+        { name: 'P.I. - D.A. - Control', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '6.3', specialColor: '#FF9800', id: '7.2' },
+        { name: 'Robótica de Manipuladores y Servicios', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '5.7', specialColor: '#00BCD4', id: '7.3' },
+        { name: 'Sistemas Mecatrónicos II', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '6.1', specialColor: '#9E9E9E', id: '7.4' },
+        { name: 'Gestión de Proyectos', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: null, specialColor: '#FFEB3B', id: '7.5' },
+        { name: 'Optativa', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '5.6', specialColor: '#424242', id: '7.6' },
+        { name: 'P.P.', ht: 0, hpe: 0, ha: 2, hts: 2, dependency: null, specialColor: '#795548', id: '7.7' }
       ]
     },
     {
       semester: 8,
-      color: '#FF9800', // 🟠 Orange
+      color: '#0D47A1', // Azul muy oscuro
       subjects: [
-        'Producción y Control de Calidad',
-        'Automatización Mecatrónica',
-        'Ingeniería en Mantenimiento',
-        'PLCs y Redes',
-        'Gestión y Emprendimiento',
-        'Diseño Mecatrónico'
-      ]
-    },
-    {
-      semester: 9,
-      color: '#F44336', // 🔴 Red
-      subjects: [
-        'MIC-PI Profesionalizante',
-        'Prácticas de Servicio Comunitario',
-        'Prácticas Laborales'
+        { name: 'Sistemas de Manufactura', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '7.4', specialColor: '#9E9E9E', id: '8.1' },
+        { name: 'Ética', ht: 2, hpe: 0, ha: 4, hts: 6, dependency: '2.2', specialColor: '#8BC34A', id: '8.2' },
+        { name: 'Gestión de la Calidad', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '7.5', specialColor: '#FFEB3B', id: '8.3' },
+        { name: 'Tesis', ht: 0, hpe: 2, ha: 6, hts: 8, dependency: '7.7', specialColor: '#795548', id: '8.4' },
+        { name: 'Optativa', ht: 2, hpe: 2, ha: 2, hts: 6, dependency: '7.6', specialColor: '#424242', id: '8.5' },
+        { name: 'P.P.', ht: 0, hpe: 0, ha: 2, hts: 2, dependency: '7.7', specialColor: '#795548', id: '8.6' }
       ]
     }
   ];
@@ -147,36 +164,166 @@ export default function CurriculumTree() {
   const getDependencyInfo = (semester: number) => {
     const semesterData = curriculumData[semester - 1];
     if (semester === 1) return 'Semestre base - sin dependencias';
-    if (semester === 9) return 'Requiere completar todos los semestres anteriores';
+    if (semester === 8) return 'Semestre final - requiere completar materias previas';
     
-    const prevSemester = curriculumData[semester - 2];
-    if (prevSemester.color === semesterData.color) {
-      return `Depende del semestre ${semester - 1} (${prevSemester.subjects.length} materias)`;
+    const subjectsWithDependencies = semesterData.subjects.filter(subject => subject.dependency);
+    if (subjectsWithDependencies.length === 0) {
+      return 'Sin dependencias directas del semestre anterior';
     }
-    return 'Sin dependencias directas del semestre anterior';
+    
+    const dependencyList = subjectsWithDependencies.map(subject => 
+      `• ${subject.name} → ${subject.dependency}`
+    ).join('\n');
+    
+    return `Materias con dependencias:\n${dependencyList}`;
+  };
+
+  const findSubjectById = (id: string) => {
+    for (const semester of curriculumData) {
+      const subject = semester.subjects.find(s => s.id === id);
+      if (subject) return { subject, semester: semester.semester };
+    }
+    return null;
   };
 
   const handleSemesterPress = (semester: number) => {
     if (selectedSemester === semester) {
       setSelectedSemester(null);
-      setZoomLevel(1);
+      setSelectedSubject(null);
     } else {
       setSelectedSemester(semester);
-      setZoomLevel(1.2);
+      setSelectedSubject(null);
+    }
+    
+    // Toggle collapse state
+    setCollapsedSemesters(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(semester)) {
+        newSet.delete(semester);
+      } else {
+        newSet.add(semester);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSubjectPress = (subject: any) => {
+    if (selectedSubject === subject.id) {
+      setSelectedSubject(null);
+    } else {
+      setSelectedSubject(subject.id);
     }
   };
 
-  const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.1, 2));
+  const toggleAllSemesters = () => {
+    if (collapsedSemesters.size === 0) {
+      // All are expanded, collapse all
+      setCollapsedSemesters(new Set(curriculumData.map(s => s.semester)));
+    } else {
+      // Some or all are collapsed, expand all
+      setCollapsedSemesters(new Set());
+    }
   };
 
-  const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
+  const expandAllSemesters = () => {
+    setCollapsedSemesters(new Set());
   };
 
-  const handleResetZoom = () => {
-    setZoomLevel(1);
-    setSelectedSemester(null);
+  const collapseAllSemesters = () => {
+    setCollapsedSemesters(new Set(curriculumData.map(s => s.semester)));
+  };
+
+  const renderDependencyLine = (fromSubject: any, toSubject: any, fromSemester: number, toSemester: number) => {
+    if (!fromSubject.dependency) return null;
+    
+    const dependencyInfo = findSubjectById(fromSubject.dependency);
+    if (!dependencyInfo) return null;
+
+    const isHighlighted = selectedSubject === fromSubject.id || selectedSubject === fromSubject.dependency;
+    const lineColor = isHighlighted ? '#6d4aff' : '#ddd';
+    const lineWidth = isHighlighted ? 3 : 1;
+
+    return (
+      <Animated.View 
+        style={[
+          styles.dependencyLine,
+          {
+            opacity: dependencyLines,
+            borderColor: lineColor,
+            borderWidth: lineWidth,
+          }
+        ]}
+      >
+        <View style={[styles.dependencyArrow, { borderColor: lineColor }]} />
+      </Animated.View>
+    );
+  };
+
+  const renderSubjectCard = (subject: any, index: number, semesterIndex: number) => {
+    const isSelected = selectedSubject === subject.id;
+    const hasDependency = subject.dependency;
+    const dependencyInfo = hasDependency ? findSubjectById(subject.dependency) : null;
+
+    return (
+      <TouchableOpacity
+        key={index}
+        style={[
+          styles.subjectCard,
+          isSelected && styles.selectedSubjectCard,
+          hasDependency && styles.subjectWithDependency
+        ]}
+        onPress={() => handleSubjectPress(subject)}
+        activeOpacity={0.8}
+      >
+        <View style={styles.subjectHeader}>
+          <View style={[
+            styles.subjectColorIndicator, 
+            { backgroundColor: subject.specialColor || subject.color }
+          ]} />
+          <Text style={styles.subjectName}>{subject.name}</Text>
+          {hasDependency && (
+            <MaterialCommunityIcons 
+              name="link-variant" 
+              size={16} 
+              color={isSelected ? "#6d4aff" : "#999"} 
+            />
+          )}
+        </View>
+        <View style={styles.hoursContainer}>
+          <View style={styles.hourItem}>
+            <Text style={styles.hourLabel}>HT</Text>
+            <Text style={styles.hourValue}>{subject.ht}</Text>
+          </View>
+          <View style={styles.hourItem}>
+            <Text style={styles.hourLabel}>HPE</Text>
+            <Text style={styles.hourValue}>{subject.hpe}</Text>
+          </View>
+          <View style={styles.hourItem}>
+            <Text style={styles.hourLabel}>HA</Text>
+            <Text style={styles.hourValue}>{subject.ha}</Text>
+          </View>
+          <View style={styles.hourItem}>
+            <Text style={styles.hourLabel}>HTS</Text>
+            <Text style={styles.hourValue}>{subject.hts}</Text>
+          </View>
+        </View>
+        
+        {/* Dependency Info */}
+        {isSelected && hasDependency && dependencyInfo && (
+          <Animated.View 
+            style={[
+              styles.dependencyInfo,
+              { opacity: dependencyLines }
+            ]}
+          >
+            <MaterialCommunityIcons name="arrow-up" size={16} color="#6d4aff" />
+            <Text style={styles.dependencyInfoText}>
+              Depende de: {dependencyInfo.subject.name} (Semestre {dependencyInfo.semester})
+            </Text>
+          </Animated.View>
+        )}
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -194,7 +341,7 @@ export default function CurriculumTree() {
         <View style={styles.headerContent}>
           <MaterialCommunityIcons name="sitemap" size={32} color="white" />
           <Text style={styles.headerTitle}>Plan de Estudios</Text>
-          <Text style={styles.headerSubtitle}>Mecatrónica ESPE - Dependencias</Text>
+          <Text style={styles.headerSubtitle}>Mecatrónica ESPE - Carga Horaria y Dependencias</Text>
         </View>
       </Animated.View>
 
@@ -206,100 +353,178 @@ export default function CurriculumTree() {
           paddingBottom: insets.bottom + 20,
         }}>
         <Animated.View style={[styles.content, {opacity: contentOpacity}]}>
-          {/* Zoom Controls */}
-          <View style={styles.zoomControls}>
-            <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut}>
-              <MaterialCommunityIcons name="magnify-minus" size={20} color="#6d4aff" />
-            </TouchableOpacity>
-            <Text style={styles.zoomLevel}>{Math.round(zoomLevel * 100)}%</Text>
-            <TouchableOpacity style={styles.zoomButton} onPress={handleZoomIn}>
-              <MaterialCommunityIcons name="magnify-plus" size={20} color="#6d4aff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.resetButton} onPress={handleResetZoom}>
-              <MaterialCommunityIcons name="refresh" size={20} color="#666" />
-            </TouchableOpacity>
-          </View>
-
           {/* Legend */}
           <View style={styles.legendContainer}>
-            <Text style={styles.legendTitle}>Leyenda de Dependencias:</Text>
-            <View style={styles.legendItems}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendColor, { backgroundColor: '#4FC3F7' }]} />
-                <Text style={styles.legendText}>🔵 Semestres 1-2 vinculados</Text>
+            <Text style={styles.legendTitle}>Leyenda de Colores y Carga Horaria:</Text>
+            
+            {/* Global Controls */}
+            <View style={styles.globalControls}>
+              <TouchableOpacity 
+                style={styles.globalControlButton}
+                onPress={toggleAllSemesters}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons 
+                  name={collapsedSemesters.size === 0 ? "eye-off" : "eye"} 
+                  size={16} 
+                  color="#6d4aff" 
+                />
+                <Text style={styles.globalControlText}>
+                  {collapsedSemesters.size === 0 ? "Ocultar Todo" : "Mostrar Todo"}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.globalControlButton}
+                onPress={expandAllSemesters}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons name="expand-all" size={16} color="#4CAF50" />
+                <Text style={styles.globalControlText}>Expandir Todo</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.globalControlButton}
+                onPress={collapseAllSemesters}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons name="collapse-all" size={16} color="#F44336" />
+                <Text style={styles.globalControlText}>Contraer Todo</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.legendGrid}>
+              <View style={styles.legendSection}>
+                <Text style={styles.legendSectionTitle}>Semestres:</Text>
+                <View style={styles.legendItems}>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendColor, { backgroundColor: '#E3F2FD' }]} />
+                    <Text style={styles.legendText}>1° Semestre</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendColor, { backgroundColor: '#BBDEFB' }]} />
+                    <Text style={styles.legendText}>2° Semestre</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendColor, { backgroundColor: '#90CAF9' }]} />
+                    <Text style={styles.legendText}>3° Semestre</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendColor, { backgroundColor: '#64B5F6' }]} />
+                    <Text style={styles.legendText}>4° Semestre</Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendColor, { backgroundColor: '#4CAF50' }]} />
-                <Text style={styles.legendText}>🟢 Semestres 3-4 vinculados</Text>
+              <View style={styles.legendSection}>
+                <Text style={styles.legendSectionTitle}>Materias Especiales:</Text>
+                <View style={styles.legendItems}>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendColor, { backgroundColor: '#FF9800' }]} />
+                    <Text style={styles.legendText}>Control</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendColor, { backgroundColor: '#9C27B0' }]} />
+                    <Text style={styles.legendText}>Electrónica</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendColor, { backgroundColor: '#4CAF50' }]} />
+                    <Text style={styles.legendText}>Física/Termo</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendColor, { backgroundColor: '#F44336' }]} />
+                    <Text style={styles.legendText}>Mecánica</Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendColor, { backgroundColor: '#FFC107' }]} />
-                <Text style={styles.legendText}>🟡 Semestres 5-6 vinculados</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendColor, { backgroundColor: '#FF9800' }]} />
-                <Text style={styles.legendText}>🟠 Semestres 7-8 vinculados</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendColor, { backgroundColor: '#F44336' }]} />
-                <Text style={styles.legendText}>🔴 Semestre final</Text>
-              </View>
+            </View>
+            <View style={styles.hoursLegend}>
+              <Text style={styles.hoursLegendTitle}>Carga Horaria:</Text>
+              <Text style={styles.hoursLegendText}>
+                HT: Horas Teóricas | HPE: Horas Práctico-Experimentales | HA: Horas de Aprendizaje Autónomo | HTS: Horas Totales Semanales
+              </Text>
+            </View>
+            <View style={styles.dependencyLegend}>
+              <Text style={styles.dependencyLegendTitle}>Dependencias:</Text>
+              <Text style={styles.dependencyLegendText}>
+                Toca una materia para ver de cuál depende. Las líneas conectan las materias relacionadas.
+              </Text>
             </View>
           </View>
 
           {/* Tree Diagram */}
           <View style={styles.treeContainer}>
-            {curriculumData.map((semesterData, index) => (
+            {curriculumData.map((semesterData, semesterIndex) => (
               <View key={semesterData.semester} style={styles.semesterRow}>
                 {/* Semester Header */}
                 <TouchableOpacity
                   style={[
                     styles.semesterHeader,
                     { backgroundColor: semesterData.color },
-                    selectedSemester === semesterData.semester && styles.selectedSemester
+                    selectedSemester === semesterData.semester && styles.selectedSemester,
+                    collapsedSemesters.has(semesterData.semester) && styles.collapsedSemester
                   ]}
                   onPress={() => handleSemesterPress(semesterData.semester)}
+                  activeOpacity={0.8}
                 >
                   <Text style={styles.semesterNumber}>{semesterData.semester}°</Text>
                   <Text style={styles.semesterLabel}>Semestre</Text>
+                  <Text style={styles.semesterHours}>
+                    {semesterData.subjects.reduce((total, subject) => total + subject.hts, 0)} HTS
+                  </Text>
+                  <MaterialCommunityIcons 
+                    name={collapsedSemesters.has(semesterData.semester) ? "chevron-down" : "chevron-up"} 
+                    size={20} 
+                    color="#666" 
+                    style={styles.semesterChevron}
+                  />
+                  {collapsedSemesters.has(semesterData.semester) && (
+                    <View style={styles.collapsedIndicator}>
+                      <Text style={styles.collapsedIndicatorText}>
+                        {semesterData.subjects.length} materias
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
 
-                {/* Subjects */}
-                <View style={styles.subjectsContainer}>
-                  {semesterData.subjects.map((subject, subjectIndex) => (
-                    <View key={subjectIndex} style={styles.subjectItem}>
-                      <View style={[styles.subjectDot, { backgroundColor: semesterData.color }]} />
-                      <Text style={styles.subjectText}>{subject}</Text>
-                    </View>
-                  ))}
-                </View>
+                {/* Subjects Grid - Only show if not collapsed */}
+                {!collapsedSemesters.has(semesterData.semester) && (
+                  <Animated.View 
+                    style={[
+                      styles.subjectsGrid,
+                      { opacity: contentOpacity }
+                    ]}
+                  >
+                    {semesterData.subjects.map((subject, subjectIndex) => 
+                      renderSubjectCard(subject, subjectIndex, semesterIndex)
+                    )}
+                  </Animated.View>
+                )}
 
-                {/* Dependency Info */}
-                {selectedSemester === semesterData.semester && (
-                  <View style={styles.dependencyInfo}>
+                {/* Dependency Info - Only show if not collapsed and selected */}
+                {!collapsedSemesters.has(semesterData.semester) && selectedSemester === semesterData.semester && (
+                  <Animated.View 
+                    style={[
+                      styles.dependencyInfo,
+                      { opacity: dependencyLines }
+                    ]}
+                  >
                     <MaterialCommunityIcons name="information" size={16} color="#6d4aff" />
                     <Text style={styles.dependencyInfoText}>
                       {getDependencyInfo(semesterData.semester)}
                     </Text>
-                  </View>
+                  </Animated.View>
                 )}
 
-                {/* Connection Line to Next Semester */}
-                {index < curriculumData.length - 1 && (
+                {/* Connection Line to Next Semester - Only show if not collapsed */}
+                {!collapsedSemesters.has(semesterData.semester) && semesterIndex < curriculumData.length - 1 && (
                   <View style={styles.connectionLine}>
                     <View style={[
                       styles.connectionDot,
-                      { backgroundColor: semesterData.color === curriculumData[index + 1].color 
-                        ? semesterData.color 
-                        : '#ddd'
-                      }
+                      { backgroundColor: semesterData.color }
                     ]} />
                     <View style={[
                       styles.connectionLineVertical,
-                      { backgroundColor: semesterData.color === curriculumData[index + 1].color 
-                        ? semesterData.color 
-                        : '#ddd'
-                      }
+                      { backgroundColor: semesterData.color }
                     ]} />
                   </View>
                 )}
@@ -309,13 +534,16 @@ export default function CurriculumTree() {
 
           {/* Instructions */}
           <View style={styles.instructionsContainer}>
-            <Text style={styles.instructionsTitle}>📚 Cómo funcionan las dependencias:</Text>
+            <Text style={styles.instructionsTitle}>📚 Cómo usar el plan de estudios:</Text>
             <Text style={styles.instructionsText}>
-              • Los semestres del mismo color están vinculados{'\n'}
-              • Si repruebas una materia de un color, no puedes tomar materias del mismo color en el siguiente semestre{'\n'}
-              • Toca un semestre para ver más detalles{'\n'}
-              • Usa los controles de zoom para explorar el plan de estudios{'\n'}
-              • El semestre 9 requiere completar todos los semestres anteriores
+              • <Text style={styles.instructionHighlight}>Toca un semestre</Text> para expandir/contraer sus materias{'\n'}
+              • <Text style={styles.instructionHighlight}>Toca una materia</Text> para ver de cuál depende{'\n'}
+              • Los semestres contraídos muestran el número de materias{'\n'}
+              • Usa los botones globales para expandir/contraer todo{'\n'}
+              • Cada materia muestra su carga horaria (HT, HPE, HA, HTS){'\n'}
+              • Las materias con colores especiales indican áreas de conocimiento específicas{'\n'}
+              • Las dependencias se muestran con líneas conectivas{'\n'}
+              • El total de HTS por semestre se muestra en el encabezado del semestre
             </Text>
           </View>
 
@@ -326,12 +554,12 @@ export default function CurriculumTree() {
               <View style={styles.careerInfoItem}>
                 <MaterialCommunityIcons name="clock-outline" size={24} color="#6d4aff" />
                 <Text style={styles.careerInfoLabel}>Duración</Text>
-                <Text style={styles.careerInfoValue}>9 Semestres</Text>
+                <Text style={styles.careerInfoValue}>8 Semestres</Text>
               </View>
               <View style={styles.careerInfoItem}>
                 <MaterialCommunityIcons name="school" size={24} color="#6d4aff" />
-                <Text style={styles.careerInfoLabel}>Créditos</Text>
-                <Text style={styles.careerInfoValue}>240+</Text>
+                <Text style={styles.careerInfoLabel}>Total HTS</Text>
+                <Text style={styles.careerInfoValue}>~400 HTS</Text>
               </View>
               <View style={styles.careerInfoItem}>
                 <MaterialCommunityIcons name="account-group" size={24} color="#6d4aff" />
@@ -403,36 +631,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
-  zoomControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 10,
-    backgroundColor: 'white',
-    borderRadius: 16,
-    paddingVertical: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  zoomButton: {
-    padding: 8,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-  },
-  zoomLevel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#6d4aff',
-  },
-  resetButton: {
-    padding: 8,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-  },
   legendContainer: {
     backgroundColor: 'white',
     borderRadius: 16,
@@ -451,23 +649,76 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     textAlign: 'center',
   },
+  legendGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  legendSection: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  legendSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
   legendItems: {
-    gap: 12,
+    gap: 8,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   legendColor: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: 12,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginRight: 8,
   },
   legendText: {
-    fontSize: 16,
+    fontSize: 12,
     color: '#555',
     fontWeight: '500',
+  },
+  hoursLegend: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 15,
+    marginBottom: 15,
+  },
+  hoursLegendTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  hoursLegendText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  dependencyLegend: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 15,
+  },
+  dependencyLegendTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  dependencyLegendText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 16,
   },
   treeContainer: {
     marginBottom: 20,
@@ -478,12 +729,12 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   semesterHeader: {
-    width: 140,
-    height: 90,
+    width: 160,
+    height: 100,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -495,44 +746,112 @@ const styles = StyleSheet.create({
     borderColor: '#6d4aff',
     transform: [{ scale: 1.05 }],
   },
+  collapsedSemester: {
+    opacity: 0.7,
+    transform: [{ scale: 0.95 }],
+  },
   semesterNumber: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#333',
   },
   semesterLabel: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
+    color: '#666',
     marginTop: 4,
   },
-  subjectsContainer: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
+  semesterHours: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  semesterChevron: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+  },
+  collapsedIndicator: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  collapsedIndicatorText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  subjectsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
     marginBottom: 15,
+    maxWidth: width - 40,
+  },
+  subjectCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    minWidth: 300,
+    minWidth: 140,
+    maxWidth: 160,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
-  subjectItem: {
+  selectedSubjectCard: {
+    borderColor: '#6d4aff',
+    backgroundColor: '#f8f9ff',
+    transform: [{ scale: 1.02 }],
+  },
+  subjectWithDependency: {
+    borderColor: '#e0e0e0',
+  },
+  subjectHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
   },
-  subjectDot: {
+  subjectColorIndicator: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    marginRight: 12,
+    marginRight: 8,
   },
-  subjectText: {
-    fontSize: 15,
+  subjectName: {
+    fontSize: 12,
     color: '#333',
-    fontWeight: '500',
+    fontWeight: '600',
     flex: 1,
+    lineHeight: 16,
+  },
+  hoursContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  hourItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  hourLabel: {
+    fontSize: 10,
+    color: '#666',
+    fontWeight: '500',
+  },
+  hourValue: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#333',
   },
   dependencyInfo: {
     flexDirection: 'row',
@@ -543,12 +862,39 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderLeftWidth: 4,
     borderLeftColor: '#6d4aff',
+    maxWidth: width - 80,
   },
   dependencyInfoText: {
     fontSize: 14,
     color: '#333',
     marginLeft: 8,
     fontWeight: '500',
+    lineHeight: 20,
+  },
+  dependencyLine: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 2,
+    height: 40,
+    backgroundColor: 'transparent',
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    zIndex: 1,
+  },
+  dependencyArrow: {
+    position: 'absolute',
+    top: -5,
+    left: -4,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#ddd',
   },
   connectionLine: {
     position: 'absolute',
@@ -588,6 +934,10 @@ const styles = StyleSheet.create({
     color: '#555',
     lineHeight: 22,
     textAlign: 'justify',
+  },
+  instructionHighlight: {
+    fontWeight: 'bold',
+    color: '#6d4aff',
   },
   careerInfoContainer: {
     backgroundColor: 'white',
@@ -631,5 +981,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
+  },
+  globalControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 15,
+  },
+  globalControlButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f8ff',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: '#6d4aff',
+  },
+  globalControlText: {
+    fontSize: 14,
+    color: '#6d4aff',
+    marginLeft: 8,
+    fontWeight: '600',
   },
 });

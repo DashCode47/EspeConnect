@@ -4,6 +4,8 @@ import { ComunityStackParamList } from './types';
 import CarreersScreen from '../screens/comunity/Carreers';
 import CarreerDetails from '../screens/comunity/CarreerDetails';
 import CurriculumTree from '../screens/comunity/CurriculumTree';
+import WisdomCapsules from '../screens/comunity/WisdomCapsules';
+import ProfessorRadar from '../screens/comunity/ProfessorRadar';
 
 const Stack = createNativeStackNavigator<ComunityStackParamList>();
 
@@ -17,6 +19,8 @@ export const ComunityStack = () => {
       <Stack.Screen name="Carreers" component={CarreersScreen} />
       <Stack.Screen name="CarreerDetails" component={CarreerDetails} />
       <Stack.Screen name="CurriculumTree" component={CurriculumTree} />
+      <Stack.Screen name="WisdomCapsules" component={WisdomCapsules} />
+      <Stack.Screen name="ProfessorRadar" component={ProfessorRadar} />
     </Stack.Navigator>
   );
 }; 

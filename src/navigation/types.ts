@@ -41,6 +41,8 @@ export type ComunityStackParamList = {
   Carreers: undefined;
   CarreerDetails: { carreerId: string };
   CurriculumTree: undefined;
+  WisdomCapsules: undefined;
+  ProfessorRadar: undefined;
 };
 
 export type BenefitsStackParamList = {

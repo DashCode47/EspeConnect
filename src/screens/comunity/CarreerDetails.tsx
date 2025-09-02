@@ -180,17 +180,6 @@ export default function CarreerDetails() {
           paddingBottom: globalStyles.getBottomSafeArea(insets) + 20,
         }}>
         <View style={styles.content}>
-          {/* Description */}
-          <Animated.View
-            style={[
-              styles.descriptionContainer,
-              {
-                opacity: contentOpacity,
-                transform: [{translateY: contentTranslateY}],
-              },
-            ]}>
-            <Text style={styles.description}>{CAREER_DATA.description}</Text>
-          </Animated.View>
 
           {/* Stats Cards */}
           <View style={styles.statsContainer}>
@@ -268,6 +257,54 @@ export default function CarreerDetails() {
               <View style={styles.curriculumButtonContent}>
                 <MaterialCommunityIcons name="arrow-right" size={24} color="white" />
                 <Text style={styles.curriculumButtonText}>Ver Plan de Estudios Completo</Text>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Wisdom Capsules Button */}
+          <Animated.View
+            style={[
+              styles.wisdomContainer,
+              {
+                opacity: contentOpacity,
+                transform: [{translateY: contentTranslateY}],
+              },
+            ]}>
+            <View style={styles.wisdomHeader}>
+              <MaterialCommunityIcons name="lightbulb-on" size={24} color="#ff6b6b" />
+              <Text style={styles.wisdomTitle}>Cápsulas de Sabiduría</Text>
+              <Text style={styles.wisdomSubtitle}>Consejos de supervivencia estudiantil</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.wisdomButton}
+              onPress={() => navigation.navigate('WisdomCapsules' as never)}>
+              <View style={styles.wisdomButtonContent}>
+                <MaterialCommunityIcons name="arrow-right" size={24} color="white" />
+                <Text style={styles.wisdomButtonText}>Ver Consejos de Supervivencia</Text>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Professor Radar Button */}
+          <Animated.View
+            style={[
+              styles.professorRadarContainer,
+              {
+                opacity: contentOpacity,
+                transform: [{translateY: contentTranslateY}],
+              },
+            ]}>
+            <View style={styles.professorRadarHeader}>
+              <MaterialCommunityIcons name="radar" size={24} color="#4ecdc4" />
+              <Text style={styles.professorRadarTitle}>Radar de Profesores</Text>
+              <Text style={styles.professorRadarSubtitle}>Reseñas académicas con respeto</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.professorRadarButton}
+              onPress={() => navigation.navigate('ProfessorRadar' as never)}>
+              <View style={styles.professorRadarButtonContent}>
+                <MaterialCommunityIcons name="arrow-right" size={24} color="white" />
+                <Text style={styles.professorRadarButtonText}>Ver Evaluaciones de Profesores</Text>
               </View>
             </TouchableOpacity>
           </Animated.View>
@@ -535,6 +572,104 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   curriculumButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  wisdomContainer: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  wisdomHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  wisdomTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 12,
+  },
+  wisdomSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 12,
+  },
+  wisdomButton: {
+    backgroundColor: '#ff6b6b',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 15,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  wisdomButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wisdomButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  professorRadarContainer: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  professorRadarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  professorRadarTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 12,
+  },
+  professorRadarSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 12,
+  },
+  professorRadarButton: {
+    backgroundColor: '#4ecdc4',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 15,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  professorRadarButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  professorRadarButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
