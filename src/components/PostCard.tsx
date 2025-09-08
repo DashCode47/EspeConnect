@@ -35,12 +35,12 @@ export const PostCard = ({post, onPress, anonimous}: PostCardProps) => {
     <Card style={styles.card} onPress={onPress}>
       <Card.Title
         title={anonimous ? 'Anonimo' : post.author.name}
-        titleStyle={{color: colors.white}}
+        titleStyle={{color: '#000000'}}
         subtitle={
           anonimous ? (
             null
           ) : (
-            <Text style={{color: colors.white, marginBottom: 0, marginTop: -8, fontSize: 12}}>
+            <Text style={{color: '#000000', marginBottom: 0, marginTop: -8, fontSize: 12}}>
               {new Date(post.createdAt).toISOString().split('T')[0]}
             </Text>
           )
@@ -59,16 +59,16 @@ export const PostCard = ({post, onPress, anonimous}: PostCardProps) => {
         <MaterialCommunityIcons
           name={isLiked ? 'heart' : 'heart-outline'}
           size={24}
-          color={isLiked ? '#6200ee' : '#757575'}
+          color={isLiked ? '#FF0000' : '#008000'}
           onPress={handleLike}
         />
-        <Text>{likes}</Text>
+        <Text style={{color: '#008000', fontWeight: '600'}}>{likes}</Text>
         <MaterialCommunityIcons
           name="comment-outline"
           size={24}
-          color="#757575"
+          color="#008000"
         />
-        <Text>{post.comments}</Text>
+        <Text style={{color: '#008000', fontWeight: '600'}}>{post.comments}</Text>
       </Card.Actions>
     </Card>
   );
@@ -77,15 +77,23 @@ export const PostCard = ({post, onPress, anonimous}: PostCardProps) => {
 const styles = StyleSheet.create({
   card: {
     marginBottom: 16,
-    backgroundColor: '#292929',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#000000',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   title: {
     marginBottom: 0,
-    color: colors.white,
+    color: '#000000',
+    fontWeight: 'bold',
   },
   content: {
-    color: colors.white,
+    color: '#000000',
     marginBottom: 10,
-    fontWeight: FONT_WEIGHT.BOLD,
+    fontWeight: FONT_WEIGHT.LIGHT,
   },
 });

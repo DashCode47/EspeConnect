@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { profileService, UserProfile } from '../services/profile.service';
 import * as ImagePicker from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -127,7 +128,11 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
+      <LinearGradient
+        colors={['#FF0000', '#008000', '#FFFFFF']}
+        style={styles.header}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         <TouchableOpacity onPress={handleImagePick} style={styles.avatarContainer}>
           <Image
             source={{ uri: profile.avatarUrl || undefined }}
@@ -138,7 +143,7 @@ export default function ProfileScreen() {
             <Icon name="camera" size={20} color="white" />
           </View>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
       <View style={styles.content}>
         <View style={styles.section}>
@@ -230,7 +235,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    backgroundColor: '#6200ee',
     height: 200,
     justifyContent: 'center',
     alignItems: 'center',
@@ -249,7 +253,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#6200ee',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -284,8 +288,9 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   editButton: {
-    color: '#6200ee',
+    color: '#008000',
     fontSize: 16,
+    fontWeight: '600',
   },
   field: {
     marginBottom: 15,

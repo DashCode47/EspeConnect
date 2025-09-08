@@ -10,89 +10,130 @@ import {
   StatusBar,
   Dimensions,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useRoute, useNavigation} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {globalStyles} from '../../config/globalStyles';
+import {careerService, Career} from '../../services/career.service';
 
 const {width, height} = Dimensions.get('window');
 
-// Mock data for career details
-const CAREER_DATA = {
-  id: '1',
-  name: 'Ingeniería en Software',
-  description: 'La Ingeniería en Software es una disciplina que se enfoca en el desarrollo, mantenimiento y evolución de sistemas informáticos. Combina principios de ingeniería con metodologías de desarrollo de software para crear soluciones tecnológicas innovadoras.',
-  longDescription: 'Esta carrera prepara a los estudiantes para diseñar, desarrollar, implementar y mantener sistemas de software de alta calidad. Los egresados están capacitados para trabajar en empresas tecnológicas, startups, consultorías y organizaciones de diversos sectores.',
-  students: 1247,
-  duration: '4 años',
-  credits: 240,
-  faculty: 'Facultad de Ingeniería',
-  campus: 'Campus ESPE',
-  careerIcon: 'laptop',
-  backgroundImage: 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=800',
-  gradient: ['#f093fb', '#f5576c'],
-  subjects: [
-    'Programación Avanzada',
-    'Bases de Datos',
-    'Arquitectura de Software',
-    'Inteligencia Artificial',
-    'Desarrollo Web',
-    'Aplicaciones Móviles',
-  ],
-  skills: [
-    'Desarrollo Full-Stack',
-    'Machine Learning',
-    'DevOps',
-    'Cloud Computing',
-    'Agile Methodologies',
-    'UI/UX Design',
-  ],
-  careerOpportunities: [
-    'Desarrollador de Software',
-    'Arquitecto de Software',
-    'Ingeniero DevOps',
-    'Data Scientist',
-    'Product Manager',
-    'Consultor Tecnológico',
-  ],
-  averageSalary: '$3,500 - $8,000',
-  employmentRate: '95%',
+// Helper function to get gradient colors based on career name
+const getCareerGradient = (careerName: string) => {
+  const gradients = [
+    ['#667eea', '#764ba2'],
+    ['#f093fb', '#f5576c'],
+    ['#4facfe', '#00f2fe'],
+    ['#43e97b', '#38f9d7'],
+    ['#fa709a', '#fee140'],
+    ['#a8edea', '#fed6e3'],
+    ['#ffecd2', '#fcb69f'],
+    ['#ff9a9e', '#fecfef'],
+  ];
+  
+  const index = careerName.length % gradients.length;
+  return gradients[index];
 };
 
+// Helper function to get background image based on career name
+const getCareerBackgroundImage = (careerName: string) => {
+  const images = [
+    'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800',
+    'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=800',
+    'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=800',
+    'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800',
+    'https://images.unsplash.com/photo-1576091160399-112f8f6a03b7?w=800',
+    'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800',
+    'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800',
+    'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800',
+  ];
+  
+  const index = careerName.length % images.length;
+  return images[index];
+};
+
+// Helper function to get career icon based on career name
+const getCareerIcon = (careerName: string) => {
+  const icons = [
+    'laptop',
+    'robot',
+    'flask',
+    'factory',
+    'heart-pulse',
+    'brain',
+    'briefcase',
+    'home-city',
+  ];
+  
+  const index = careerName.length % icons.length;
+  return icons[index];
+};
+
+interface RouteParams {
+  careerId: string;
+}
+
 export default function CarreerDetails() {
-  const route = useRoute();
+  const route = useRoute<any>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const [career, setCareer] = useState<Career | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [headerOpacity] = useState(new Animated.Value(0));
   const [contentOpacity] = useState(new Animated.Value(0));
   const [contentTranslateY] = useState(new Animated.Value(50));
 
-  useEffect(() => {
-    // Animate header
-    Animated.timing(headerOpacity, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }).start();
+  const {careerId} = route.params;
 
-    // Animate content with delay
-    Animated.parallel([
-      Animated.timing(contentOpacity, {
+  const fetchCareer = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await careerService.getCareer(careerId);
+      console.log('Career response:', response.data.career);
+      setCareer(response.data.career);
+    } catch (err: any) {
+      console.error('Error fetching career:', err);
+      setError(err.response?.data?.message || 'Error al cargar la carrera');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCareer();
+  }, [careerId]);
+
+  useEffect(() => {
+    if (career) {
+      // Animate header
+      Animated.timing(headerOpacity, {
         toValue: 1,
-        duration: 600,
-        delay: 300,
+        duration: 800,
         useNativeDriver: true,
-      }),
-      Animated.timing(contentTranslateY, {
-        toValue: 0,
-        duration: 600,
-        delay: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+      }).start();
+
+      // Animate content with delay
+      Animated.parallel([
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: 600,
+          delay: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentTranslateY, {
+          toValue: 0,
+          duration: 600,
+          delay: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [career]);
 
   const renderInfoCard = (title: string, value: string, icon: string, color: string) => (
     <Animated.View
@@ -137,6 +178,36 @@ export default function CarreerDetails() {
     </Animated.View>
   );
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#667eea" />
+          <Text style={styles.loadingText}>Cargando carrera...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !career) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error || 'Carrera no encontrada'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchCareer}>
+            <Text style={styles.retryButtonText}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const gradient = getCareerGradient(career.name);
+  const backgroundImage = getCareerBackgroundImage(career.name);
+  const careerIcon = getCareerIcon(career.name);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -144,11 +215,11 @@ export default function CarreerDetails() {
       {/* Header */}
       <Animated.View style={[styles.header, {opacity: headerOpacity}]}>
         <Image
-          source={{uri: CAREER_DATA.backgroundImage}}
+          source={{uri: backgroundImage}}
           style={styles.headerBackground}
         />
         <LinearGradient
-          colors={CAREER_DATA.gradient}
+          colors={gradient}
           style={styles.headerGradient}
           start={{x: 0, y: 0}}
           end={{x: 1, y: 1}}>
@@ -161,13 +232,13 @@ export default function CarreerDetails() {
           <View style={styles.headerContent}>
             <View style={styles.careerIconContainer}>
               <MaterialCommunityIcons
-                name={CAREER_DATA.careerIcon as any}
+                name={careerIcon as any}
                 size={48}
                 color="white"
               />
             </View>
-            <Text style={styles.careerName}>{CAREER_DATA.name}</Text>
-            <Text style={styles.careerFaculty}>{CAREER_DATA.faculty}</Text>
+            <Text style={styles.careerName}>{career.name}</Text>
+            <Text style={styles.careerFaculty}>{career.campus}</Text>
           </View>
         </LinearGradient>
       </Animated.View>
@@ -184,56 +255,109 @@ export default function CarreerDetails() {
           {/* Stats Cards */}
           <View style={styles.statsContainer}>
             {renderInfoCard(
-              'Estudiantes',
-              CAREER_DATA.students.toLocaleString(),
-              'account-group',
-              '#667eea'
-            )}
-            {renderInfoCard(
               'Duración',
-              CAREER_DATA.duration,
+              `${career.duration} semestres`,
               'clock-outline',
               '#f093fb'
             )}
             {renderInfoCard(
-              'Créditos',
-              CAREER_DATA.credits.toString(),
+              'Modalidad',
+              career.modality,
+              'account-group',
+              '#667eea'
+            )}
+            {renderInfoCard(
+              'Horario',
+              career.schedule,
               'school',
               '#4facfe'
             )}
           </View>
 
-          {/* Career Opportunities */}
-          {renderSection(
-            'Oportunidades Laborales',
-            CAREER_DATA.careerOpportunities,
-            'briefcase'
-          )}
-
-          {/* Skills */}
-          {renderSection('Habilidades', CAREER_DATA.skills, 'lightbulb')}
-
-          {/* Subjects */}
-          {renderSection('Materias Principales', CAREER_DATA.subjects, 'book-open')}
-
-          {/* Salary and Employment */}
+          {/* Mission & Vision */}
           <Animated.View
             style={[
-              styles.salaryContainer,
+              styles.section,
               {
                 opacity: contentOpacity,
                 transform: [{translateY: contentTranslateY}],
               },
             ]}>
-            <View style={styles.salaryCard}>
-              <MaterialCommunityIcons name="cash" size={32} color="#43e97b" />
-              <Text style={styles.salaryTitle}>Salario Promedio</Text>
-              <Text style={styles.salaryValue}>{CAREER_DATA.averageSalary}</Text>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="target" size={24} color="#6d4aff" />
+              <Text style={styles.sectionTitle}>Misión y Visión</Text>
             </View>
-            <View style={styles.employmentCard}>
-              <MaterialCommunityIcons name="chart-line" size={32} color="#fa709a" />
-              <Text style={styles.employmentTitle}>Tasa de Empleo</Text>
-              <Text style={styles.employmentValue}>{CAREER_DATA.employmentRate}</Text>
+            <View style={styles.missionVisionContainer}>
+              <View style={styles.missionVisionItem}>
+                <Text style={styles.missionVisionTitle}>Misión</Text>
+                <Text style={styles.missionVisionText}>{career.mission}</Text>
+              </View>
+              <View style={styles.missionVisionItem}>
+                <Text style={styles.missionVisionTitle}>Visión</Text>
+                <Text style={styles.missionVisionText}>{career.vision}</Text>
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Objectives */}
+          {renderSection('Objetivos', career.objectives, 'flag-checkered')}
+
+          {/* Graduate Profile */}
+          <Animated.View
+            style={[
+              styles.section,
+              {
+                opacity: contentOpacity,
+                transform: [{translateY: contentTranslateY}],
+              },
+            ]}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="account-graduate" size={24} color="#6d4aff" />
+              <Text style={styles.sectionTitle}>Perfil del Egresado</Text>
+            </View>
+            <Text style={styles.profileText}>{career.graduateProfile}</Text>
+          </Animated.View>
+
+          {/* Professional Profile */}
+          <Animated.View
+            style={[
+              styles.section,
+              {
+                opacity: contentOpacity,
+                transform: [{translateY: contentTranslateY}],
+              },
+            ]}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="briefcase" size={24} color="#6d4aff" />
+              <Text style={styles.sectionTitle}>Perfil Profesional</Text>
+            </View>
+            <Text style={styles.profileText}>{career.professionalProfile}</Text>
+          </Animated.View>
+
+          {/* Subjects */}
+          {renderSection('Materias Principales', career.subjects, 'book-open')}
+
+          {/* Accreditations */}
+          {career.accreditations.length > 0 && (
+            renderSection('Acreditaciones', career.accreditations, 'certificate')
+          )}
+
+          {/* Director Info */}
+          <Animated.View
+            style={[
+              styles.section,
+              {
+                opacity: contentOpacity,
+                transform: [{translateY: contentTranslateY}],
+              },
+            ]}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="account-tie" size={24} color="#6d4aff" />
+              <Text style={styles.sectionTitle}>Director de Carrera</Text>
+            </View>
+            <View style={styles.directorInfo}>
+              <Text style={styles.directorName}>{career.directorName}</Text>
+              <Text style={styles.directorEmail}>{career.directorEmail}</Text>
             </View>
           </Animated.View>
 
@@ -674,5 +798,84 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#6d4aff',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  missionVisionContainer: {
+    gap: 12,
+  },
+  missionVisionItem: {
+    backgroundColor: '#f0f7ff',
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#6d4aff',
+  },
+  missionVisionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  missionVisionText: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 22,
+  },
+  profileText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#333',
+    marginTop: 10,
+  },
+  directorInfo: {
+    marginTop: 15,
+  },
+  directorName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  directorEmail: {
+    fontSize: 14,
+    color: '#666',
   },
 });

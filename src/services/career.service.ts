@@ -110,12 +110,12 @@ export interface DeleteCareerResponse {
 }
 
 export interface GetCareersParams {
-  modality?: CareerModality;
-  campus?: string;
-  schedule?: CareerSchedule;
-  isActive?: boolean;
-  page?: number;
-  limit?: number;
+  modality?: CareerModality | null;
+  campus?: string | null;
+  schedule?: CareerSchedule | null;
+  isActive?: boolean | null;
+  page?: number | null;
+  limit?: number | null;
 }
 
 const getAuthHeaders = async () => {
@@ -138,23 +138,24 @@ export const careerService = {
   async getCareers(params?: GetCareersParams) {
     try {
       const queryParams = new URLSearchParams();
+      console.log('Params:', params);
       
-      if (params?.modality) {
+      if (params?.modality && params.modality.trim() !== '') {
         queryParams.append('modality', params.modality);
       }
-      if (params?.campus) {
+      if (params?.campus && params.campus.trim() !== '') {
         queryParams.append('campus', params.campus);
       }
-      if (params?.schedule) {
+      if (params?.schedule && params.schedule.trim() !== '') {
         queryParams.append('schedule', params.schedule);
       }
-      if (params?.isActive !== undefined) {
+      if (params?.isActive !== undefined && params.isActive !== null) {
         queryParams.append('isActive', params.isActive.toString());
       }
-      if (params?.page) {
+      if (params?.page && params.page > 0) {
         queryParams.append('page', params.page.toString());
       }
-      if (params?.limit) {
+      if (params?.limit && params.limit > 0) {
         queryParams.append('limit', params.limit.toString());
       }
 

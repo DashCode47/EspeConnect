@@ -44,15 +44,15 @@ const useHome = () => {
   const handleBackgroundColors = (category: PromotionCategory) => {
     switch (category) {
       case PromotionCategory.FOOD:
-        return '#FFF3CD';
+        return '#E8F5E8'; // Light green
       case PromotionCategory.DRINKS:
-        return '#D1F2EB';
+        return '#F0F8F0'; // Very light green
       case PromotionCategory.EVENTS:
-        return '#D6EAF8';
+        return '#E0F0E0'; // Light green variant
       case PromotionCategory.PARTIES:
-        return '#FADADD';
+        return '#F5F0F0'; // Light red tint
       default:
-        return '#000000';
+        return '#008000'; // Primary green
     }
   };
 

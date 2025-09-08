@@ -103,7 +103,7 @@ export const CreatePostScreen = () => {
               <MaterialCommunityIcons 
                 name="image-plus" 
                 size={32} 
-                color="#666"
+                color="#008000"
               />
               <Text style={styles.imagePlaceholderText}>Add Image</Text>
             </View>
@@ -127,7 +127,7 @@ export const CreatePostScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   content: {
     padding: 16,
@@ -137,6 +137,7 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 8,
+    backgroundColor: '#008000',
   },
   segmentedButtons: {
     marginBottom: 16,
@@ -145,8 +146,8 @@ const styles = StyleSheet.create({
     height: 200,
     marginBottom: 16,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderWidth: 2,
+    borderColor: '#008000',
     borderStyle: 'dashed',
     overflow: 'hidden',
   },
@@ -163,7 +164,8 @@ const styles = StyleSheet.create({
   },
   imagePlaceholderText: {
     marginTop: 8,
-    color: '#666',
+    color: '#008000',
     fontSize: 16,
+    fontWeight: '600',
   },
 }); 

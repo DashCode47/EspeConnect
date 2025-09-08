@@ -145,57 +145,63 @@ const BenefitDetail = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}>
-        {/* Hero Section */}
+        {/* Hero Section with Circular Image */}
         <Animated.View
           style={[
             styles.heroSection,
             {opacity: fadeAnim, transform: [{scale: scaleAnim}]},
           ]}>
-          <ImageBackground
-            source={{uri: promotion.imageUrl}}
-            style={styles.heroBackground}
-            imageStyle={styles.heroBackgroundImage}>
-            <View style={styles.heroOverlay}>
-                             <View style={styles.heroContent}>
-                 <Text style={styles.heroTitle}>{promotion.title}</Text>
-                 <Text style={styles.restaurantName}>Restaurante La Esquina Gourmet</Text>
-                 <Text style={styles.heroDescription}>{promotion.description}</Text>
-               </View>
-              
-              {/* Status Badge */}
+          {/* Circular Image Container */}
+          <View style={styles.circularImageContainer}>
+            <View style={[styles.circularImageWrapper, {borderColor: categoryColor}]}>
+              <ImageBackground
+                source={{uri: promotion.imageUrl}}
+                style={styles.circularImage}
+                imageStyle={styles.circularImageStyle}>
+                <View style={styles.circularImageOverlay}>
+                  {/* Status Badge */}
+                  <Animated.View
+                    style={[styles.badgeContainer, {transform: [{scale: badgeScale}]}]}>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        {backgroundColor: isExpired ? '#FF5252' : '#4CAF50'},
+                      ]}>
+                      <MaterialCommunityIcons
+                        name={isExpired ? 'clock-alert' : 'check-circle'}
+                        size={16}
+                        color="white"
+                      />
+                      <Text style={styles.statusText}>
+                        {isExpired ? 'Expirado' : 'Activo'}
+                      </Text>
+                    </View>
+                  </Animated.View>
+                </View>
+              </ImageBackground>
+            </View>
+            
+            {/* Discount Badge */}
+            {promotion.discount > 0 && (
               <Animated.View
-                style={[styles.badgeContainer, {transform: [{scale: badgeScale}]}]}>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {backgroundColor: isExpired ? '#FF5252' : '#4CAF50'},
-                  ]}>
-                  <MaterialCommunityIcons
-                    name={isExpired ? 'clock-alert' : 'check-circle'}
-                    size={16}
-                    color="white"
-                  />
-                  <Text style={styles.statusText}>
-                    {isExpired ? 'Expirado' : 'Activo'}
-                  </Text>
+                style={[
+                  styles.discountContainer,
+                  {transform: [{scale: badgeScale}]},
+                ]}>
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountText}>{promotion.discount}%</Text>
+                  <Text style={styles.discountLabel}>DESCUENTO</Text>
                 </View>
               </Animated.View>
+            )}
+          </View>
 
-              {/* Discount Badge */}
-              {promotion.discount > 0 && (
-                <Animated.View
-                  style={[
-                    styles.discountContainer,
-                    {transform: [{scale: badgeScale}]},
-                  ]}>
-                  <View style={styles.discountBadge}>
-                    <Text style={styles.discountText}>{promotion.discount}%</Text>
-                    <Text style={styles.discountLabel}>DESCUENTO</Text>
-                  </View>
-                </Animated.View>
-              )}
-            </View>
-          </ImageBackground>
+          {/* Content Section */}
+          <View style={styles.heroContent}>
+            <Text style={styles.heroTitle}>{promotion.title}</Text>
+            <Text style={styles.restaurantName}>Restaurante La Esquina Gourmet</Text>
+            <Text style={styles.heroDescription}>{promotion.description}</Text>
+          </View>
         </Animated.View>
 
         {/* Content */}
@@ -222,24 +228,6 @@ const BenefitDetail = () => {
               </View>
               <Text style={styles.infoLabel}>Categoría</Text>
               <Text style={styles.infoValue}>{promotion.category}</Text>
-            </View>
-
-            {/* Start Date Card */}
-            <View style={[styles.infoCard, styles.infoCardSmall]}>
-              <View style={[styles.infoIconContainer, { backgroundColor: `${categoryColor}15` }]}>
-                <MaterialCommunityIcons name="calendar-start" size={28} color={categoryColor} />
-              </View>
-              <Text style={styles.infoLabel}>Inicio</Text>
-              <Text style={styles.infoValue}>{formatDate(promotion.startDate)}</Text>
-            </View>
-
-            {/* End Date Card */}
-            <View style={[styles.infoCard, styles.infoCardSmall]}>
-              <View style={[styles.infoIconContainer, { backgroundColor: `${categoryColor}15` }]}>
-                <MaterialCommunityIcons name="calendar-end" size={28} color={categoryColor} />
-              </View>
-              <Text style={styles.infoLabel}>Finaliza</Text>
-              <Text style={styles.infoValue}>{formatDate(promotion.endDate)}</Text>
             </View>
           </View>
 
@@ -313,6 +301,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
     paddingTop: 30,
+    paddingBottom: 60,
   },
   header: {
     zIndex: 1000,
@@ -362,74 +351,89 @@ const styles = StyleSheet.create({
   heroSection: {
     marginHorizontal: 20,
     marginTop: 20,
+    backgroundColor: 'white',
     borderRadius: 24,
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 12,
-    overflow: 'hidden',
-  },
-  heroBackground: {
-    width: '100%',
-    height: 280,
-  },
-  heroBackgroundImage: {
-    borderRadius: 24,
-  },
-  heroOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
     padding: 24,
-    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  circularImageContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+    position: 'relative',
+  },
+  circularImageWrapper: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 4,
+    overflow: 'hidden',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  circularImage: {
+    width: '100%',
+    height: '100%',
+  },
+  circularImageStyle: {
+    borderRadius: 80,
+  },
+  circularImageOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   heroContent: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
+    width: '100%',
   },
   categoryIcon: {
     marginBottom: 16,
     opacity: 0.9,
   },
   heroTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#333',
     textAlign: 'center',
     marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: {width: 0, height: 2},
-    textShadowRadius: 4,
   },
   restaurantName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
+    color: '#666',
     textAlign: 'center',
     marginBottom: 12,
-    textShadowColor: 'rgba(0,0,0,0.4)',
-    textShadowOffset: {width: 0, height: 1},
-    textShadowRadius: 2,
     fontStyle: 'italic',
   },
   heroDescription: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    color: '#666',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
+    maxWidth: '90%',
   },
   badgeContainer: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    right: 8,
     alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: 10,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
@@ -439,35 +443,38 @@ const styles = StyleSheet.create({
   statusText: {
     color: 'white',
     fontWeight: '600',
-    marginLeft: 6,
-    fontSize: 14,
+    marginLeft: 4,
+    fontSize: 12,
   },
   discountContainer: {
-    alignItems: 'center',
-    marginTop: 16,
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    zIndex: 10,
   },
   discountBadge: {
     backgroundColor: '#FF5722',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
     alignItems: 'center',
     elevation: 6,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 3},
     shadowOpacity: 0.3,
     shadowRadius: 6,
+    minWidth: 50,
   },
   discountText: {
     color: 'white',
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   discountLabel: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 12,
+    fontSize: 8,
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: 1,
   },
   content: {
     paddingHorizontal: 20,
@@ -475,8 +482,7 @@ const styles = StyleSheet.create({
   },
   infoGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     marginBottom: 24,
   },
   infoCard: {
@@ -493,10 +499,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   infoCardSmall: {
-    width: '48%',
+    width: '45%',
     flexDirection: 'column',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     marginBottom: 12,
   },
   timelineContainer: {

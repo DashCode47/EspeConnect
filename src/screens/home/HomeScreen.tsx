@@ -9,6 +9,7 @@ import {
   StatusBar,
   Dimensions,
   ImageBackground,
+  Image,
 } from 'react-native';
 import {Icon} from '../../components/Icon';
 import {Header} from '../../components/Header';
@@ -81,7 +82,7 @@ const DealCard: React.FC<DealCardProps> = ({
   data,
 }) => (
   <TouchableOpacity
-    style={[styles.dealCard, {backgroundColor}]}
+    style={styles.dealCard}
     onPress={() =>
       navigationRef.current?.navigate(BENEFIT_STACK, {
         screen: BENEFIT_DETAILS,
@@ -90,16 +91,13 @@ const DealCard: React.FC<DealCardProps> = ({
         },
       })
     }>
-    <View style={styles.dealCardContent}>
-      <View style={styles.dealTextContainer}>
-        <Text style={styles.dealText} numberOfLines={2}>
-          {title}
-        </Text>
-      </View>
-      <View style={{position: 'absolute', right: 0, bottom: 0}}>
-        <ThemedSvgIcon IconComponent={icon} color="white" size={145} />
-      </View>
+    <View style={[styles.dealCircle, {backgroundColor}]}>
+      <Image source={{uri: icon}} style={{width: 70, height: 70, resizeMode: 'contain'}} />
+      {/* <ThemedSvgIcon IconComponent={icon} color="white" size={40} /> */}
     </View>
+    <Text style={styles.dealName} numberOfLines={2}>
+      {title}
+    </Text>
   </TouchableOpacity>
 );
 
@@ -164,7 +162,7 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <Header userName={profile?.name} />
       <ScrollView
         style={styles.scrollView}
@@ -228,7 +226,7 @@ export const HomeScreen: React.FC = () => {
               allPromotions.map(promotion => (
                 <DealCard
                   data={promotion}
-                  icon={handleIcon(promotion.category)}
+                  icon={promotion.imageUrl || ''}
                   title={promotion.title}
                   backgroundColor={handleBackgroundColors(promotion.category)}
                   key={promotion.id}
@@ -331,7 +329,7 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#FFFFFF',
     paddingBottom: 100,
   },
   header: {
@@ -341,7 +339,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '600',
-    color: 'white',
+    color: '#FFFFFF',
   },
   content: {
     flex: 1,
@@ -353,12 +351,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 16,
-    color: '#1A1A1A',
+    color: '#008000',
   },
   sectionTitleMore: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffa500',
+    color: '#FF0000',
   },
   confessionContainer: {
     flexDirection: 'row',
@@ -387,7 +385,7 @@ const styles = StyleSheet.create({
   newsTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: 'white',
+    color: '#FFFFFF',
     marginBottom: 8,
     maxWidth: '80%',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
@@ -412,54 +410,35 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   dealCard: {
-    width: 280,
-    height: 180,
-    borderRadius: 16,
-    paddingTop: 16,
+    alignItems: 'center',
+    marginRight: 20,
+    width: 80,
+  },
+  dealCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.15,
     shadowRadius: 6,
-    marginRight: 16,
+    marginBottom: 8,
+    overflow: 'hidden',
   },
-  dealCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flex: 1,
-  },
-  dealIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dealTextContainer: {
-    flex: 1,
-    marginHorizontal: 12,
-  },
-  dealText: {
-    fontSize: 34,
-    width: '45%',
-    fontWeight: FONT_WEIGHT.BOLD,
-    color: '#1F1F1F',
-    textAlign: 'left',
-  },
-  dealArrowContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  dealName: {
+    fontSize: 12,
+    fontWeight: FONT_WEIGHT.MEDIUM,
+    color: '#333',
+    textAlign: 'center',
+    lineHeight: 16,
   },
   extraItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     elevation: 1,
@@ -467,12 +446,14 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#008000',
   },
   extraIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#008000',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -480,10 +461,10 @@ const styles = StyleSheet.create({
   extraTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: '#008000',
   },
   errorText: {
-    color: 'red',
+    color: '#FF0000',
     fontSize: 16,
     textAlign: 'center',
     marginVertical: 10,
@@ -505,13 +486,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   paginationDotActive: {
-    backgroundColor: '#4169E1',
+    backgroundColor: '#008000',
     width: 12,
     height: 12,
     borderRadius: 6,
   },
   promotionsScrollContent: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   quickActionsContainer: {
     flexDirection: 'row',
@@ -523,12 +505,14 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 16,
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.15,
     shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: '#008000',
   },
   quickActionContent: {
     flexDirection: 'row',
@@ -550,7 +534,7 @@ const styles = StyleSheet.create({
   quickActionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: '#008000',
     marginBottom: 4,
   },
   quickActionSubtitle: {
@@ -562,7 +546,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#008000',
     justifyContent: 'center',
     alignItems: 'center',
   },

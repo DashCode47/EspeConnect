@@ -128,21 +128,26 @@ export const PostScreen = () => {
   return (
     <View style={styles.container}>
       <Appbar.Header style={styles.header}>
-        <Appbar.Content title="Posts" titleStyle={{color: colors.white}} />
-        <Appbar.Action icon="plus" onPress={handleCreatePost} />
+        <Appbar.Content title="Posts" titleStyle={{color: '#000000'}} />
+        <Appbar.Action icon="plus" onPress={handleCreatePost} iconColor="#FFFFFF" />
       </Appbar.Header>
       
       {renderPostTypeChips()}
       
       {loading ? (
-        <ActivityIndicator size="large" style={styles.loader} />
+        <ActivityIndicator size="large" style={styles.loader} color="#008000" />
       ) : (
         <FlatList
           data={posts}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={handleRefresh}
+              colors={['#008000']}
+              tintColor="#008000"
+            />
           }
           contentContainerStyle={{
             paddingBottom: globalStyles.getBottomSafeArea(insets) + 20,
@@ -156,21 +161,26 @@ export const PostScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.black,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
   },
   header: {
-    backgroundColor: colors.black,
+    backgroundColor: '#0000',
     elevation: 2,
   },
   chipContainer: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: colors.black,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'space-around',
+    borderBottomWidth: 1,
+    borderBottomColor: '#008000',
   },
   chip: {
     marginRight: 8,
+    backgroundColor: '#F0F8F0',
+    borderWidth: 1,
+    borderColor: '#008000',
   },
   listContent: {
     padding: 16,
@@ -188,6 +198,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: '#008000',
+    fontWeight: '600',
   },
 }); 

@@ -145,7 +145,7 @@ export const PostDetailsScreen = () => {
               <MaterialCommunityIcons 
                 name="account-circle" 
                 size={40} 
-                color={theme.colors.primary} 
+                color="#008000" 
               />
             )}
           />
@@ -196,12 +196,12 @@ export const PostDetailsScreen = () => {
             <IconButton
               icon={isLiked ? 'heart' : 'heart-outline'}
               onPress={handleLike}
-              iconColor={isLiked ? theme.colors.error : theme.colors.onSurface}
+              iconColor={isLiked ? '#FF0000' : '#008000'}
             />
             <Text>{postData.likes || 0}</Text>
             <IconButton 
               icon="comment-outline"
-              iconColor={theme.colors.onSurface}
+              iconColor="#008000"
             />
             <Text>{postData.comments || 0}</Text>
           </Card.Actions>
@@ -244,7 +244,7 @@ export const PostDetailsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FFFFFF',
     paddingBottom: 100,
   },
   errorContainer: {
@@ -259,23 +259,30 @@ const styles = StyleSheet.create({
   card: {
     margin: 16,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#008000',
   },
   typeChip: {
     alignSelf: 'flex-start',
     marginBottom: 12,
+    backgroundColor: '#008000',
   },
   title: {
     marginBottom: 12,
     fontWeight: 'bold',
+    color: '#008000',
   },
   contentText: {
     lineHeight: 24,
     marginBottom: 16,
+    color: '#333',
   },
   imageContainer: {
     marginVertical: 12,
     borderRadius: 8,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#008000',
   },
   image: {
     width: '100%',
@@ -292,6 +299,8 @@ const styles = StyleSheet.create({
   commentInput: {
     borderRadius: 0,
     margin: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#008000',
   },
   commentInputContent: {
     flexDirection: 'row',
@@ -305,5 +314,6 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     borderRadius: 20,
+    backgroundColor: '#008000',
   },
 }); 
