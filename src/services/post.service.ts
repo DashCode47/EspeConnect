@@ -16,8 +16,11 @@ export interface Post {
   };
   createdAt: string;
   updatedAt: string;
-  likes: number;
   comments: number;
+  reactions: {
+    type: 'like' | 'dislike';
+    userId: string;
+  }[];
 }
 
 interface PostsResponse {
@@ -135,7 +138,9 @@ export const postService = {
 
   async likePost(id: string) {
     try {
-      const response = await api.post<Post>(`/posts/${id}/like`);
+      const response = await api.post<Post>(`/posts/${id}/react`, {
+        reactionType: 'like'
+      });
       return response.data;
     } catch (error) {
       throw error;
@@ -144,7 +149,11 @@ export const postService = {
 
   async unlikePost(id: string) {
     try {
-      const response = await api.delete<Post>(`/posts/${id}/like`);
+      const response = await api.delete<Post>(`/posts/${id}/react`, {
+        data: {
+          reactionType: 'like'
+        }
+      });
       return response.data;
     } catch (error) {
       throw error;

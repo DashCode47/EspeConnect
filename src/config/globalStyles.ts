@@ -75,6 +75,12 @@ export const FONT_WEIGHT = {
 } as const; 
 
 export const FONT_FAMILY = {
-  REGULAR: 'Urbanist',
-  BOLD: 'Urbanist_700Bold',
+  REGULAR: 'LeagueSpartan-Regular',
+  MEDIUM: 'LeagueSpartan-Medium',
+  SEMI_BOLD: 'LeagueSpartan-SemiBold',
+  BOLD: 'LeagueSpartan-Bold',
+  LIGHT: 'LeagueSpartan-Light',
+  EXTRA_LIGHT: 'LeagueSpartan-ExtraLight',
+  EXTRA_BOLD: 'LeagueSpartan-ExtraBold',
+  BLACK: 'LeagueSpartan-Black',
 } as const;

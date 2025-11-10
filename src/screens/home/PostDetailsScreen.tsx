@@ -1,251 +1,234 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
-import { Appbar, Card, Text, IconButton, Divider, useTheme, Chip, TextInput, Button } from 'react-native-paper';
+import React, { useState, useRef } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Dimensions,
+  TouchableOpacity,
+  Text,
+  SafeAreaView,
+  FlatList,
+} from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../navigation/types';
-import { Post, postService } from '../../services/post.service';
-import { Comment, commentService } from '../../services/comment.service';
+import { Post } from '../../services/post.service';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { CommentList } from '../../components/CommentList';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '../../config/colors';
+import { useHideNavbar } from '../../hooks/useHideNavbar';
+import Carousel, { ICarouselInstance } from 'react-native-reanimated-carousel';
 
 type PostDetailsScreenNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'PostDetails'>;
 type PostDetailsScreenRouteProp = RouteProp<HomeStackParamList, 'PostDetails'>;
 
-const getPostTypeIcon = (type: string) => {
-  switch (type) {
-    case 'CONFESSION':
-      return 'message-text';
-    case 'MARKETPLACE':
-      return 'store';
-    case 'LOST_AND_FOUND':
-      return 'magnify';
-    default:
-      return 'post';
-  }
-};
-
-const getPostTypeLabel = (type: string) => {
-  switch (type) {
-    case 'CONFESSION':
-      return 'Confesión';
-    case 'MARKETPLACE':
-      return 'Marketplace';
-    case 'LOST_AND_FOUND':
-      return 'Perdido y Encontrado';
-    default:
-      return type;
-  }
-};
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export const PostDetailsScreen = () => {
-  const [post, setPost] = useState<Post | null>(null);
-  const [isLiked, setIsLiked] = useState(false);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [newComment, setNewComment] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<PostDetailsScreenNavigationProp>();
   const route = useRoute<PostDetailsScreenRouteProp>();
   const { postData } = route.params;
-  const theme = useTheme();
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const carouselRef = useRef<ICarouselInstance>(null);
 
-  useEffect(() => {
-    fetchComments();
-  }, []);
-
-  const fetchComments = async (pageToLoad = 1) => {
-    if (!postData) return;
-
-    try {
-      setLoading(true);
-      const response = await commentService.getComments(postData.id, pageToLoad);
-      
-      if (pageToLoad === 1) {
-        setComments(response.data.comments);
-      } else {
-        setComments(prev => [...prev, ...response.data.comments]);
-      }
-      
-      setHasMore(pageToLoad < response.data.pagination.pages);
-      setPage(pageToLoad);
-    } catch (error) {
-      console.error('Error fetching comments:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      fetchComments(page + 1);
-    }
-  };
-
-  const handleSubmitComment = async () => {
-    if (!postData || !newComment.trim() || submitting) return;
-
-    try {
-      setSubmitting(true);
-      const response = await commentService.createComment(postData.id, newComment.trim());
-      setComments(prev => [response.data.comment, ...prev]);
-      setNewComment('');
-    } catch (error) {
-      console.error('Error submitting comment:', error);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleLike = async () => {
-    if (!postData) return;
-
-    try {
-      if (isLiked) {
-        await postService.unlikePost(postData.id);
-        setPost((prev) => prev ? { ...prev, likes: prev.likes - 1 } : null);
-      } else {
-        await postService.likePost(postData.id);
-        setPost((prev) => prev ? { ...prev, likes: prev.likes + 1 } : null);
-      }
-      setIsLiked(!isLiked);
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    }
-  };
+  // Ocultar el navbar en esta pantalla
+  useHideNavbar(true);
 
   if (!postData) {
     return (
-      <View style={styles.errorContainer}>
-        <MaterialCommunityIcons name="alert" size={48} color={theme.colors.error} />
-        <Text variant="headlineSmall">Post no encontrado</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <MaterialCommunityIcons name="alert" size={48} color={colors.primary} />
+          <Text style={styles.errorText}>Post no encontrado</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
+  // Parse images - if imageUrl exists, create array, otherwise empty
+  const images = postData.imageUrl ? [postData.imageUrl] : [];
+  
+  // Extract price from content if it's a marketplace post
+  const extractPrice = (content: string): string | null => {
+    if (postData.type !== 'MARKETPLACE') return null;
+    const priceMatch = content.match(/\$?(\d+\.?\d*)/);
+    return priceMatch ? `$${parseFloat(priceMatch[1]).toFixed(2)}` : null;
+  };
+
+  const price = extractPrice(postData.content);
+
+  const handleProgressChange = (progress: number) => {
+    const newIndex = Math.round(progress);
+    if (newIndex !== activeIndex) {
+      setActiveIndex(newIndex);
+    }
+  };
+
+  const handleDotPress = (index: number) => {
+    setActiveIndex(index);
+    carouselRef.current?.scrollTo({ index, animated: true });
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Appbar.Header>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="Detalles del Post" />
-      </Appbar.Header>
-
-      <ScrollView style={styles.content}>
-        <Card style={styles.card} mode="elevated">
-          <Card.Title
-            title={postData.author.name}
-            subtitle={`@${postData.author.username}`}
-            left={(props) => (
-              <MaterialCommunityIcons 
-                name="account-circle" 
-                size={40} 
-                color="#008000" 
-              />
-            )}
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => navigation.goBack()}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.black} />
+        </TouchableOpacity>
+        
+        <Text style={styles.headerTitle}>Detalle del Anuncio</Text>
+        
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => setIsBookmarked(!isBookmarked)}
+        >
+          <MaterialCommunityIcons
+            name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+            size={24}
+            color={colors.black}
           />
-          
-          <Card.Content>
-            <Chip 
-              icon={getPostTypeIcon(postData.type)}
-              style={styles.typeChip}
-              mode="outlined"
-            >
-              {getPostTypeLabel(postData.type)}
-            </Chip>
+        </TouchableOpacity>
+      </View>
 
-            {postData.title && (
-              <Text variant="titleLarge" style={styles.title}>
-                {postData.title}
-              </Text>
-            )}
-
-            <Text variant="bodyLarge" style={styles.contentText}>
-              {postData.content}
-            </Text>
-
-            {postData.imageUrl && (
-              <View style={styles.imageContainer}>
-                <Image 
-                  source={{ uri: postData.imageUrl }} 
-                  style={styles.image}
-                  resizeMode="cover"
-                />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Image Carousel */}
+        {images.length > 0 ? (
+          <View style={styles.carouselContainer}>
+            <Carousel
+              ref={carouselRef}
+              loop={false}
+              width={SCREEN_WIDTH}
+              height={SCREEN_WIDTH * 0.5625} // 16:9 aspect ratio
+              data={images}
+              renderItem={({ item }) => (
+                <View style={styles.imageContainer}>
+                  <Image
+                    source={{ uri: item }}
+                    style={styles.carouselImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              )}
+              onProgressChange={handleProgressChange}
+              enabled={images.length > 1}
+              defaultIndex={0}
+            />
+            
+            {/* Page Indicators */}
+            {images.length > 1 && (
+              <View style={styles.indicatorsContainer}>
+                {images.map((_, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handleDotPress(index)}
+                    style={styles.indicatorWrapper}
+                  >
+                    <View
+                      style={[
+                        styles.indicator,
+                        index === activeIndex && styles.indicatorActive,
+                      ]}
+                    />
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
+          </View>
+        ) : (
+          <View style={[styles.imageContainer, styles.placeholderImage]}>
+            <MaterialCommunityIcons name="image-off" size={64} color="#999" />
+          </View>
+        )}
 
-            <Text variant="bodySmall" style={styles.timestamp}>
-              {new Date(postData.createdAt).toLocaleDateString('es-ES', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </Text>
-          </Card.Content>
-
-          <Divider style={styles.divider} />
+        {/* Product Info */}
+        <View style={styles.productInfo}>
+          {postData.title && (
+            <Text style={styles.productTitle}>{postData.title}</Text>
+          )}
           
-          <Card.Actions>
-            <IconButton
-              icon={isLiked ? 'heart' : 'heart-outline'}
-              onPress={handleLike}
-              iconColor={isLiked ? '#FF0000' : '#008000'}
-            />
-            <Text>{postData.likes || 0}</Text>
-            <IconButton 
-              icon="comment-outline"
-              iconColor="#008000"
-            />
-            <Text>{postData.comments || 0}</Text>
-          </Card.Actions>
-        </Card>
+          {price && (
+            <View style={styles.priceContainer}>
+              <MaterialCommunityIcons name="tag" size={32} color={colors.secondary} />
+              <Text style={styles.priceText}>{price}</Text>
+            </View>
+          )}
+        </View>
 
-        <CommentList
-          comments={comments}
-          loading={loading}
-          hasMore={hasMore}
-          onLoadMore={handleLoadMore}
-        />
+        {/* Description */}
+        <View style={styles.descriptionSection}>
+          <Text style={styles.sectionTitle}>Descripción</Text>
+          <Text style={styles.descriptionText}>{postData.content}</Text>
+        </View>
+
+        {/* Divider */}
+        <View style={styles.divider} />
+
+        {/* Seller Card */}
+        <View style={styles.sellerSection}>
+          <Text style={styles.sectionTitle}>Vendido por</Text>
+          <View style={styles.sellerCard}>
+            <View style={styles.avatarContainer}>
+              <MaterialCommunityIcons
+                name="account-circle"
+                size={64}
+                color={colors.primary}
+              />
+            </View>
+            <View style={styles.sellerInfo}>
+              <Text style={styles.sellerName}>{postData.author.name}</Text>
+              <Text style={styles.sellerCareer}>
+                {postData.author.username || 'Estudiante'}
+              </Text>
+              <Text style={styles.sellerDate}>
+                Publicado: {formatDate(postData.createdAt)}
+              </Text>
+            </View>
+          </View>
+        </View>
       </ScrollView>
 
-      <Card style={styles.commentInput} mode="outlined">
-        <Card.Content style={styles.commentInputContent}>
-          <TextInput
-            mode="outlined"
-            placeholder="Escribe un comentario..."
-            value={newComment}
-            onChangeText={setNewComment}
-            multiline
-            style={styles.input}
-            disabled={submitting}
-          />
-          <Button
-            mode="contained"
-            onPress={handleSubmitComment}
-            loading={submitting}
-            disabled={!newComment.trim() || submitting}
-            style={styles.submitButton}
-          >
-            Enviar
-          </Button>
-        </Card.Content>
-      </Card>
-    </KeyboardAvoidingView>
+      {/* Sticky CTA Button */}
+      <View style={[styles.stickyButtonContainer, { paddingBottom: insets.bottom + 8 }]}>
+        <TouchableOpacity
+          style={styles.contactButton}
+          onPress={() => {
+            // TODO: Implement contact functionality
+            console.log('Contact seller');
+          }}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="chat" size={24} color={colors.white} />
+          <Text style={styles.contactButtonText}>Contactar al Vendedor</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingBottom: 100,
+    backgroundColor: '#F5F5F5',
   },
   errorContainer: {
     flex: 1,
@@ -253,67 +236,183 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  content: {
-    flex: 1,
+  errorText: {
+    fontSize: 16,
+    color: colors.black,
   },
-  card: {
-    margin: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#008000',
-  },
-  typeChip: {
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-    backgroundColor: '#008000',
-  },
-  title: {
-    marginBottom: 12,
-    fontWeight: 'bold',
-    color: '#008000',
-  },
-  contentText: {
-    lineHeight: 24,
-    marginBottom: 16,
-    color: '#333',
-  },
-  imageContainer: {
-    marginVertical: 12,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#008000',
-  },
-  image: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#f0f0f0',
-  },
-  timestamp: {
-    marginTop: 16,
-    color: '#666',
-  },
-  divider: {
-    marginVertical: 8,
-  },
-  commentInput: {
-    borderRadius: 0,
-    margin: 0,
-    borderTopWidth: 1,
-    borderTopColor: '#008000',
-  },
-  commentInputContent: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F5F5F5',
   },
-  input: {
+  headerButton: {
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
     flex: 1,
-    maxHeight: 100,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.black,
   },
-  submitButton: {
-    borderRadius: 20,
-    backgroundColor: '#008000',
+  scrollView: {
+    flex: 1,
   },
-}); 
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  carouselContainer: {
+    marginBottom: 16,
+  },
+  imageContainer: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+  },
+  carouselImage: {
+    width: '100%',
+    height: '100%',
+  },
+  placeholderImage: {
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    borderRadius: 12,
+  },
+  indicatorsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 16,
+  },
+  indicatorWrapper: {
+    padding: 4,
+  },
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: `${colors.primary}4D`, // 30% opacity
+  },
+  indicatorActive: {
+    backgroundColor: colors.primary,
+  },
+  productInfo: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  productTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: colors.black,
+    lineHeight: 38,
+    marginBottom: 12,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: `${colors.secondary}33`, // accent/20 equivalent
+    borderRadius: 12,
+    padding: 12,
+    alignSelf: 'flex-start',
+  },
+  priceText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: colors.secondary,
+  },
+  descriptionSection: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.black,
+    marginBottom: 12,
+  },
+  descriptionText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#888888',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginHorizontal: 16,
+    marginVertical: 24,
+  },
+  sellerSection: {
+    paddingHorizontal: 16,
+  },
+  sellerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 12,
+  },
+  avatarContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: 'hidden',
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sellerInfo: {
+    flex: 1,
+  },
+  sellerName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.black,
+    marginBottom: 4,
+  },
+  sellerCareer: {
+    fontSize: 14,
+    color: '#888888',
+    marginBottom: 4,
+  },
+  sellerDate: {
+    fontSize: 12,
+    color: '#888888',
+    marginTop: 4,
+  },
+  stickyButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    backgroundColor: '#F5F5F5E6', // 90% opacity (backdrop blur effect)
+  },
+  contactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    height: 56,
+    gap: 12,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  contactButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.white,
+  },
+});

@@ -16,6 +16,7 @@ export type MainTabParamList = {
   carreers: undefined;
   posts: undefined;
   benefits: undefined;
+  rides: undefined;
 };
 
 export type HomeStackParamList = {
@@ -25,6 +26,15 @@ export type HomeStackParamList = {
   BenefitStack: undefined;
 };
 
+export type RideStackParamList = {
+  RidesList: undefined;
+  RidePost: { postId?: string };
+  TripDetail: { tripId: string };
+  CreateTrip: undefined;
+  EditTrip: { tripId: string };
+  MyTrips: undefined;
+  RateDriver: { tripId: string };
+};
 export type ProfileStackParamList = {
   UserProfile: undefined;
   EditProfile: undefined;

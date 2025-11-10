@@ -331,6 +331,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     paddingBottom: 100,
+    paddingTop: globalStyles.screenHeight * 0.06,
   },
   header: {
     paddingVertical: 16,

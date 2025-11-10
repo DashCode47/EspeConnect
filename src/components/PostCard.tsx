@@ -13,7 +13,8 @@ interface PostCardProps {
 }
 
 export const PostCard = ({post, onPress, anonimous}: PostCardProps) => {
-  const [likes, setLikes] = useState(post.likes);
+  console.log(post);
+  const [likes, setLikes] = useState(post.reactions?.length);
   const [isLiked, setIsLiked] = useState(false);
 
   const handleLike = async () => {

@@ -48,5 +48,16 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>LeagueSpartan-Regular.ttf</string>
+		<string>LeagueSpartan-Medium.ttf</string>
+		<string>LeagueSpartan-SemiBold.ttf</string>
+		<string>LeagueSpartan-Bold.ttf</string>
+		<string>LeagueSpartan-Light.ttf</string>
+		<string>LeagueSpartan-ExtraLight.ttf</string>
+		<string>LeagueSpartan-ExtraBold.ttf</string>
+		<string>LeagueSpartan-Black.ttf</string>
+	</array>
 </dict>
 </plist>
