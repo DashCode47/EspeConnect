@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Text, TextInput, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -15,6 +17,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { tripService, CreateTripData } from '../../services/trip.service';
 import { colors } from '../../config/colors';
 import { RideStackParamList } from '../../navigation/types';
+import { useHideNavbar } from '../../hooks/useHideNavbar';
+import { globalStyles } from '../../config/globalStyles';
 
 type CreateTripScreenNavigationProp = NativeStackNavigationProp<RideStackParamList, 'CreateTrip'>;
 
@@ -32,6 +36,7 @@ export const CreateTripScreen = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date(formData.departureTime));
+  useHideNavbar(true);
 
   const handleInputChange = (field: keyof CreateTripData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -178,7 +183,16 @@ export const CreateTripScreen = () => {
         <View style={styles.headerRight} />
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
         <Text style={styles.sectionTitle}>Información del Viaje</Text>
 
         {/* Origin */}
@@ -508,7 +522,8 @@ export const CreateTripScreen = () => {
         >
           Crear Viaje
         </Button>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -517,7 +532,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
-    paddingBottom: 70,
+    paddingTop: globalStyles.screenHeight * 0.06,
+    paddingBottom: globalStyles.bottomNavigatorHeight,
   },
   header: {
     flexDirection: 'row',
@@ -539,6 +555,9 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 40,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,

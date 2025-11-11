@@ -26,6 +26,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {globalStyles} from '../../config/globalStyles';
 import {navigationRef} from '../../navigation/RootNavigator';
 import {BENEFIT_DETAILS, BENEFIT_STACK} from '../../config/constants';
+import {HomeSkeletonLoader} from '../../components/HomeSkeletonLoader';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -160,6 +161,16 @@ export const HomeScreen: React.FC = () => {
     carouselRef.current?.scrollTo({index, animated: true});
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <Header userName={profile?.name} />
+        <HomeSkeletonLoader />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -172,9 +183,7 @@ export const HomeScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}>
         {/* University News Section */}
         <View style={styles.section}>
-          {loading ? (
-            <Text>Loading banners...</Text>
-          ) : error ? (
+          {error ? (
             <Text style={styles.errorText}>{error}</Text>
           ) : (
             <View>
