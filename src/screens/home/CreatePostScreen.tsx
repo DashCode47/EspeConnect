@@ -97,13 +97,21 @@ export const CreatePostScreen = () => {
       const finalContent = postType === 'MARKETPLACE' && price
         ? `${content.trim()}\n\nPrecio: $${parseFloat(price).toFixed(2)}`
         : content.trim();
-
-      await postService.createPost({
-        title: title.trim(),
-        content: finalContent,
-        type: postType,
-        imageUrl: image?.uri,
-      });
+      console.log('image', image);
+      const formData = new FormData();
+      if (image?.uri) {
+        // Use default type and name, as image object only has uri
+        formData.append('image', {
+          uri: image.uri,
+          type: 'image/jpeg',
+          name: 'photo.jpg',
+        } as any);
+      }
+      formData.append('title', title.trim());
+      formData.append('content', finalContent);
+      formData.append('type', postType);
+      console.log('formData', formData);
+      await postService.createPost(formData as any);
       Alert.alert('Éxito', 'Publicación creada exitosamente', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);

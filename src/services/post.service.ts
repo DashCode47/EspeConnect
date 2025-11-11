@@ -110,9 +110,16 @@ export const postService = {
     }
   },
 
-  async createPost(data: CreatePostData) {
+  async createPost(data: any) {
     try {
-      const response = await api.post<Post>('/posts', data);
+      const isFormData = data instanceof FormData;
+      const response = await api.post<Post>('/posts', data, {
+        headers: isFormData ? {
+          'Content-Type': 'multipart/form-data',
+        } : {
+          'Content-Type': 'application/json',
+        },
+      });
       return response.data;
     } catch (error) {
       throw error;
