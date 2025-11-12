@@ -10,12 +10,14 @@ import Food from '../../../assets/svg/Food';
 import Drinks from '../../../assets/svg/Drinks';
 import Parties from '../../../assets/svg/Party';
 import { Post, postService } from '../../../services/post.service';
+import { Event, eventService } from '../../../services/event.service';
 
 const useHome = () => {
   const [allPromotions, setAllPromotions] = useState<Promotion[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confessionHome, setConfessionHome] = useState<Post | null>(null);
+  const [closestEvent, setClosestEvent] = useState<Event | null>(null);
   const fetchPromotions = async () => {
     try {
       const promotions = await promotionService.getPromotions();
@@ -78,11 +80,57 @@ const useHome = () => {
     }
   };
 
+  const getClosestEvent = async () => {
+    try {
+      const response = await eventService.getEvents();
+      const events = response.data.events;
+      
+      if (events.length === 0) {
+        setClosestEvent(null);
+        return;
+      }
+
+      // Filtrar eventos futuros y ordenar por fecha más cercana
+      const now = new Date();
+      const futureEvents = events
+        .filter(event => {
+          const eventDate = new Date(event.fechaInicio);
+          return eventDate >= now;
+        })
+        .sort((a, b) => {
+          const dateA = new Date(a.fechaInicio);
+          const dateB = new Date(b.fechaInicio);
+          return dateA.getTime() - dateB.getTime();
+        });
+
+      // Si hay múltiples eventos con la misma fecha, tomar el primero
+      if (futureEvents.length > 0) {
+        setClosestEvent(futureEvents[0]);
+      } else {
+        setClosestEvent(null);
+      }
+    } catch (error) {
+      console.error('Error fetching closest event:', error);
+      setClosestEvent(null);
+    }
+  };
+
   useEffect(() => {
     fetchProfile();
   }, []);
 
-  return {allPromotions, fetchPromotions, handleIcon, profile, fetchProfile, handleBackgroundColors, getConfessionHome, confessionHome};
+  return {
+    allPromotions,
+    fetchPromotions,
+    handleIcon,
+    profile,
+    fetchProfile,
+    handleBackgroundColors,
+    getConfessionHome,
+    confessionHome,
+    getClosestEvent,
+    closestEvent,
+  };
 };
 
 export default useHome;

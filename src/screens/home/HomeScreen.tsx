@@ -22,6 +22,9 @@ import useHome from './Hooks/useHome';
 import ThemedSvgIcon from '../../components/ThemedSvgIcon';
 import {FONT_WEIGHT} from '../../config/globalStyles';
 import {PostCard} from '../../components/PostCard';
+import {eventService, Event, EventCategory} from '../../services/event.service';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {colors} from '../../config/colors';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {globalStyles} from '../../config/globalStyles';
 import {navigationRef} from '../../navigation/RootNavigator';
@@ -119,12 +122,15 @@ export const HomeScreen: React.FC = () => {
     handleBackgroundColors,
     getConfessionHome,
     confessionHome,
+    getClosestEvent,
+    closestEvent,
   } = useHome();
   useEffect(() => {
     console.log(allPromotions);
     fetchPromotions();
     fetchBanners();
     getConfessionHome();
+    getClosestEvent();
   }, []);
   console.log(allPromotions);
   const fetchBanners = async () => {
@@ -159,6 +165,51 @@ export const HomeScreen: React.FC = () => {
   const handleDotPress = (index: number) => {
     setActiveIndex(index);
     carouselRef.current?.scrollTo({index, animated: true});
+  };
+
+  const formatEventDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getCategoryColor = (category: EventCategory) => {
+    switch (category) {
+      case EventCategory.ACADEMIC:
+        return '#2ECC71';
+      case EventCategory.SPORTS:
+        return '#3498DB';
+      case EventCategory.SOCIAL:
+        return '#E74C3C';
+      case EventCategory.PRIVATE:
+        return '#9B59B6';
+      case EventCategory.OTHER:
+        return '#95A5A6';
+      default:
+        return colors.secondary;
+    }
+  };
+
+  const getCategoryLabel = (category: EventCategory) => {
+    switch (category) {
+      case EventCategory.ACADEMIC:
+        return 'ACADÉMICO';
+      case EventCategory.SPORTS:
+        return 'DEPORTIVO';
+      case EventCategory.SOCIAL:
+        return 'SOCIAL';
+      case EventCategory.PRIVATE:
+        return 'PRIVADO';
+      case EventCategory.OTHER:
+        return 'OTRO';
+      default:
+        return '';
+    }
   };
 
   if (loading) {
@@ -247,88 +298,90 @@ export const HomeScreen: React.FC = () => {
         {/* Quick Actions Section */}
         <View style={styles.section}>
           <View style={styles.confessionContainer}>
-            <Text style={styles.sectionTitle}>Destacado</Text>
+            <Text style={styles.sectionTitle}>Eventos proximos</Text>
             <TouchableOpacity
-              onPress={() => navigation.navigate('posts' as any)}>
+              onPress={() => navigation.navigate('events' as any)}>
               <Text style={styles.sectionTitleMore}>Ver todas</Text>
             </TouchableOpacity>
           </View>
-          {confessionHome && (
-            <PostCard
-              anonimous={true}
-              post={confessionHome}
-              onPress={() =>
-                navigation.navigate('PostDetails', {postData: confessionHome})
-              }
-            />
-          )}
-          <View style={styles.quickActionsContainer}>
-            {/* <TouchableOpacity
-              style={styles.quickActionCard}
-              onPress={() => navigation.navigate('matches' as any)}>
-              <View style={styles.quickActionContent}>
-                <View
-                  style={[
-                    styles.quickActionIcon,
-                    {backgroundColor: '#FF6B6B'},
-                  ]}>
-                  <Icon
-                    library="MaterialCommunityIcons"
-                    name="heart-multiple"
-                    size={32}
-                    color="white"
-                  />
-                </View>
-                <View style={styles.quickActionTextContainer}>
-                  <Text style={styles.quickActionTitle}>Matches</Text>
-                  <Text style={styles.quickActionSubtitle}>
-                    Encuentra tu pareja ideal
-                  </Text>
-                </View>
-                <View style={styles.quickActionArrow}>
-                  <Icon
-                    library="MaterialCommunityIcons"
-                    name="chevron-right"
-                    size={24}
-                    color="#666"
-                  />
-                </View>
-              </View>
-            </TouchableOpacity> */}
-            {/* 
+          {closestEvent ? (
             <TouchableOpacity
-              style={styles.quickActionCard}
-              onPress={() => navigation.navigate('posts' as any)}>
-              <View style={styles.quickActionContent}>
+              style={styles.eventCard}
+              onPress={() =>
+                navigation.navigate('events' as any, {
+                  screen: 'EventDetail',
+                  params: {eventId: closestEvent.id},
+                })
+              }>
+              <View style={styles.eventImageContainer}>
+                {closestEvent.imagen ? (
+                  <Image
+                    source={{uri: closestEvent.imagen}}
+                    style={styles.eventImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.eventImagePlaceholder,
+                      {
+                        backgroundColor: getCategoryColor(closestEvent.categoria),
+                      },
+                    ]}>
+                    <MaterialCommunityIcons
+                      name="calendar-star"
+                      size={48}
+                      color="#fff"
+                    />
+                  </View>
+                )}
                 <View
                   style={[
-                    styles.quickActionIcon,
-                    {backgroundColor: '#4ECDC4'},
+                    styles.categoryBadge,
+                    {backgroundColor: getCategoryColor(closestEvent.categoria)},
                   ]}>
-                  <Icon
-                    library="MaterialCommunityIcons"
-                    name="post-outline"
-                    size={32}
-                    color="white"
-                  />
-                </View>
-                <View style={styles.quickActionTextContainer}>
-                  <Text style={styles.quickActionTitle}>Posts</Text>
-                  <Text style={styles.quickActionSubtitle}>
-                    Comparte y descubre
+                  <Text style={styles.categoryBadgeText}>
+                    {getCategoryLabel(closestEvent.categoria)}
                   </Text>
                 </View>
-                <View style={styles.quickActionArrow}>
-                  <Icon
-                    library="MaterialCommunityIcons"
-                    name="chevron-right"
-                    size={24}
-                    color="#666"
-                  />
+              </View>
+              <View style={styles.eventContent}>
+                <Text style={styles.eventTitle}>{closestEvent.nombre}</Text>
+                <View style={styles.eventDetails}>
+                  <View style={styles.eventDetailRow}>
+                    <MaterialCommunityIcons
+                      name="calendar-today"
+                      size={20}
+                      color="#666"
+                    />
+                    <Text style={styles.eventDetailText}>
+                      {formatEventDate(closestEvent.fechaInicio)}
+                    </Text>
+                  </View>
+                  <View style={styles.eventDetailRow}>
+                    <MaterialCommunityIcons name="map-marker" size={20} color="#666" />
+                    <Text style={styles.eventDetailText} numberOfLines={1}>
+                      {closestEvent.ubicacion}
+                    </Text>
+                  </View>
+                  {closestEvent.asistentesCount > 0 && (
+                    <View style={styles.eventDetailRow}>
+                      <MaterialCommunityIcons name="account-group" size={20} color="#666" />
+                      <Text style={styles.eventDetailText}>
+                        {closestEvent.asistentesCount}{' '}
+                        {closestEvent.asistentesCount === 1 ? 'asistente' : 'asistentes'}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
-            </TouchableOpacity> */}
-          </View>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.noEventContainer}>
+              <MaterialCommunityIcons name="calendar-remove" size={48} color="#999" />
+              <Text style={styles.noEventText}>No hay eventos próximos</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -366,7 +419,7 @@ const styles = StyleSheet.create({
   sectionTitleMore: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FF0000',
+    color: '#2BEE79',
   },
   confessionContainer: {
     flexDirection: 'row',
@@ -562,5 +615,78 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  eventCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    marginTop: 8,
+  },
+  eventImageContainer: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 16 / 9,
+  },
+  eventImage: {
+    width: '100%',
+    height: '100%',
+  },
+  eventImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  categoryBadgeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  eventContent: {
+    padding: 16,
+    gap: 12,
+  },
+  eventTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.black,
+    marginBottom: 4,
+  },
+  eventDetails: {
+    gap: 8,
+  },
+  eventDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  eventDetailText: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+  },
+  noEventContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    marginTop: 8,
+  },
+  noEventText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#999',
   },
 });

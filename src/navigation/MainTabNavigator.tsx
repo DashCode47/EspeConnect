@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PostStack } from './PostStack';
 import { ComunityStack } from './ComunityStack';
 import { RideStack } from './RideStack';
+import { EventStack } from './EventStack';
 import { useNavbar } from '../contexts/NavbarContext';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -71,12 +72,16 @@ export const MainTabNavigator = () => {
           component={PostStack}
         />
         <Tab.Screen
-          name="profile"
-          component={ProfileScreen}
+          name="events"
+          component={EventStack}
         />
         <Tab.Screen
           name="rides"
           component={RideStack}
+        />
+        <Tab.Screen
+          name="profile"
+          component={ProfileScreen}
         />
       </Tab.Navigator>
     </View>

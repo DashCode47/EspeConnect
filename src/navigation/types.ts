@@ -17,6 +17,7 @@ export type MainTabParamList = {
   posts: undefined;
   benefits: undefined;
   rides: undefined;
+  events: undefined;
 };
 
 export type HomeStackParamList = {
@@ -57,4 +58,10 @@ export type ComunityStackParamList = {
 
 export type BenefitsStackParamList = {
   BenefitDetails: { data: any };
+};
+
+export type EventStackParamList = {
+  EventsList: undefined;
+  EventDetail: { eventId: string };
+  CreateEvent: undefined;
 };

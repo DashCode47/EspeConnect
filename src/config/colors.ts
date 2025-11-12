@@ -9,4 +9,5 @@ export const colors = {
     senary: '#03360b',
     black: '#222222',
     white: '#fff',
+    greenLight: '#2BEE79',
 }

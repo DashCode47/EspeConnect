@@ -28,6 +28,7 @@ const navigationItems: NavigationItem[] = [
   { key: 'home', icon: 'home-outline', label: 'Inicio' },
   // { key: 'carreers', icon: 'heart-outline', label: 'Carreras' },
   { key: 'posts', icon: 'account-group-outline', label: 'Posts' },
+  { key: 'events', icon: 'calendar-outline', label: 'Eventos' },
   { key: 'rides', icon: 'car-outline', label: 'Rides' },
   { key: 'profile', icon: 'account-outline', label: 'Perfil' },
 ];
