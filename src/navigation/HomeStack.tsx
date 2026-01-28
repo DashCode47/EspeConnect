@@ -6,6 +6,7 @@ import { CreatePostScreen } from '../screens/home/CreatePostScreen';
 import { PostDetailsScreen } from '../screens/home/PostDetailsScreen';
 import { BenefitsNavigator } from './BenefitsNavigator';
 import { BENEFIT_STACK } from '../config/constants';
+import { ProfileScreen } from '../screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -20,6 +21,7 @@ export const HomeStack = () => {
       <Stack.Screen name="CreatePost" component={CreatePostScreen} />
       <Stack.Screen name="PostDetails" component={PostDetailsScreen} />
       <Stack.Screen name={BENEFIT_STACK} component={BenefitsNavigator} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   );
 }; 

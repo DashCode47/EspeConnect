@@ -8,12 +8,14 @@ import {
   TouchableOpacity,
   Text,
   SafeAreaView,
-  FlatList,
+  Linking,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../navigation/types';
 import { Post } from '../../services/post.service';
+import { Product } from '../../services/marketplace.service';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../config/colors';
@@ -25,60 +27,141 @@ type PostDetailsScreenRouteProp = RouteProp<HomeStackParamList, 'PostDetails'>;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Helper to format price
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(price);
+};
+
+// Helper to get category label
+const getCategoryLabel = (category: string) => {
+  const categoryMap: { [key: string]: string } = {
+    'BOOKS': 'Libros',
+    'UNIFORMS': 'Uniformes',
+    'TECHNOLOGY': 'Tecnología',
+    'HOME': 'Hogar',
+    'OTHER': 'Otros',
+  };
+  return categoryMap[category] || category;
+};
+
 export const PostDetailsScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<PostDetailsScreenNavigationProp>();
   const route = useRoute<PostDetailsScreenRouteProp>();
-  const { postData } = route.params;
+  const { postData, productData } = route.params;
   const [activeIndex, setActiveIndex] = useState(0);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const carouselRef = useRef<ICarouselInstance>(null);
 
-  // Ocultar el navbar en esta pantalla
   useHideNavbar(true);
 
-  if (!postData) {
+  // Determine if we're showing a Product or a Post
+  const isProduct = !!productData;
+  const data = productData || postData;
+
+  if (!data) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <MaterialCommunityIcons name="alert" size={48} color={colors.primary} />
-          <Text style={styles.errorText}>Post no encontrado</Text>
+          <Text style={styles.errorText}>Producto no encontrado</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Parse images - if imageUrl exists, create array, otherwise empty
-  const images = postData.imageUrl ? [postData.imageUrl] : [];
-  
-  // Extract price from content if it's a marketplace post
-  const extractPrice = (content: string): string | null => {
-    if (postData.type !== 'MARKETPLACE') return null;
-    const priceMatch = content.match(/\$?(\d+\.?\d*)/);
-    return priceMatch ? `$${parseFloat(priceMatch[1]).toFixed(2)}` : null;
+  // Get display data based on type
+  const getDisplayData = () => {
+    if (isProduct && productData) {
+      return {
+        title: productData.title,
+        price: formatPrice(productData.price),
+        category: getCategoryLabel(productData.category),
+        description: productData.description,
+        imageUrl: productData.imageUrl,
+        contact: productData.contact,
+        createdAt: productData.createdAt,
+      };
+    } else if (postData) {
+      // Parse old Post format
+      const content = postData.content || '';
+      const lines = content.split('\n');
+
+      let price = '';
+      let category = 'General';
+      let description = '';
+
+      lines.forEach((line) => {
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('Precio:')) {
+          const priceMatch = trimmedLine.match(/Precio:\s*(.+)/);
+          if (priceMatch) price = priceMatch[1].trim();
+        } else if (trimmedLine.startsWith('Categoría:')) {
+          const match = trimmedLine.match(/Categoría:\s*(.+)/);
+          if (match) category = match[1].trim();
+        } else if (trimmedLine && !trimmedLine.startsWith('Precio:') && !trimmedLine.startsWith('Categoría:') && !trimmedLine.startsWith('Contacto:')) {
+          description += (description ? ' ' : '') + trimmedLine;
+        }
+      });
+
+      if (!description.trim()) {
+        description = content;
+      }
+
+      return {
+        title: postData.title || 'Producto',
+        price,
+        category,
+        description,
+        imageUrl: postData.imageUrl,
+        contact: null,
+        createdAt: postData.createdAt,
+      };
+    }
+    return null;
   };
 
-  const price = extractPrice(postData.content);
+  const displayData = getDisplayData();
+  if (!displayData) return null;
 
-  const handleProgressChange = (progress: number) => {
-    const newIndex = Math.round(progress);
-    if (newIndex !== activeIndex) {
-      setActiveIndex(newIndex);
+  const images = displayData.imageUrl ? [displayData.imageUrl] : [];
+
+  const handleSnapToItem = (index: number) => {
+    setActiveIndex(index);
+  };
+
+  const handleContact = () => {
+    if (displayData.contact) {
+      // If contact is a phone number, open dialer
+      const phoneRegex = /^\+?[\d\s-]+$/;
+      if (phoneRegex.test(displayData.contact.replace(/\s/g, ''))) {
+        Linking.openURL(`tel:${displayData.contact}`);
+      } else {
+        // Show contact info in alert
+        Alert.alert('Contacto', displayData.contact);
+      }
+    } else {
+      Alert.alert('Contactar', 'Información de contacto no disponible');
     }
   };
 
-  const handleDotPress = (index: number) => {
-    setActiveIndex(index);
-    carouselRef.current?.scrollTo({ index, animated: true });
-  };
-
+  // Format date
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('es-ES', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      return '';
+    }
   };
 
   return (
@@ -86,139 +169,148 @@ export const PostDetailsScreen = () => {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.black} />
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}>
+          <MaterialCommunityIcons name="chevron-left" size={24} color={colors.black} />
         </TouchableOpacity>
-        
-        <Text style={styles.headerTitle}>Detalle del Anuncio</Text>
-        
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => setIsBookmarked(!isBookmarked)}
-        >
-          <MaterialCommunityIcons
-            name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-            size={24}
-            color={colors.black}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.notificationButton}>
+            <MaterialCommunityIcons name="share-variant" size={20} color={colors.white} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.bookmarkButton}
+            onPress={() => setIsBookmarked(!isBookmarked)}>
+            <MaterialCommunityIcons
+              name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+              size={20}
+              color={colors.white}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Image Carousel */}
-        {images.length > 0 ? (
-          <View style={styles.carouselContainer}>
+        showsVerticalScrollIndicator={false}>
+
+        {/* Image Section */}
+        <View style={styles.imageSection}>
+          {images.length > 0 ? (
             <Carousel
               ref={carouselRef}
               loop={false}
               width={SCREEN_WIDTH}
-              height={SCREEN_WIDTH * 0.5625} // 16:9 aspect ratio
+              height={320}
               data={images}
               renderItem={({ item }) => (
-                <View style={styles.imageContainer}>
-                  <Image
-                    source={{ uri: item }}
-                    style={styles.carouselImage}
-                    resizeMode="cover"
-                  />
-                </View>
+                <Image source={{ uri: item }} style={styles.productImage} resizeMode="cover" />
               )}
-              onProgressChange={handleProgressChange}
+              onSnapToItem={handleSnapToItem}
               enabled={images.length > 1}
               defaultIndex={0}
             />
-            
-            {/* Page Indicators */}
-            {images.length > 1 && (
-              <View style={styles.indicatorsContainer}>
-                {images.map((_, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => handleDotPress(index)}
-                    style={styles.indicatorWrapper}
-                  >
-                    <View
-                      style={[
-                        styles.indicator,
-                        index === activeIndex && styles.indicatorActive,
-                      ]}
-                    />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-        ) : (
-          <View style={[styles.imageContainer, styles.placeholderImage]}>
-            <MaterialCommunityIcons name="image-off" size={64} color="#999" />
-          </View>
-        )}
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <MaterialCommunityIcons name="image-off" size={64} color="#999" />
+            </View>
+          )}
+          {images.length > 1 && (
+            <View style={styles.imageCounter}>
+              <Text style={styles.imageCounterText}>
+                {activeIndex + 1} / {images.length}
+              </Text>
+            </View>
+          )}
+        </View>
 
         {/* Product Info */}
-        <View style={styles.productInfo}>
-          {postData.title && (
-            <Text style={styles.productTitle}>{postData.title}</Text>
-          )}
-          
-          {price && (
-            <View style={styles.priceContainer}>
-              <MaterialCommunityIcons name="tag" size={32} color={colors.secondary} />
-              <Text style={styles.priceText}>{price}</Text>
-            </View>
-          )}
-        </View>
+        <View style={styles.contentSection}>
+          {/* Category Badge */}
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>{displayData.category}</Text>
+          </View>
 
-        {/* Description */}
-        <View style={styles.descriptionSection}>
-          <Text style={styles.sectionTitle}>Descripción</Text>
-          <Text style={styles.descriptionText}>{postData.content}</Text>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Seller Card */}
-        <View style={styles.sellerSection}>
-          <Text style={styles.sectionTitle}>Vendido por</Text>
-          <View style={styles.sellerCard}>
-            <View style={styles.avatarContainer}>
+          {/* Title */}
+          <View style={styles.titleSection}>
+            <Text style={styles.productTitle}>{displayData.title}</Text>
+            <TouchableOpacity
+              style={styles.titleBookmark}
+              onPress={() => setIsBookmarked(!isBookmarked)}>
               <MaterialCommunityIcons
-                name="account-circle"
-                size={64}
-                color={colors.primary}
+                name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+                size={24}
+                color="#999"
               />
+            </TouchableOpacity>
+          </View>
+
+          {/* Price */}
+          {displayData.price && (
+            <View style={styles.priceSection}>
+              <Text style={styles.priceText}>{displayData.price}</Text>
             </View>
-            <View style={styles.sellerInfo}>
-              <Text style={styles.sellerName}>{postData.author.name}</Text>
-              <Text style={styles.sellerCareer}>
-                {postData.author.username || 'Estudiante'}
-              </Text>
-              <Text style={styles.sellerDate}>
-                Publicado: {formatDate(postData.createdAt)}
-              </Text>
+          )}
+
+          {/* Published Date */}
+          {displayData.createdAt && (
+            <View style={styles.dateSection}>
+              <MaterialCommunityIcons name="calendar" size={16} color="#666" />
+              <Text style={styles.dateText}>Publicado el {formatDate(displayData.createdAt)}</Text>
+            </View>
+          )}
+
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Description */}
+          <View style={styles.descriptionSection}>
+            <Text style={styles.descriptionTitle}>Descripción</Text>
+            <Text style={styles.descriptionText}>{displayData.description}</Text>
+          </View>
+
+          {/* Contact Info */}
+          {displayData.contact && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.contactInfoSection}>
+                <Text style={styles.contactInfoTitle}>Información de contacto</Text>
+                <View style={styles.contactInfoRow}>
+                  <MaterialCommunityIcons name="phone" size={20} color={colors.primary} />
+                  <Text style={styles.contactInfoText}>{displayData.contact}</Text>
+                </View>
+              </View>
+            </>
+          )}
+
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Seller Info */}
+          <View style={styles.sellerSection}>
+            <Text style={styles.sellerSectionTitle}>Información del vendedor</Text>
+            <View style={styles.sellerCard}>
+              <View style={styles.sellerLeft}>
+                <View style={styles.sellerAvatarPlaceholder}>
+                  <MaterialCommunityIcons name="account" size={24} color="#666" />
+                </View>
+                <View style={styles.sellerInfo}>
+                  <Text style={styles.sellerName}>Vendedor</Text>
+                  <Text style={styles.sellerCareer}>Estudiante</Text>
+                </View>
+              </View>
             </View>
           </View>
         </View>
       </ScrollView>
 
-      {/* Sticky CTA Button */}
-      <View style={[styles.stickyButtonContainer, { paddingBottom: insets.bottom + 8 }]}>
+      {/* Footer with Contact Button */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
           style={styles.contactButton}
-          onPress={() => {
-            // TODO: Implement contact functionality
-            console.log('Contact seller');
-          }}
-          activeOpacity={0.8}
-        >
-          <MaterialCommunityIcons name="chat" size={24} color={colors.white} />
-          <Text style={styles.contactButtonText}>Contactar al Vendedor</Text>
+          onPress={handleContact}>
+          <MaterialCommunityIcons name="message-text" size={20} color={colors.white} style={{ marginRight: 8 }} />
+          <Text style={styles.contactButtonText}>Contactar vendedor</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -228,7 +320,7 @@ export const PostDetailsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.white,
   },
   errorContainer: {
     flex: 1,
@@ -246,20 +338,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.white,
   },
-  headerButton: {
-    width: 48,
-    height: 48,
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 20,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  notificationButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.black,
+  bookmarkButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
@@ -267,104 +374,149 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  carouselContainer: {
-    marginBottom: 16,
-  },
-  imageContainer: {
+  imageSection: {
+    position: 'relative',
+    height: 320,
     width: '100%',
-    aspectRatio: 16 / 9,
   },
-  carouselImage: {
+  productImage: {
     width: '100%',
     height: '100%',
   },
-  placeholderImage: {
-    backgroundColor: '#E0E0E0',
+  imagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 16,
-    borderRadius: 12,
   },
-  indicatorsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 16,
+  imageCounter: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  indicatorWrapper: {
-    padding: 4,
+  imageCounterText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '600',
   },
-  indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: `${colors.primary}4D`, // 30% opacity
+  contentSection: {
+    padding: 16,
+    gap: 16,
   },
-  indicatorActive: {
+  categoryBadge: {
+    alignSelf: 'flex-start',
     backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  productInfo: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
+  categoryBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  titleSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   productTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.black,
-    lineHeight: 38,
-    marginBottom: 12,
+    flex: 1,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#131413',
+    lineHeight: 28,
   },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: `${colors.secondary}33`, // accent/20 equivalent
-    borderRadius: 12,
-    padding: 12,
-    alignSelf: 'flex-start',
+  titleBookmark: {
+    padding: 4,
+  },
+  priceSection: {
+    marginTop: 4,
   },
   priceText: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.secondary,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  dateSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dateText: {
+    fontSize: 14,
+    color: '#666',
   },
   descriptionSection: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
+    gap: 8,
   },
-  sectionTitle: {
+  descriptionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.black,
-    marginBottom: 12,
+    fontWeight: '700',
+    color: '#131413',
   },
   descriptionText: {
     fontSize: 16,
+    color: '#666',
     lineHeight: 24,
-    color: '#888888',
+  },
+  contactInfoSection: {
+    gap: 12,
+  },
+  contactInfoTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#131413',
+  },
+  contactInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  contactInfoText: {
+    fontSize: 16,
+    color: colors.primary,
+    fontWeight: '500',
   },
   divider: {
     height: 1,
     backgroundColor: '#E0E0E0',
-    marginHorizontal: 16,
-    marginVertical: 24,
+    marginVertical: 8,
   },
   sellerSection: {
-    paddingHorizontal: 16,
+    gap: 12,
+  },
+  sellerSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#131413',
   },
   sellerCard: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 16,
-    marginTop: 12,
   },
-  avatarContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    overflow: 'hidden',
-    backgroundColor: '#E0E0E0',
+  sellerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  sellerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  sellerAvatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#D9D9D9',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -373,46 +525,37 @@ const styles = StyleSheet.create({
   },
   sellerName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.black,
+    fontWeight: '600',
+    color: '#131413',
     marginBottom: 4,
   },
   sellerCareer: {
     fontSize: 14,
-    color: '#888888',
-    marginBottom: 4,
+    color: '#666',
   },
-  sellerDate: {
-    fontSize: 12,
-    color: '#888888',
-    marginTop: 4,
-  },
-  stickyButtonContainer: {
+  footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 16,
-    paddingTop: 8,
-    backgroundColor: '#F5F5F5E6', // 90% opacity (backdrop blur effect)
+    paddingTop: 16,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
   },
   contactButton: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.primary,
     borderRadius: 12,
-    height: 56,
-    gap: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   contactButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: colors.white,
   },
 });

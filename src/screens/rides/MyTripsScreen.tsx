@@ -7,77 +7,77 @@ import {
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
+  Text,
 } from 'react-native';
-import { Text, SegmentedButtons, Chip } from 'react-native-paper';
+import { Chip } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { tripService, Trip, TripType } from '../../services/trip.service';
-import { authService } from '../../services/auth.service';
+import { useUserStore } from '../../store/userStore';
 import { RideCard, Ride } from '../../components/rides/RideCard';
 import { colors } from '../../config/colors';
 import { RideStackParamList } from '../../navigation/types';
+import { useHideNavbar } from '../../hooks/useHideNavbar';
+import { ErrorModal } from '../../components/modals/ErrorModal';
 
 type MyTripsScreenNavigationProp = NativeStackNavigationProp<RideStackParamList, 'MyTrips'>;
 
 export const MyTripsScreen = () => {
   const navigation = useNavigation<MyTripsScreenNavigationProp>();
+  const { profile } = useUserStore();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [tripType, setTripType] = useState<TripType>('all');
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [tripType, setTripType] = useState<TripType>('created'); // Por defecto mostrar solo creados
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useHideNavbar(true);
 
   useEffect(() => {
-    fetchCurrentUser();
-  }, []);
-
-  useEffect(() => {
-    if (currentUserId) {
+    if (!profile) {
+      setErrorMessage('Debes iniciar sesión para ver tus viajes');
+      setShowErrorModal(true);
+      setTimeout(() => {
+        navigation.goBack();
+      }, 2000);
+    } else {
       fetchTrips();
     }
-  }, [currentUserId, tripType]);
-
-  const fetchCurrentUser = async () => {
-    try {
-      const user = await authService.getCurrentUser();
-      if (user?.id) {
-        setCurrentUserId(user.id);
-      } else {
-        Alert.alert('Error', 'Debes iniciar sesión para ver tus viajes');
-        navigation.goBack();
-      }
-    } catch (error) {
-      console.error('Error fetching current user:', error);
-    }
-  };
+  }, [profile?.id, tripType]);
 
   const fetchTrips = async () => {
-    if (!currentUserId) return;
+    if (!profile?.id) return;
 
     try {
       setLoading(true);
-      const response = await tripService.getUserTrips(currentUserId, {
+      const response = await tripService.getUserTrips(profile.id, {
         type: tripType,
       });
       setTrips(response.data.trips);
     } catch (error: any) {
       console.error('Error fetching trips:', error);
+      setErrorMessage('Error al cargar tus viajes');
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchTrips();
-  }, [currentUserId, tripType]);
-
   const handleTripPress = (tripId: string) => {
     navigation.navigate('TripDetail', { tripId });
   };
+
+  const handleManageRequests = (tripId: string) => {
+    navigation.navigate('ManageTripRequests', { tripId });
+  };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchTrips();
+  }, [profile?.id, tripType]);
 
   // Convert Trip to Ride format for RideCard component
   const convertTripToRide = (trip: Trip): Ride => {
@@ -144,27 +144,56 @@ export const MyTripsScreen = () => {
       </View>
 
       <View style={styles.filterContainer}>
-        <SegmentedButtons
-          value={tripType}
-          onValueChange={(value) => setTripType(value as TripType)}
-          buttons={[
-            {
-              value: 'all',
-              label: 'Todos',
-              icon: 'format-list-bulleted',
-            },
-            {
-              value: 'created',
-              label: 'Creados',
-              icon: 'car',
-            },
-            {
-              value: 'joined',
-              label: 'Unidos',
-              icon: 'account-plus',
-            },
-          ]}
-        />
+        <View style={styles.filterButtons}>
+          <TouchableOpacity
+            style={[styles.filterButton, tripType === 'created' && styles.filterButtonActive]}
+            onPress={() => setTripType('created')}
+            activeOpacity={0.7}>
+            <MaterialCommunityIcons
+              name="car"
+              size={20}
+              color={tripType === 'created' ? colors.white : colors.primaryDark}
+            />
+            <Text
+              style={[
+                styles.filterButtonText,
+                tripType === 'created' && styles.filterButtonTextActive,
+              ]}>
+              Creados
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterButton, tripType === 'joined' && styles.filterButtonActive]}
+            onPress={() => setTripType('joined')}
+            activeOpacity={0.7}>
+            <MaterialCommunityIcons
+              name="account-plus"
+              size={20}
+              color={tripType === 'joined' ? colors.white : colors.primaryDark}
+            />
+            <Text
+              style={[
+                styles.filterButtonText,
+                tripType === 'joined' && styles.filterButtonTextActive,
+              ]}>
+              Unidos
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterButton, tripType === 'all' && styles.filterButtonActive]}
+            onPress={() => setTripType('all')}
+            activeOpacity={0.7}>
+            <MaterialCommunityIcons
+              name="format-list-bulleted"
+              size={20}
+              color={tripType === 'all' ? colors.white : colors.primaryDark}
+            />
+            <Text
+              style={[styles.filterButtonText, tripType === 'all' && styles.filterButtonTextActive]}>
+              Todos
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {trips.length === 0 ? (
@@ -244,14 +273,37 @@ export const MyTripsScreen = () => {
                     : 'Cancelado'}
                 </Chip>
               </View>
-              <RideCard
-                ride={convertTripToRide(trip)}
-                onJoinPress={() => handleTripPress(trip.id)}
-              />
+              <TouchableOpacity
+                onPress={() => handleTripPress(trip.id)}
+                activeOpacity={0.7}>
+                <RideCard
+                  ride={convertTripToRide(trip)}
+                  onJoinPress={() => handleTripPress(trip.id)}
+                />
+              </TouchableOpacity>
+              {trip.userRole === 'driver' && trip.status === 'ACTIVE' && (
+                <TouchableOpacity
+                  style={styles.manageButton}
+                  onPress={() => handleManageRequests(trip.id)}
+                  activeOpacity={0.7}>
+                  <MaterialCommunityIcons name="account-group" size={18} color={colors.primary} />
+                  <Text style={styles.manageButtonText}>Gestionar Solicitudes</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))}
         </ScrollView>
       )}
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={showErrorModal}
+        message={errorMessage}
+        onClose={() => {
+          setShowErrorModal(false);
+          setErrorMessage('');
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -288,6 +340,53 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  filterButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  filterButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primaryDark,
+  },
+  filterButtonTextActive: {
+    color: colors.white,
+  },
+  manageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  manageButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
   },
   loadingContainer: {
     flex: 1,

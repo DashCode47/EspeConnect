@@ -1,5 +1,4 @@
-import api from './api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../lib/supabase';
 
 interface LoginData {
   email: string;
@@ -17,57 +16,109 @@ interface RegisterData {
 
 export const authService = {
   async login(data: LoginData) {
-    try {
-      console.log('Login attempt with1:', data);
-      const response = await api.post('/auth/login', data);
-      if (response.data?.data?.token) {
-        console.log('Login attempt2', response?.data?.data?.token);
-        await AsyncStorage.setItem('token', response.data?.data?.token);
-        await AsyncStorage.setItem('user', JSON.stringify(response.data?.data?.user));
-      }
-      return response.data;
-    } catch (error) {
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (error) {
       throw error;
     }
+
+    return authData;
   },
 
   async register(data: RegisterData) {
-    try {
-      const response = await api.post('/auth/register', data);
-      if (response.data.token) {
-        await AsyncStorage.setItem('token', response.data.token);
-        await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
-      }
-      return response.data;
-    } catch (error) {
-      throw error;
+    // First, create the auth user
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          full_name: data.name,
+          career: data.career,
+          gender: data.gender,
+          interests: data.interests,
+        },
+      },
+    });
+
+    if (authError) {
+      throw authError;
     }
+
+    // If user was created, also create a profile in the profiles table
+    if (authData.user) {
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: authData.user.id,
+        full_name: data.name,
+        career: data.career,
+        gender: data.gender,
+        interests: data.interests,
+        email: data.email,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        // Don't throw here - the auth user was created successfully
+      }
+    }
+
+    return authData;
   },
 
   async logout() {
-    try {
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
-    } catch (error) {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
       throw error;
     }
   },
 
   async getCurrentUser() {
-    try {
-      const user = await AsyncStorage.getItem('user');
-      return user ? JSON.parse(user) : null;
-    } catch (error) {
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error) {
       throw error;
     }
+
+    if (!user) {
+      return null;
+    }
+
+    // Get additional profile data
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    return {
+      ...user,
+      profile,
+    };
   },
 
   async isAuthenticated() {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      return !!token;
-    } catch (error) {
-      return false;
+    const { data: { session } } = await supabase.auth.getSession();
+    return !!session;
+  },
+
+  async updateProfile(profileData: Partial<RegisterData>) {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    const { error } = await supabase.from('profiles').upsert({
+      id: user.id,
+      ...profileData,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      throw error;
     }
   },
-}; 
+};

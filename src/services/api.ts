@@ -6,7 +6,7 @@ const api = axios.create({
   // For iOS simulator, use localhost
   // For physical device, use your machine's IP address
   // baseURL: 'http://10.0.2.2:3000/api',
-  baseURL: 'https://camplus.vercel.app/api',
+  // baseURL: 'https://camplus.vercel.app/api',
   headers: {},
 });
 
@@ -15,6 +15,7 @@ api.interceptors.request.use(
   async config => {
     try {
       const token = await AsyncStorage.getItem('token');
+      const isFormData = config.data instanceof FormData;
 
       // Log the request details
       console.log('API Request:', {
@@ -31,8 +32,14 @@ api.interceptors.request.use(
 
       // If we have a token, add it to the headers
       if (token) {
-        config.headers.Authorization = token; // Token already includes 'Bearer '
+        // Asegurar que el token tenga el prefijo Bearer
+        const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+        config.headers.Authorization = authToken;
       }
+
+      // Para FormData, NO establecer Content-Type aquí
+      // Se establecerá en el servicio específico para evitar conflictos
+      // El interceptor solo maneja la autenticación
 
       return config;
     } catch (error) {

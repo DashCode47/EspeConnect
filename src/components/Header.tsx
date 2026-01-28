@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, Text, StyleSheet} from 'react-native';
 import {FONT_WEIGHT, FONT_FAMILY} from '../config/globalStyles';
+import {colors} from '../config/colors';
 import BannerLines from '../assets/svg/BannerLines';
 
 interface HeaderProps {
@@ -29,15 +30,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   welcomeText: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: FONT_WEIGHT.BOLD,
-    color: 'black',
-    marginTop: 35,
+    color: colors.primaryDark,
+    marginTop: 8,
+    letterSpacing: -0.5,
   },
   subtitleText: {
-    fontSize: 30,
-    fontWeight: FONT_WEIGHT.BOLD,
+    fontSize: 16,
+    fontWeight: FONT_WEIGHT.MEDIUM,
     fontFamily: FONT_FAMILY.REGULAR,
-    color: '#01613f',
+    color: colors.primary,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });

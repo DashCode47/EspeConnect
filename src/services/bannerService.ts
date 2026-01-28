@@ -1,4 +1,4 @@
-import api from './api';
+import { supabase } from '../lib/supabase';
 
 export interface Banner {
   id: string;
@@ -11,41 +11,74 @@ export interface Banner {
 
 export const bannerService = {
   getAll: async (): Promise<Banner[]> => {
-    try {
-      const response = await api.get('/banners');
-      return response.data;
-    } catch (error) {
+    const { data, error } = await supabase
+      .from('Banner')
+      .select('*')
+      .order('createdAt', { ascending: false });
+
+    if (error) {
       console.error('Error fetching banners:', error);
       throw error;
     }
+
+    return data as Banner[];
+  },
+
+  getActive: async (): Promise<Banner[]> => {
+    const { data, error } = await supabase
+      .from('Banner')
+      .select('*')
+      .eq('isActive', true)
+      .order('createdAt', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching active banners:', error);
+      throw error;
+    }
+
+    return data as Banner[];
   },
 
   create: async (banner: Omit<Banner, 'id' | 'createdAt'>): Promise<Banner> => {
-    try {
-      const response = await api.post('/banners', banner);
-      return response.data;
-    } catch (error) {
+    const { data, error } = await supabase
+      .from('Banner')
+      .insert(banner)
+      .select()
+      .single();
+
+    if (error) {
       console.error('Error creating banner:', error);
       throw error;
     }
+
+    return data as Banner;
   },
 
   update: async (id: string, banner: Partial<Banner>): Promise<Banner> => {
-    try {
-      const response = await api.put(`/banners/${id}`, banner);
-      return response.data;
-    } catch (error) {
+    const { data, error } = await supabase
+      .from('Banner')
+      .update(banner)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
       console.error('Error updating banner:', error);
       throw error;
     }
+
+    return data as Banner;
   },
 
   delete: async (id: string): Promise<void> => {
-    try {
-      await api.delete(`/banners/${id}`);
-    } catch (error) {
+    const { error } = await supabase
+      .from('Banner')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
       console.error('Error deleting banner:', error);
       throw error;
     }
   },
-}; 
+};

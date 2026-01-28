@@ -8,6 +8,7 @@ import { CreateTripScreen } from '../screens/rides/CreateTripScreen';
 import { EditTripScreen } from '../screens/rides/EditTripScreen';
 import { MyTripsScreen } from '../screens/rides/MyTripsScreen';
 import { RateDriverScreen } from '../screens/rides/RateDriverScreen';
+import { ManageTripRequestsScreen } from '../screens/rides/ManageTripRequestsScreen';
 
 const Stack = createNativeStackNavigator<RideStackParamList>();
 
@@ -25,6 +26,7 @@ export const RideStack = () => {
       <Stack.Screen name="EditTrip" component={EditTripScreen} />
       <Stack.Screen name="MyTrips" component={MyTripsScreen} />
       <Stack.Screen name="RateDriver" component={RateDriverScreen} />
+      <Stack.Screen name="ManageTripRequests" component={ManageTripRequestsScreen} />
     </Stack.Navigator>
   );
 }; 

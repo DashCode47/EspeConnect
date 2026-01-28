@@ -1,41 +1,32 @@
 import {
   PromotionCategory,
-  promotionService,
 } from '../../../services/promotion.service';
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {Promotion} from '../../../services/promotion.service';
-import {profileService, UserProfile} from '../../../services/profile.service';
-import {useEffect} from 'react';
+import {useUserStore} from '../../../store/userStore';
 import Food from '../../../assets/svg/Food';
 import Drinks from '../../../assets/svg/Drinks';
 import Parties from '../../../assets/svg/Party';
-import { Post, postService } from '../../../services/post.service';
-import { Event, eventService } from '../../../services/event.service';
+import {Post, postService} from '../../../services/post.service';
+import {Event, eventService} from '../../../services/event.service';
 
 const useHome = () => {
   const [allPromotions, setAllPromotions] = useState<Promotion[]>([]);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confessionHome, setConfessionHome] = useState<Post | null>(null);
   const [closestEvent, setClosestEvent] = useState<Event | null>(null);
-  const fetchPromotions = async () => {
-    try {
-      const promotions = await promotionService.getPromotions();
-      setAllPromotions(promotions.data.promotions);
-    } catch (error) {
-      console.log(error);
-    }
-  };
+
+  // Use Zustand store for profile
+  const {profile, fetchProfile, isLoading: profileLoading} = useUserStore();
 
   const handleIcon = (category: PromotionCategory) => {
-    console.log(category);
     switch (category) {
       case PromotionCategory.FOOD:
         return Food;
       case PromotionCategory.DRINKS:
         return Drinks;
       case PromotionCategory.EVENTS:
-        return Parties; // Using Parties as fallback since Events doesn't exist
+        return Parties;
       case PromotionCategory.PARTIES:
         return Parties;
       default:
@@ -46,27 +37,15 @@ const useHome = () => {
   const handleBackgroundColors = (category: PromotionCategory) => {
     switch (category) {
       case PromotionCategory.FOOD:
-        return '#E8F5E8'; // Light green
+        return '#E8F5E8';
       case PromotionCategory.DRINKS:
-        return '#F0F8F0'; // Very light green
+        return '#F0F8F0';
       case PromotionCategory.EVENTS:
-        return '#E0F0E0'; // Light green variant
+        return '#E0F0E0';
       case PromotionCategory.PARTIES:
-        return '#F5F0F0'; // Light red tint
+        return '#F5F0F0';
       default:
-        return '#008000'; // Primary green
-    }
-  };
-
-  const fetchProfile = async () => {
-    try {
-      const response = await profileService.getProfile();
-      if (response.status === 'success') {
-        setProfile(response.data.user);
-      }
-    } catch (err) {
-      setError('Failed to load profile');
-      console.error(err);
+        return '#008000';
     }
   };
 
@@ -74,7 +53,6 @@ const useHome = () => {
     try {
       const response = await postService.getPosts('CONFESSION');
       setConfessionHome(response.data.posts[0]);
-      console.log(response);
     } catch (error) {
       console.error(error);
     }
@@ -84,13 +62,12 @@ const useHome = () => {
     try {
       const response = await eventService.getEvents();
       const events = response.data.events;
-      
+
       if (events.length === 0) {
         setClosestEvent(null);
         return;
       }
 
-      // Filtrar eventos futuros y ordenar por fecha más cercana
       const now = new Date();
       const futureEvents = events
         .filter(event => {
@@ -103,7 +80,6 @@ const useHome = () => {
           return dateA.getTime() - dateB.getTime();
         });
 
-      // Si hay múltiples eventos con la misma fecha, tomar el primero
       if (futureEvents.length > 0) {
         setClosestEvent(futureEvents[0]);
       } else {
@@ -121,10 +97,10 @@ const useHome = () => {
 
   return {
     allPromotions,
-    fetchPromotions,
     handleIcon,
     profile,
     fetchProfile,
+    profileLoading,
     handleBackgroundColors,
     getConfessionHome,
     confessionHome,

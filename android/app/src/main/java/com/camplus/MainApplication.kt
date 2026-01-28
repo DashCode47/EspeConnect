@@ -1,4 +1,4 @@
-package com.especonnectfront
+package com.camplus
 
 import android.app.Application
 import com.facebook.react.PackageList
@@ -42,3 +42,4 @@ class MainApplication : Application(), ReactApplication {
     }
   }
 }
+

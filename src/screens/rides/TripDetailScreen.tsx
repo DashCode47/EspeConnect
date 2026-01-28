@@ -5,17 +5,23 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
+  Text,
+  Image,
 } from 'react-native';
-import { Text, Avatar, Chip, Button, Divider } from 'react-native-paper';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { tripService, Trip, TripRequest } from '../../services/trip.service';
-import { authService } from '../../services/auth.service';
+import { tripService, Trip } from '../../services/trip.service';
+import { useUserStore } from '../../store/userStore';
 import { colors } from '../../config/colors';
 import { RideStackParamList } from '../../navigation/types';
+import { UbicacionActual } from '../../assets/svg/UbicacionActual';
+import { Destino } from '../../assets/svg/Destino';
+import { useHideNavbar } from '../../hooks/useHideNavbar';
+import { ConfirmationModal } from '../../components/modals/ConfirmationModal';
+import { SuccessModal } from '../../components/modals/SuccessModal';
+import { ErrorModal } from '../../components/modals/ErrorModal';
 
 type TripDetailScreenRouteProp = RouteProp<RideStackParamList, 'TripDetail'>;
 type TripDetailScreenNavigationProp = NativeStackNavigationProp<RideStackParamList, 'TripDetail'>;
@@ -25,14 +31,19 @@ export const TripDetailScreen = () => {
   const navigation = useNavigation<TripDetailScreenNavigationProp>();
   const { tripId } = route.params;
 
+  const { profile } = useUserStore();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showReserveModal, setShowReserveModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useHideNavbar(true);
 
   useEffect(() => {
     fetchTrip();
-    fetchCurrentUser();
   }, [tripId]);
 
   const fetchTrip = async () => {
@@ -42,140 +53,61 @@ export const TripDetailScreen = () => {
       setTrip(response.data.trip);
     } catch (error: any) {
       console.error('Error fetching trip:', error);
-      Alert.alert('Error', 'No se pudo cargar el viaje');
-      navigation.goBack();
+      setErrorMessage('No se pudo cargar el viaje');
+      setShowErrorModal(true);
+      setTimeout(() => {
+        navigation.goBack();
+      }, 2000);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCurrentUser = async () => {
+  const handleContact = () => {
+    // TODO: Implementar contacto con el conductor
+    setErrorMessage('Funcionalidad de contacto próximamente');
+    setShowErrorModal(true);
+  };
+
+  const handleReserve = () => {
+    if (!trip || !profile) {
+      setErrorMessage('Debes iniciar sesión para reservar un viaje');
+      setShowErrorModal(true);
+      return;
+    }
+
+    if (trip.driverId === profile.id) {
+      setErrorMessage('No puedes reservar tu propio viaje');
+      setShowErrorModal(true);
+      return;
+    }
+
+    setShowReserveModal(true);
+  };
+
+  const confirmReserve = async () => {
     try {
-      const user = await authService.getCurrentUser();
-      setCurrentUser(user);
-    } catch (error) {
-      console.error('Error fetching current user:', error);
+      setActionLoading(true);
+      setShowReserveModal(false);
+      await tripService.joinTrip(tripId);
+      setShowSuccessModal(true);
+      fetchTrip();
+    } catch (error: any) {
+      setErrorMessage(
+        error.response?.data?.message || 'No se pudo reservar el viaje. Intenta nuevamente.'
+      );
+      setShowErrorModal(true);
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const handleJoinTrip = async () => {
-    if (!trip || !currentUser) {
-      Alert.alert('Error', 'Debes iniciar sesión para unirte a un viaje');
-      return;
-    }
-
-    if (trip.driverId === currentUser.id) {
-      Alert.alert('Error', 'No puedes unirte a tu propio viaje');
-      return;
-    }
-
-    Alert.alert(
-      'Unirse al viaje',
-      '¿Estás seguro de que deseas unirte a este viaje?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: async () => {
-            try {
-              setActionLoading(true);
-              await tripService.joinTrip(tripId);
-              Alert.alert('Éxito', 'Solicitud enviada. El conductor te notificará cuando la acepte.');
-              fetchTrip();
-            } catch (error: any) {
-              Alert.alert(
-                'Error',
-                error.response?.data?.message || 'No se pudo unir al viaje. Intenta nuevamente.'
-              );
-            } finally {
-              setActionLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleConfirmPassenger = async (requestId: string) => {
-    if (!trip || trip.driverId !== currentUser?.id) {
-      Alert.alert('Error', 'Solo el conductor puede confirmar pasajeros');
-      return;
-    }
-
-    Alert.alert(
-      'Confirmar pasajero',
-      '¿Aceptar a este pasajero en el viaje?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: async () => {
-            try {
-              setActionLoading(true);
-              await tripService.confirmPassenger(tripId, { requestId });
-              Alert.alert('Éxito', 'Pasajero confirmado exitosamente');
-              fetchTrip();
-            } catch (error: any) {
-              Alert.alert(
-                'Error',
-                error.response?.data?.message || 'No se pudo confirmar al pasajero.'
-              );
-            } finally {
-              setActionLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleEditTrip = () => {
-    if (trip) {
-      navigation.navigate('EditTrip', { tripId: trip.id });
-    }
-  };
-
-  const handleCancelTrip = () => {
-    Alert.alert(
-      'Cancelar viaje',
-      '¿Estás seguro de que deseas cancelar este viaje? Todos los pasajeros serán notificados.',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Sí, cancelar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setActionLoading(true);
-              await tripService.cancelTrip(tripId);
-              Alert.alert('Éxito', 'Viaje cancelado exitosamente');
-              navigation.goBack();
-            } catch (error: any) {
-              Alert.alert(
-                'Error',
-                error.response?.data?.message || 'No se pudo cancelar el viaje.'
-              );
-            } finally {
-              setActionLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleRateDriver = () => {
-    navigation.navigate('RateDriver', { tripId });
-  };
-
-  const formatDateTime = (dateString: string) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString('es-ES', {
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     });
   };
 
@@ -184,20 +116,9 @@ export const TripDetailScreen = () => {
     return date.toLocaleTimeString('es-ES', {
       hour: '2-digit',
       minute: '2-digit',
+      hour12: true,
     });
   };
-
-  const isDriver = trip?.driverId === currentUser?.id;
-  const hasJoined = trip?.requests?.some(
-    (req) => req.passengerId === currentUser?.id && req.status === 'ACCEPTED'
-  );
-  const hasPendingRequest = trip?.requests?.some(
-    (req) => req.passengerId === currentUser?.id && req.status === 'PENDING'
-  );
-  const canJoin = !isDriver && !hasJoined && !hasPendingRequest && trip?.status === 'ACTIVE';
-  const canRate = hasJoined && trip?.status !== 'ACTIVE' && !trip?.ratings?.some(
-    (rating) => rating.raterId === currentUser?.id
-  );
 
   if (loading) {
     return (
@@ -215,309 +136,217 @@ export const TripDetailScreen = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Viaje no encontrado</Text>
-          <Button onPress={() => navigation.goBack()}>Volver</Button>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={styles.backButtonText}>Volver</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  const pendingRequests = trip.requests?.filter((req) => req.status === 'PENDING') || [];
-  const acceptedRequests = trip.requests?.filter((req) => req.status === 'ACCEPTED') || [];
+  const isDriver = trip.driverId === profile?.id;
+  const occupiedSeats = trip.requests?.filter((req) => req.status === 'ACCEPTED').length || 0;
+  const totalSeats = trip.availableSeats + occupiedSeats;
+  const pendingRequests = trip.requests?.filter((req) => req.status === 'PENDING').length || 0;
+
+  const handleManageRequests = () => {
+    navigation.navigate('ManageTripRequests', { tripId });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.black} />
+          <MaterialCommunityIcons name="chevron-left" size={24} color={colors.black} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detalle del Viaje</Text>
-        <View style={styles.headerRight} />
+        <Text style={styles.headerTitle}>Detalle del viaje</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.notificationButton}>
+            <MaterialCommunityIcons name="bell" size={20} color={colors.white} />
+            <View style={styles.notificationDot} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.bookmarkButton}>
+            <MaterialCommunityIcons name="bookmark" size={20} color={colors.white} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Status Chip */}
-        <View style={styles.statusContainer}>
-          <Chip
-            icon={() => (
-              <MaterialCommunityIcons
-                name={
-                  trip.status === 'ACTIVE'
-                    ? 'check-circle'
-                    : trip.status === 'FULL'
-                    ? 'account-group'
-                    : 'cancel'
-                }
-                size={16}
-                color={colors.white}
-              />
-            )}
-            style={[
-              styles.statusChip,
-              {
-                backgroundColor:
-                  trip.status === 'ACTIVE'
-                    ? '#4CAF50'
-                    : trip.status === 'FULL'
-                    ? '#FF9800'
-                    : '#F44336',
-              },
-            ]}
-            textStyle={styles.statusChipText}
-          >
-            {trip.status === 'ACTIVE'
-              ? 'Activo'
-              : trip.status === 'FULL'
-              ? 'Completo'
-              : 'Cancelado'}
-          </Chip>
-        </View>
-
-        {/* Driver Info */}
-        <View style={styles.card}>
-          <View style={styles.driverHeader}>
+        {/* Driver Info and Price */}
+        <View style={styles.driverSection}>
+          <View style={styles.driverInfo}>
             {trip.driver.avatarUrl ? (
-              <Avatar.Image size={64} source={{ uri: trip.driver.avatarUrl }} />
+              <Image source={{ uri: trip.driver.avatarUrl }} style={styles.profileImage} />
             ) : (
-              <Avatar.Text
-                size={64}
-                label={trip.driver.name.charAt(0).toUpperCase()}
-                style={styles.avatar}
-              />
+              <View style={styles.profileImagePlaceholder}>
+                <MaterialCommunityIcons name="account" size={32} color={colors.primary} />
+              </View>
             )}
-            <View style={styles.driverInfo}>
+            <View style={styles.driverText}>
               <Text style={styles.driverName}>{trip.driver.name}</Text>
               <Text style={styles.driverCareer}>{trip.driver.career}</Text>
-              {trip.driver.averageRating && (
-                <View style={styles.ratingContainer}>
-                  <MaterialCommunityIcons name="star" size={16} color="#FFD700" />
-                  <Text style={styles.ratingText}>
-                    {trip.driver.averageRating.toFixed(1)} ({trip.driver.totalRatings} calificaciones)
+            </View>
+          </View>
+          <View style={styles.priceBadge}>
+            <Text style={styles.priceText}>${trip.price?.toFixed(0) || '0'}</Text>
+          </View>
+        </View>
+
+        {/* Location Card */}
+        <View style={styles.locationCard}>
+          <View style={styles.locationField}>
+            <UbicacionActual color={colors.primary} size={20} />
+            <Text style={styles.locationText}>{trip.origin}</Text>
+          </View>
+          <View style={styles.locationConnector} />
+          <View style={styles.locationField}>
+            <Destino color={colors.primary} size={20} />
+            <Text style={[styles.locationText, styles.destinationText]}>{trip.destination}</Text>
+          </View>
+        </View>
+
+        {/* Trip Details Card */}
+        <View style={styles.detailsCard}>
+          <View style={styles.detailsRow}>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Fecha</Text>
+              <View style={styles.detailValueContainer}>
+                <MaterialCommunityIcons name="calendar" size={20} color={colors.primaryDark} />
+                <Text style={styles.detailValue}>{formatDate(trip.departureTime)}</Text>
+              </View>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Hora</Text>
+              <View style={styles.detailValueContainer}>
+                <MaterialCommunityIcons name="clock-outline" size={20} color={colors.primaryDark} />
+                <Text style={styles.detailValue}>{formatTime(trip.departureTime)}</Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.detailsRow}>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Vehículo</Text>
+              <Text style={styles.detailValue}>AKA745</Text>
+              <Text style={styles.detailSubValue}>Audi A3 Sportback</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Cupos: {occupiedSeats}/{totalSeats}</Text>
+              <View style={styles.seatsContainer}>
+                {Array.from({ length: totalSeats }).map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.seatIcon,
+                      index < occupiedSeats ? styles.seatOccupied : styles.seatAvailable,
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Duration and Distance */}
+        <View style={styles.durationCard}>
+          <Text style={styles.durationText}>Duración aproximada: 30m</Text>
+          <View style={styles.distanceContainer}>
+            <MaterialCommunityIcons name="map-marker" size={16} color={colors.primaryDark} />
+            <Text style={styles.distanceText}>A 100m</Text>
+          </View>
+        </View>
+
+        {/* Manage Requests Banner - Only for Driver */}
+        {isDriver && (
+          <TouchableOpacity
+            style={styles.manageRequestsBanner}
+            onPress={handleManageRequests}
+            activeOpacity={0.8}>
+            <View style={styles.manageRequestsContent}>
+              <View style={styles.manageRequestsLeft}>
+                <View style={styles.manageRequestsIconContainer}>
+                  <MaterialCommunityIcons name="account-group" size={24} color={colors.primary} />
+                </View>
+                <View style={styles.manageRequestsTextContainer}>
+                  <Text style={styles.manageRequestsTitle}>Gestionar Solicitudes</Text>
+                  <Text style={styles.manageRequestsSubtitle}>
+                    {pendingRequests > 0
+                      ? `${pendingRequests} solicitud${pendingRequests > 1 ? 'es' : ''} pendiente${pendingRequests > 1 ? 's' : ''}`
+                      : 'No hay solicitudes pendientes'}
                   </Text>
                 </View>
-              )}
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={24} color={colors.primaryDark} />
             </View>
-          </View>
-          {trip.driver.bio && (
-            <Text style={styles.bio}>{trip.driver.bio}</Text>
-          )}
-        </View>
+            {pendingRequests > 0 && (
+              <View style={styles.pendingBadge}>
+                <Text style={styles.pendingBadgeText}>{pendingRequests}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+      </ScrollView>
 
-        {/* Route Info */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Ruta</Text>
-          <View style={styles.routeItem}>
-            <MaterialCommunityIcons name="map-marker" size={24} color={colors.primary} />
-            <View style={styles.routeTextContainer}>
-              <Text style={styles.routeLabel}>Origen</Text>
-              <Text style={styles.routeValue}>{trip.origin}</Text>
-            </View>
-          </View>
-          <View style={styles.routeLine} />
-          <View style={styles.routeItem}>
-            <MaterialCommunityIcons name="map-marker-check" size={24} color={colors.secondary} />
-            <View style={styles.routeTextContainer}>
-              <Text style={styles.routeLabel}>Destino</Text>
-              <Text style={styles.routeValue}>{trip.destination}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Schedule Info */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Horario</Text>
-          <View style={styles.scheduleItem}>
-            <MaterialCommunityIcons name="clock-outline" size={24} color={colors.primary} />
-            <View style={styles.scheduleTextContainer}>
-              <Text style={styles.scheduleLabel}>Fecha y hora de salida</Text>
-              <Text style={styles.scheduleValue}>{formatDateTime(trip.departureTime)}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Trip Details */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Detalles</Text>
-          <View style={styles.detailRow}>
-            <MaterialCommunityIcons name="seat" size={20} color={colors.primary} />
-            <Text style={styles.detailText}>
-              {trip.availableSeats} {trip.availableSeats === 1 ? 'asiento disponible' : 'asientos disponibles'}
+      {/* Action Buttons */}
+      <View style={styles.actionButtons}>
+        {isDriver ? (
+          <TouchableOpacity
+            style={styles.manageRequestsButton}
+            onPress={handleManageRequests}
+            activeOpacity={0.8}>
+            <MaterialCommunityIcons name="account-group" size={20} color={colors.white} />
+            <Text style={styles.manageRequestsButtonText}>
+              {pendingRequests > 0
+                ? `Gestionar Solicitudes (${pendingRequests})`
+                : 'Gestionar Solicitudes'}
             </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <MaterialCommunityIcons
-              name={trip.price ? 'cash' : 'heart'}
-              size={20}
-              color={colors.primary}
-            />
-            <Text style={styles.detailText}>
-              {trip.price ? `$${trip.price.toFixed(2)}` : 'Aporte voluntario'}
-            </Text>
-          </View>
-          {trip.notes && (
-            <View style={styles.notesContainer}>
-              <Text style={styles.notesLabel}>Notas:</Text>
-              <Text style={styles.notesText}>{trip.notes}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Passengers Section - Only for driver */}
-        {isDriver && (
+          </TouchableOpacity>
+        ) : (
           <>
-            {pendingRequests.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Solicitudes Pendientes</Text>
-                {pendingRequests.map((request) => (
-                  <View key={request.id} style={styles.requestItem}>
-                    <View style={styles.requestHeader}>
-                      {request.passenger.avatarUrl ? (
-                        <Avatar.Image
-                          size={40}
-                          source={{ uri: request.passenger.avatarUrl }}
-                        />
-                      ) : (
-                        <Avatar.Text
-                          size={40}
-                          label={request.passenger.name.charAt(0).toUpperCase()}
-                        />
-                      )}
-                      <View style={styles.requestInfo}>
-                        <Text style={styles.requestName}>{request.passenger.name}</Text>
-                        {request.passenger.career && (
-                          <Text style={styles.requestCareer}>{request.passenger.career}</Text>
-                        )}
-                      </View>
-                    </View>
-                    <Button
-                      mode="contained"
-                      onPress={() => handleConfirmPassenger(request.id)}
-                      disabled={actionLoading || trip.availableSeats === 0}
-                      style={styles.confirmButton}
-                    >
-                      Aceptar
-                    </Button>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {acceptedRequests.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Pasajeros Confirmados</Text>
-                {acceptedRequests.map((request) => (
-                  <View key={request.id} style={styles.passengerItem}>
-                    {request.passenger.avatarUrl ? (
-                      <Avatar.Image
-                        size={40}
-                        source={{ uri: request.passenger.avatarUrl }}
-                      />
-                    ) : (
-                      <Avatar.Text
-                        size={40}
-                        label={request.passenger.name.charAt(0).toUpperCase()}
-                      />
-                    )}
-                    <View style={styles.passengerInfo}>
-                      <Text style={styles.passengerName}>{request.passenger.name}</Text>
-                      {request.passenger.career && (
-                        <Text style={styles.passengerCareer}>{request.passenger.career}</Text>
-                      )}
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
+            <TouchableOpacity
+              style={styles.contactButton}
+              onPress={handleContact}
+              disabled={actionLoading}>
+              <Text style={styles.contactButtonText}>Contactar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.reserveButton}
+              onPress={handleReserve}
+              disabled={actionLoading || trip.availableSeats === 0}>
+              <Text style={styles.reserveButtonText}>Reservar</Text>
+            </TouchableOpacity>
           </>
         )}
+      </View>
 
-        {/* Ratings Section */}
-        {trip.ratings && trip.ratings.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Calificaciones</Text>
-            {trip.ratings.map((rating) => (
-              <View key={rating.id} style={styles.ratingItem}>
-                <View style={styles.ratingHeader}>
-                  {rating.rater.avatarUrl ? (
-                    <Avatar.Image size={32} source={{ uri: rating.rater.avatarUrl }} />
-                  ) : (
-                    <Avatar.Text
-                      size={32}
-                      label={rating.rater.name.charAt(0).toUpperCase()}
-                    />
-                  )}
-                  <View style={styles.ratingInfo}>
-                    <Text style={styles.ratingName}>{rating.rater.name}</Text>
-                    <View style={styles.ratingStars}>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <MaterialCommunityIcons
-                          key={star}
-                          name={star <= rating.rating ? 'star' : 'star-outline'}
-                          size={16}
-                          color="#FFD700"
-                        />
-                      ))}
-                    </View>
-                  </View>
-                </View>
-                {rating.comment && (
-                  <Text style={styles.ratingComment}>{rating.comment}</Text>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
+      {/* Modals */}
+      <ConfirmationModal
+        visible={showReserveModal}
+        title="Reservar Viaje"
+        message="¿Estás seguro de que deseas reservar este viaje? El conductor te notificará cuando acepte tu solicitud."
+        confirmText="Confirmar"
+        cancelText="Cancelar"
+        icon="car"
+        onConfirm={confirmReserve}
+        onCancel={() => setShowReserveModal(false)}
+      />
 
-        {/* Action Buttons */}
-        <View style={styles.actionsContainer}>
-          {isDriver && trip.status === 'ACTIVE' && (
-            <>
-              <Button
-                mode="outlined"
-                onPress={handleEditTrip}
-                style={styles.actionButton}
-                icon="pencil"
-              >
-                Editar Viaje
-              </Button>
-              <Button
-                mode="outlined"
-                onPress={handleCancelTrip}
-                style={[styles.actionButton, styles.cancelButton]}
-                icon="cancel"
-                disabled={actionLoading}
-              >
-                Cancelar Viaje
-              </Button>
-            </>
-          )}
-          {canJoin && (
-            <Button
-              mode="contained"
-              onPress={handleJoinTrip}
-              style={styles.joinButton}
-              icon="account-plus"
-              disabled={actionLoading}
-            >
-              Unirse al Viaje
-            </Button>
-          )}
-          {hasPendingRequest && (
-            <Chip icon="clock-outline" style={styles.pendingChip}>
-              Solicitud pendiente
-            </Chip>
-          )}
-          {canRate && (
-            <Button
-              mode="contained"
-              onPress={handleRateDriver}
-              style={styles.rateButton}
-              icon="star"
-            >
-              Calificar Conductor
-            </Button>
-          )}
-        </View>
-      </ScrollView>
+      <SuccessModal
+        visible={showSuccessModal}
+        title="¡Solicitud Enviada!"
+        message="Tu solicitud ha sido enviada exitosamente. El conductor te notificará cuando la acepte."
+        onClose={() => setShowSuccessModal(false)}
+        icon="check-circle"
+      />
+
+      <ErrorModal
+        visible={showErrorModal}
+        message={errorMessage}
+        onClose={() => {
+          setShowErrorModal(false);
+          setErrorMessage('');
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -525,29 +354,65 @@ export const TripDetailScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    paddingBottom: 70,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
   },
   backButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.black,
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
   headerRight: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  notificationButton: {
     width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accent,
+  },
+  bookmarkButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 100,
   },
   loadingContainer: {
     flex: 1,
@@ -557,7 +422,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: colors.black,
+    color: colors.primaryDark,
   },
   errorContainer: {
     flex: 1,
@@ -567,252 +432,296 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    color: colors.black,
+    color: colors.primaryDark,
     marginBottom: 16,
   },
-  scrollView: {
-    flex: 1,
+  backButtonText: {
+    fontSize: 16,
+    color: colors.primary,
+    fontWeight: '600',
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  statusContainer: {
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  statusChip: {
-    paddingHorizontal: 12,
-  },
-  statusChipText: {
-    color: colors.white,
-    fontWeight: 'bold',
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  driverHeader: {
+  driverSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatar: {
-    backgroundColor: colors.primary,
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
   driverInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  profileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  profileImagePlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  driverText: {
     marginLeft: 12,
     flex: 1,
   },
   driverName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.black,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
   driverCareer: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
+    marginTop: 2,
   },
-  ratingContainer: {
+  priceBadge: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  priceText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  locationCard: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  locationField: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 8,
+    gap: 12,
   },
-  ratingText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 4,
-  },
-  bio: {
-    fontSize: 14,
-    color: colors.black,
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.black,
-    marginBottom: 12,
-  },
-  routeItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  routeLine: {
+  locationConnector: {
+    position: 'absolute',
+    left: 30,
+    top: 42,
     width: 2,
     height: 20,
     backgroundColor: colors.primary,
-    marginLeft: 12,
-    marginBottom: 12,
+    zIndex: 0,
   },
-  routeTextContainer: {
-    marginLeft: 12,
+  locationText: {
+    fontSize: 16,
+    color: colors.primaryDark,
     flex: 1,
   },
-  routeLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+  destinationText: {
+    color: colors.primary,
+    fontWeight: '600',
   },
-  routeValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.black,
+  detailsCard: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
   },
-  scheduleItem: {
+  detailsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
-  scheduleTextContainer: {
-    marginLeft: 12,
+  detailItem: {
     flex: 1,
   },
-  scheduleLabel: {
-    fontSize: 12,
+  detailLabel: {
+    fontSize: 14,
     color: '#666',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  scheduleValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.black,
-  },
-  detailRow: {
+  detailValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: 8,
   },
-  detailText: {
+  detailValue: {
     fontSize: 16,
-    color: colors.black,
-    marginLeft: 12,
+    fontWeight: '600',
+    color: colors.primaryDark,
   },
-  notesContainer: {
+  detailSubValue: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 4,
+  },
+  seatsContainer: {
+    flexDirection: 'row',
+    gap: 8,
     marginTop: 8,
-    paddingTop: 12,
+  },
+  seatIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  seatOccupied: {
+    backgroundColor: colors.primary,
+  },
+  seatAvailable: {
+    backgroundColor: '#E0E0E0',
+  },
+  durationCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  durationText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  distanceText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  actionButtons: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    padding: 20,
+    backgroundColor: colors.white,
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
+    borderTopColor: '#E0E0E0',
+    gap: 12,
   },
-  notesLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.black,
-    marginBottom: 4,
+  contactButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  notesText: {
-    fontSize: 14,
-    color: '#666',
+  contactButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primaryDark,
   },
-  requestItem: {
+  reserveButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reserveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  manageRequestsBanner: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  manageRequestsContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
   },
-  requestHeader: {
+  manageRequestsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    gap: 12,
   },
-  requestInfo: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  requestName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.black,
-  },
-  requestCareer: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  confirmButton: {
-    marginLeft: 12,
-  },
-  passengerItem: {
-    flexDirection: 'row',
+  manageRequestsIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  passengerInfo: {
-    marginLeft: 12,
+  manageRequestsTextContainer: {
     flex: 1,
   },
-  passengerName: {
+  manageRequestsTitle: {
     fontSize: 16,
-    fontWeight: '500',
-    color: colors.black,
-  },
-  passengerCareer: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  ratingItem: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  ratingHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  ratingInfo: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  ratingName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.black,
+    fontWeight: '700',
+    color: colors.primaryDark,
     marginBottom: 4,
   },
-  ratingStars: {
-    flexDirection: 'row',
-  },
-  ratingComment: {
+  manageRequestsSubtitle: {
     fontSize: 14,
+    fontWeight: '400',
     color: '#666',
-    marginTop: 8,
-    fontStyle: 'italic',
   },
-  actionsContainer: {
-    marginTop: 8,
+  pendingBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: colors.error,
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    borderWidth: 2,
+    borderColor: colors.white,
   },
-  actionButton: {
-    marginBottom: 12,
+  pendingBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.white,
   },
-  cancelButton: {
-    borderColor: '#F44336',
-  },
-  joinButton: {
-    marginBottom: 12,
+  manageRequestsButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
     backgroundColor: colors.primary,
   },
-  pendingChip: {
-    alignSelf: 'center',
-    marginBottom: 12,
-  },
-  rateButton: {
-    marginBottom: 12,
-    backgroundColor: colors.secondary,
+  manageRequestsButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
   },
 });
-

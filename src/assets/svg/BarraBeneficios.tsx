@@ -1,0 +1,17 @@
+import * as React from 'react';
+import Svg, { Path } from 'react-native-svg';
+
+interface BarraBeneficiosProps {
+  color?: string;
+  size?: number;
+}
+
+export const BarraBeneficios = ({ color = '#B6B6B6', size = 24 }: BarraBeneficiosProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path
+      d="M6,24H8.13a2.02,2.02,0,0,0,1.941-1.532,2,2,0,0,1,3.858,0A2.02,2.02,0,0,0,15.87,24H18a3,3,0,0,0,3-3V17H17a1,1,0,0,1,0-2h4V5a5.006,5.006,0,0,0-5-5h-.13a2.02,2.02,0,0,0-1.941,1.532,2,2,0,0,1-3.858,0A2.02,2.02,0,0,0,8.13,0H8A5.006,5.006,0,0,0,3,5V15H7a1,1,0,0,1,0,2H3v4A3,3,0,0,0,6,24Zm5-9h2a1,1,0,0,1,0,2H11a1,1,0,0,1,0-2Z"
+      fill={color}
+    />
+  </Svg>
+);
+

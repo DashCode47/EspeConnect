@@ -1,6 +1,4 @@
-import api from './api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { supabase } from '../lib/supabase';
 
 export enum EventCategory {
   ALL = 'ALL',
@@ -24,44 +22,24 @@ export interface Event {
   nombre: string;
   descripcion: string;
   categoria: EventCategory;
-  fechaInicio: string; // ISO 8601 date-time
-  fechaFin: string | null; // ISO 8601 date-time, opcional
+  fechaInicio: string;
+  fechaFin: string | null;
   ubicacion: string;
-  precio: number; // default: 0
-  creadoPor: string; // UUID del usuario creador
-  imagen: string | null; // URL pública de la imagen
-  createdAt: string; // ISO 8601 date-time
-  updatedAt: string; // ISO 8601 date-time
-  asistentesCount: number; // número de asistentes
-  isAttending: boolean; // si el usuario actual está asistiendo
+  precio: number;
+  creadoPor: string;
+  imagen: string | null;
+  createdAt: string;
+  updatedAt: string;
+  asistentesCount: number;
+  isAttending: boolean;
   creador: EventCreator;
-}
-
-interface EventsResponse {
-  status: string;
-  data: {
-    events: Event[];
-    pagination?: {
-      page: number;
-      limit: number;
-      total: number;
-      pages: number;
-    };
-  };
-}
-
-interface EventResponse {
-  status: string;
-  data: {
-    event: Event;
-  };
 }
 
 interface GetEventsParams {
   categoria?: EventCategory;
-  fechaInicio?: string; // ISO 8601
-  fechaFin?: string; // ISO 8601
-  ubicacion?: string; // búsqueda parcial
+  fechaInicio?: string;
+  fechaFin?: string;
+  ubicacion?: string;
   page?: number;
   limit?: number;
 }
@@ -70,10 +48,10 @@ interface CreateEventData {
   nombre: string;
   descripcion: string;
   categoria: EventCategory;
-  fechaInicio: string; // ISO 8601
-  fechaFin?: string | null; // ISO 8601, opcional
+  fechaInicio: string;
+  fechaFin?: string | null;
   ubicacion: string;
-  precio?: number; // default: 0
+  precio?: number;
   image?: { uri: string; type?: string; fileName?: string } | null;
 }
 
@@ -88,242 +66,330 @@ interface UpdateEventData {
   image?: { uri: string; type?: string; fileName?: string } | null;
 }
 
-interface Attendee {
+export interface Attendee {
   id: string;
   name: string;
   email: string;
   avatarUrl: string | null;
   career: string;
-  attendedAt: string; // ISO 8601 date-time
+  attendedAt: string;
 }
 
-interface AttendeesResponse {
-  status: string;
-  data: {
-    attendees: Attendee[];
-    pagination?: {
-      page: number;
-      limit: number;
-      total: number;
-      pages: number;
-    };
+type EventRow = {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  categoria: string;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  ubicacion: string;
+  precio: number;
+  creado_por: string;
+  imagen: string | null;
+  created_at: string;
+  updated_at: string;
+  profiles?: { full_name: string | null; avatar_url: string | null; career: string | null } | null;
+};
+
+function mapRowToEvent(
+  row: EventRow,
+  asistentesCount: number = 0,
+  isAttending: boolean = false
+): Event {
+  return {
+    id: row.id,
+    nombre: row.nombre,
+    descripcion: row.descripcion,
+    categoria: row.categoria as EventCategory,
+    fechaInicio: row.fecha_inicio,
+    fechaFin: row.fecha_fin,
+    ubicacion: row.ubicacion,
+    precio: Number(row.precio) ?? 0,
+    creadoPor: row.creado_por,
+    imagen: row.imagen,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    asistentesCount,
+    isAttending,
+    creador: {
+      id: row.creado_por,
+      name: row.profiles?.full_name ?? '',
+      email: '',
+      avatarUrl: row.profiles?.avatar_url ?? null,
+      career: row.profiles?.career ?? '',
+    },
   };
+}
+
+async function getAttendeesCountByEvent(eventIds: string[]): Promise<Record<string, number>> {
+  if (eventIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from('event_attendees')
+    .select('event_id')
+    .in('event_id', eventIds);
+  if (error) return {};
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    counts[row.event_id] = (counts[row.event_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
+async function getAttendingEventIds(userId: string | null): Promise<Set<string>> {
+  if (!userId) return new Set();
+  const { data, error } = await supabase
+    .from('event_attendees')
+    .select('event_id')
+    .eq('user_id', userId);
+  if (error) return new Set();
+  return new Set((data ?? []).map((r) => r.event_id));
 }
 
 export const eventService = {
   async getEvents(params?: GetEventsParams) {
-    try {
-      const queryParams = new URLSearchParams();
-      
-      if (params?.categoria && params.categoria !== EventCategory.ALL) {
-        queryParams.append('categoria', params.categoria);
-      }
-      if (params?.fechaInicio) {
-        queryParams.append('fechaInicio', params.fechaInicio);
-      }
-      if (params?.fechaFin) {
-        queryParams.append('fechaFin', params.fechaFin);
-      }
-      if (params?.ubicacion && params.ubicacion.trim() !== '') {
-        queryParams.append('ubicacion', params.ubicacion.trim());
-      }
-      if (params?.page && params.page > 0) {
-        queryParams.append('page', params.page.toString());
-      }
-      if (params?.limit && params.limit > 0) {
-        queryParams.append('limit', params.limit.toString());
-      }
+    let query = supabase
+      .from('events')
+      .select('*, profiles!creado_por(full_name, avatar_url, career)')
+      .order('fecha_inicio', { ascending: true });
 
-      const url = `/events${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await api.get<EventsResponse>(url);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
-      throw error;
+    if (params?.categoria && params.categoria !== EventCategory.ALL) {
+      query = query.eq('categoria', params.categoria);
     }
+    if (params?.fechaInicio) {
+      query = query.gte('fecha_inicio', params.fechaInicio);
+    }
+    if (params?.fechaFin) {
+      query = query.lte('fecha_fin', params.fechaFin);
+    }
+    if (params?.ubicacion?.trim()) {
+      query = query.ilike('ubicacion', `%${params.ubicacion.trim()}%`);
+    }
+    const limit = Math.min(params?.limit ?? 50, 100);
+    const page = Math.max(params?.page ?? 1, 1);
+    query = query.range((page - 1) * limit, page * limit - 1);
+
+    const { data: rows, error } = await query;
+    if (error) throw error;
+
+    const eventsList = (rows ?? []) as EventRow[];
+    const eventIds = eventsList.map((e) => e.id);
+    const [counts, attendingSet] = await Promise.all([
+      getAttendeesCountByEvent(eventIds),
+      supabase.auth.getUser().then(({ data: { user } }) => getAttendingEventIds(user?.id ?? null)),
+    ]);
+
+    const events: Event[] = eventsList.map((row) =>
+      mapRowToEvent(
+        row,
+        counts[row.id] ?? 0,
+        attendingSet.has(row.id)
+      )
+    );
+
+    return {
+      status: 'success',
+      data: {
+        events,
+        pagination: { page, limit, total: events.length, pages: 1 },
+      },
+    };
   },
 
   async getEventById(id: string) {
-    try {
-      const response = await api.get<EventResponse>(`/events/${id}`);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
-      throw error;
+    const { data: row, error } = await supabase
+      .from('events')
+      .select('*, profiles!creado_por(full_name, avatar_url, career)')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    if (!row) throw new Error('Event not found');
+
+    const [countResult, { data: { user } }] = await Promise.all([
+      supabase.from('event_attendees').select('id', { count: 'exact', head: true }).eq('event_id', id),
+      supabase.auth.getUser(),
+    ]);
+    const asistentesCount = countResult.count ?? 0;
+    let isAttending = false;
+    if (user?.id) {
+      const { data: att } = await supabase
+        .from('event_attendees')
+        .select('id')
+        .eq('event_id', id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      isAttending = !!att;
     }
+
+    const event = mapRowToEvent(row as EventRow, asistentesCount, isAttending);
+    return { status: 'success', data: { event } };
   },
 
   async createEvent(data: CreateEventData) {
-    try {
-      const isFormData = data instanceof FormData;
-      const response = await api.post<EventResponse>('/events', data, {
-        headers: isFormData ? {
-          'Content-Type': 'multipart/form-data',
-        } : {
-          'Content-Type': 'application/json',
-        },
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error('No authenticated user');
+
+    // Ensure profile exists before creating event (required for FK constraint)
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
+    
+    if (!existingProfile) {
+      // Create profile if it doesn't exist
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: user.id,
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
+        career: user.user_metadata?.career || '',
+        gender: user.user_metadata?.gender || '',
+        interests: user.user_metadata?.interests || [],
+        email: user.email || '',
+        updated_at: new Date().toISOString(),
       });
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        throw new Error('No se pudo crear el perfil. Por favor, completa tu perfil primero.');
       }
-      throw error;
     }
+
+    let imagen: string | null = null;
+    if (data.image?.uri) {
+      try {
+        const ext = data.image.uri.split('.').pop() || 'jpg';
+        const path = `${user.id}/events/${Date.now()}.${ext}`;
+        const contentType = data.image.type || 'image/jpeg';
+        const response = await fetch(data.image.uri);
+        const blob = await response.blob();
+        const { error: uploadError } = await supabase.storage
+          .from('events')
+          .upload(path, blob, { contentType, upsert: true });
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('events').getPublicUrl(path);
+          imagen = urlData.publicUrl;
+        }
+      } catch (_) {
+        // ignore image upload failure, event can still be created
+      }
+    }
+
+    const row = {
+      nombre: data.nombre.trim(),
+      descripcion: data.descripcion.trim(),
+      categoria: data.categoria,
+      fecha_inicio: data.fechaInicio,
+      fecha_fin: data.fechaFin ?? null,
+      ubicacion: data.ubicacion.trim(),
+      precio: data.precio ?? 0,
+      creado_por: user.id,
+      imagen,
+    };
+    const { data: inserted, error } = await supabase.from('events').insert(row).select('*, profiles!creado_por(full_name, avatar_url, career)').single();
+    if (error) throw error;
+    const event = mapRowToEvent(inserted as EventRow, 0, false);
+    return { status: 'success', data: { event } };
   },
 
   async updateEvent(id: string, data: UpdateEventData) {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      
-      // Si hay una imagen, usar FormData
-      if (data.image) {
-        const formData = new FormData();
-        if (data.nombre) formData.append('nombre', data.nombre);
-        if (data.descripcion) formData.append('descripcion', data.descripcion);
-        if (data.categoria) formData.append('categoria', data.categoria);
-        if (data.fechaInicio) formData.append('fechaInicio', data.fechaInicio);
-        if (data.fechaFin !== undefined) {
-          formData.append('fechaFin', data.fechaFin || '');
-        }
-        if (data.ubicacion) formData.append('ubicacion', data.ubicacion);
-        if (data.precio !== undefined) {
-          formData.append('precio', data.precio.toString());
-        }
-        
-        const imageUri = Platform.OS === 'android' 
-          ? data.image.uri 
-          : data.image.uri.replace('file://', '');
-        
-        formData.append('image', {
-          uri: imageUri,
-          type: data.image.type || 'image/jpeg',
-          name: data.image.fileName || `event_${Date.now()}.jpg`,
-        } as any);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error('No authenticated user');
 
-        const headers: any = {};
-        if (token) {
-          const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-          headers['Authorization'] = authToken;
+    const update: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (data.nombre !== undefined) update.nombre = data.nombre;
+    if (data.descripcion !== undefined) update.descripcion = data.descripcion;
+    if (data.categoria !== undefined) update.categoria = data.categoria;
+    if (data.fechaInicio !== undefined) update.fecha_inicio = data.fechaInicio;
+    if (data.fechaFin !== undefined) update.fecha_fin = data.fechaFin;
+    if (data.ubicacion !== undefined) update.ubicacion = data.ubicacion;
+    if (data.precio !== undefined) update.precio = data.precio;
+
+    if (data.image?.uri) {
+      try {
+        const ext = data.image.uri.split('.').pop() || 'jpg';
+        const path = `${user.id}/events/${id}_${Date.now()}.${ext}`;
+        const contentType = data.image.type || 'image/jpeg';
+        const response = await fetch(data.image.uri);
+        const blob = await response.blob();
+        const { error: uploadError } = await supabase.storage
+          .from('events')
+          .upload(path, blob, { contentType, upsert: true });
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('events').getPublicUrl(path);
+          update.imagen = urlData.publicUrl;
         }
-
-        const response = await api.put<EventResponse>(`/events/${id}`, formData, {
-          headers,
-        });
-        return response.data;
-      } else {
-        // Si no hay imagen, enviar como JSON
-        const headers: any = {
-          'Content-Type': 'application/json',
-        };
-        if (token) {
-          const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-          headers['Authorization'] = authToken;
-        }
-
-        const jsonData: any = {};
-        if (data.nombre) jsonData.nombre = data.nombre;
-        if (data.descripcion) jsonData.descripcion = data.descripcion;
-        if (data.categoria) jsonData.categoria = data.categoria;
-        if (data.fechaInicio) jsonData.fechaInicio = data.fechaInicio;
-        if (data.fechaFin !== undefined) jsonData.fechaFin = data.fechaFin;
-        if (data.ubicacion) jsonData.ubicacion = data.ubicacion;
-        if (data.precio !== undefined) jsonData.precio = data.precio;
-
-        const response = await api.put<EventResponse>(`/events/${id}`, jsonData, {
-          headers,
-        });
-        return response.data;
+      } catch (_) {
+        // ignore image upload failure
       }
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
-      throw error;
     }
+
+    const { data: updated, error } = await supabase
+      .from('events')
+      .update(update)
+      .eq('id', id)
+      .eq('creado_por', user.id)
+      .select('*, profiles!creado_por(full_name, avatar_url, career)')
+      .single();
+    if (error) throw error;
+    const [countResult] = await Promise.all([
+      supabase.from('event_attendees').select('id', { count: 'exact', head: true }).eq('event_id', id),
+    ]);
+    const { data: att } = await supabase.from('event_attendees').select('id').eq('event_id', id).eq('user_id', user.id).maybeSingle();
+    const event = mapRowToEvent(updated as EventRow, countResult.count ?? 0, !!att);
+    return { status: 'success', data: { event } };
   },
 
   async deleteEvent(id: string) {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const headers: any = {};
-      if (token) {
-        const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-        headers['Authorization'] = authToken;
-      }
-
-      const response = await api.delete(`/events/${id}`, {
-        headers,
-      });
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
-      throw error;
-    }
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error('No authenticated user');
+    const { error } = await supabase.from('events').delete().eq('id', id).eq('creado_por', user.id);
+    if (error) throw error;
+    return { status: 'success' };
   },
 
   async attendEvent(id: string) {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const headers: any = {};
-      if (token) {
-        const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-        headers['Authorization'] = authToken;
-      }
-
-      const response = await api.post<{ status: string; message: string }>(`/events/${id}/attend`, {}, {
-        headers,
-      });
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
-      throw error;
-    }
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error('No authenticated user');
+    const { error } = await supabase.from('event_attendees').upsert(
+      { event_id: id, user_id: user.id },
+      { onConflict: 'event_id,user_id' }
+    );
+    if (error) throw error;
+    return { status: 'success', message: 'Asistencia registrada' };
   },
 
   async cancelAttendance(id: string) {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const headers: any = {};
-      if (token) {
-        const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-        headers['Authorization'] = authToken;
-      }
-
-      const response = await api.delete<{ status: string; message: string }>(`/events/${id}/attend`, {
-        headers,
-      });
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
-      throw error;
-    }
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error('No authenticated user');
+    const { error } = await supabase.from('event_attendees').delete().eq('event_id', id).eq('user_id', user.id);
+    if (error) throw error;
+    return { status: 'success', message: 'Asistencia cancelada' };
   },
 
   async getEventAttendees(id: string, page: number = 1, limit: number = 20) {
-    try {
-      const queryParams = new URLSearchParams();
-      queryParams.append('page', page.toString());
-      queryParams.append('limit', limit.toString());
+    const from = (page - 1) * limit;
+    const { data: rows, error } = await supabase
+      .from('event_attendees')
+      .select('user_id, created_at, profiles!user_id(full_name, avatar_url, career)')
+      .eq('event_id', id)
+      .order('created_at', { ascending: false })
+      .range(from, from + limit - 1);
+    if (error) throw error;
 
-      const response = await api.get<AttendeesResponse>(`/events/${id}/attendees?${queryParams.toString()}`);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
-      throw error;
-    }
+    const attendees: Attendee[] = (rows ?? []).map((r: any) => ({
+      id: r.user_id,
+      name: r.profiles?.full_name ?? '',
+      email: '', // requires admin to resolve; leave empty or add if you expose it
+      avatarUrl: r.profiles?.avatar_url ?? null,
+      career: r.profiles?.career ?? '',
+      attendedAt: r.created_at,
+    }));
+    return {
+      status: 'success',
+      data: {
+        attendees,
+        pagination: { page, limit, total: attendees.length, pages: Math.ceil(attendees.length / limit) || 1 },
+      },
+    };
   },
 };
-

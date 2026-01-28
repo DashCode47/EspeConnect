@@ -9,7 +9,7 @@ import { CommentInput } from '../../components/rides/CommentInput';
 import { CommentList } from '../../components/CommentList';
 import { Post, postService } from '../../services/post.service';
 import { Comment, commentService } from '../../services/comment.service';
-import { authService } from '../../services/auth.service';
+import { useUserStore } from '../../store/userStore';
 import { colors } from '../../config/colors';
 
 type RidePostScreenRouteProp = RouteProp<any, 'RidePost'>;
@@ -25,16 +25,15 @@ export const RidePostScreen = () => {
   const [hasMore, setHasMore] = useState(true);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const { profile } = useUserStore();
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
-  const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Get post ID from route params or use a default for now
   const postId = (route.params as any)?.postId || '';
 
   useEffect(() => {
     fetchPost();
-    fetchCurrentUser();
   }, []);
 
   useEffect(() => {
@@ -43,15 +42,6 @@ export const RidePostScreen = () => {
       checkIfLiked();
     }
   }, [post]);
-
-  const fetchCurrentUser = async () => {
-    try {
-      const user = await authService.getCurrentUser();
-      setCurrentUser(user);
-    } catch (error) {
-      console.error('Error fetching current user:', error);
-    }
-  };
 
   const fetchPost = async () => {
     if (!postId) {
@@ -96,10 +86,10 @@ export const RidePostScreen = () => {
   };
 
   const checkIfLiked = () => {
-    if (!post || !currentUser) return;
+    if (!post || !profile) return;
     
     const hasLiked = post.reactions?.some(
-      reaction => reaction.userId === currentUser.id && reaction.type === 'like'
+      reaction => reaction.userId === profile.id && reaction.type === 'like'
     );
     setIsLiked(hasLiked || false);
   };
@@ -219,8 +209,8 @@ export const RidePostScreen = () => {
         value={newComment}
         onChangeText={setNewComment}
         onSubmit={handleSubmitComment}
-        userAvatar={currentUser?.avatarUrl}
-        userName={currentUser?.name}
+        userAvatar={profile?.avatarUrl || null}
+        userName={profile?.name || ''}
         disabled={submitting}
       />
     </SafeAreaView>

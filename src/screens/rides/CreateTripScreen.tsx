@@ -1,41 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
-  Alert,
+  Text,
+  TextInput,
+  Image,
   Modal,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Text, TextInput, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { tripService, CreateTripData } from '../../services/trip.service';
 import { colors } from '../../config/colors';
+import { UbicacionActual } from '../../assets/svg/UbicacionActual';
+import { Destino } from '../../assets/svg/Destino';
 import { RideStackParamList } from '../../navigation/types';
 import { useHideNavbar } from '../../hooks/useHideNavbar';
 import { globalStyles } from '../../config/globalStyles';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useUserStore } from '../../store/userStore';
+import { SuccessModal } from '../../components/modals/SuccessModal';
+import { ErrorModal } from '../../components/modals/ErrorModal';
 
 type CreateTripScreenNavigationProp = NativeStackNavigationProp<RideStackParamList, 'CreateTrip'>;
 
 export const CreateTripScreen = () => {
   const navigation = useNavigation<CreateTripScreenNavigationProp>();
+  const insets = useSafeAreaInsets();
+  const { profile } = useUserStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<CreateTripData>({
     origin: '',
     destination: '',
     departureTime: new Date().toISOString(),
-    availableSeats: 1,
+    availableSeats: 0,
     price: undefined,
     notes: '',
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showSeatsPicker, setShowSeatsPicker] = useState(false);
+  const [showPaymentPicker, setShowPaymentPicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date(formData.departureTime));
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [priceValue, setPriceValue] = useState('0.00');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [createdTripId, setCreatedTripId] = useState<string | null>(null);
+  
   useHideNavbar(true);
 
   const handleInputChange = (field: keyof CreateTripData, value: any) => {
@@ -77,14 +95,6 @@ export const CreateTripScreen = () => {
     }
   };
 
-  const adjustMonth = (months: number) => {
-    const newDate = new Date(tempDate);
-    newDate.setMonth(newDate.getMonth() + months);
-    if (newDate >= new Date()) {
-      setTempDate(newDate);
-    }
-  };
-
   const adjustHour = (hours: number) => {
     const newDate = new Date(tempDate);
     newDate.setHours(newDate.getHours() + hours);
@@ -109,23 +119,49 @@ export const CreateTripScreen = () => {
     setTempDate(newDate);
   };
 
+  const adjustSeats = (seats: number) => {
+    const newSeats = formData.availableSeats + seats;
+    if (newSeats >= 0 && newSeats <= 10) {
+      handleInputChange('availableSeats', newSeats);
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   const validateForm = (): boolean => {
     if (!formData.origin.trim()) {
-      Alert.alert('Error', 'El origen es requerido');
+      setErrorMessage('El origen es requerido');
+      setShowErrorModal(true);
       return false;
     }
     if (!formData.destination.trim()) {
-      Alert.alert('Error', 'El destino es requerido');
+      setErrorMessage('El destino es requerido');
+      setShowErrorModal(true);
       return false;
     }
     if (formData.availableSeats < 1) {
-      Alert.alert('Error', 'Debe haber al menos 1 asiento disponible');
+      setErrorMessage('Debe haber al menos 1 asiento disponible');
+      setShowErrorModal(true);
       return false;
     }
     const departureDate = new Date(formData.departureTime);
     const now = new Date();
     if (departureDate <= now) {
-      Alert.alert('Error', 'La fecha y hora de salida debe ser en el futuro');
+      setErrorMessage('La fecha y hora de salida debe ser en el futuro');
+      setShowErrorModal(true);
       return false;
     }
     return true;
@@ -141,389 +177,507 @@ export const CreateTripScreen = () => {
       const response = await tripService.createTrip({
         ...formData,
         notes: formData.notes || undefined,
-        price: formData.price || undefined,
+        price: priceValue && parseFloat(priceValue) > 0 ? parseFloat(priceValue) : undefined,
       });
-      Alert.alert('Éxito', 'Viaje creado exitosamente', [
-        {
-          text: 'OK',
-          onPress: () => {
-            navigation.navigate('TripDetail', { tripId: response.data.trip.id });
-          },
-        },
-      ]);
+      setCreatedTripId(response.data.trip.id);
+      setShowSuccessModal(true);
     } catch (error: any) {
       console.error('Error creating trip:', error);
-      Alert.alert(
-        'Error',
+      setErrorMessage(
         error.response?.data?.message || 'No se pudo crear el viaje. Intenta nuevamente.'
       );
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.black} />
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => navigation.goBack()}>
+          <MaterialCommunityIcons name="chevron-left" size={24} color="#666" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Crear Viaje</Text>
-        <View style={styles.headerRight} />
+        <Text style={styles.headerTitle}>Crear viaje</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.notificationButton}>
+            <MaterialCommunityIcons name="bell" size={20} color={colors.white} />
+            <View style={styles.notificationDot} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.bookmarkButton}>
+            <MaterialCommunityIcons name="bookmark" size={20} color={colors.white} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: globalStyles.getBottomSafeArea(insets) + 20 },
+          ]}
           keyboardShouldPersistTaps="handled"
-        >
-        <Text style={styles.sectionTitle}>Información del Viaje</Text>
-
-        {/* Origin */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Origen *</Text>
-          <TextInput
-            mode="outlined"
-            placeholder="Ej: Campus Sangolquí"
-            value={formData.origin}
-            onChangeText={(text) => handleInputChange('origin', text)}
-            style={styles.input}
-            left={<TextInput.Icon icon="map-marker" />}
-          />
-        </View>
-
-        {/* Destination */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Destino *</Text>
-          <TextInput
-            mode="outlined"
-            placeholder="Ej: Quicentro Shopping"
-            value={formData.destination}
-            onChangeText={(text) => handleInputChange('destination', text)}
-            style={styles.input}
-            left={<TextInput.Icon icon="map-marker-check" />}
-          />
-        </View>
-
-        {/* Date and Time */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Fecha y Hora de Salida *</Text>
+          showsVerticalScrollIndicator={false}>
           
-          <View style={styles.dateTimeContainer}>
+          {/* User Info */}
+          <View style={styles.userSection}>
+            {profile?.avatarUrl ? (
+              <Image source={{ uri: profile.avatarUrl }} style={styles.userAvatar} />
+            ) : (
+              <View style={styles.userAvatarPlaceholder}>
+                <MaterialCommunityIcons name="account" size={20} color={colors.primary} />
+              </View>
+            )}
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{profile?.name || 'Nombre Apellido'}</Text>
+              <Text style={styles.userCareer}>{profile?.career || 'Carrera'}</Text>
+            </View>
+          </View>
+
+          {/* Location Card */}
+          <View style={styles.locationCard}>
+            <View style={styles.locationField}>
+              <UbicacionActual color={colors.primary} size={20} />
+              <TextInput
+                style={styles.locationInput}
+                placeholder="Ubicación actual"
+                placeholderTextColor="#999"
+                value={formData.origin}
+                onChangeText={(text) => handleInputChange('origin', text)}
+              />
+            </View>
+            <View style={styles.locationConnector} />
+            <View style={styles.locationField}>
+              <Destino color={colors.primary} size={20} />
+              <TextInput
+                style={styles.locationInput}
+                placeholder="Universidad"
+                placeholderTextColor={colors.primary}
+                value={formData.destination}
+                onChangeText={(text) => handleInputChange('destination', text)}
+              />
+            </View>
+          </View>
+
+          {/* Map Section */}
+          <View style={styles.mapSection}>
+            <View style={styles.mapSectionHeader}>
+              <Text style={styles.mapSectionTitle}>Tu ubicación</Text>
+              <TouchableOpacity>
+                <MaterialCommunityIcons name="fullscreen" size={20} color={colors.primaryDark} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.mapPlaceholder}>
+              <MaterialCommunityIcons name="map" size={48} color="#ccc" />
+              <Text style={styles.mapPlaceholderText}>Mapa</Text>
+            </View>
+            <View style={styles.mapInfo}>
+              <Text style={styles.mapInfoText}>Duración aproximada: 30m</Text>
+              <Text style={styles.mapInfoText}>Distancia: 100m</Text>
+            </View>
+          </View>
+
+          {/* Schedule Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Horario</Text>
+            
+            {/* Date Field */}
             <TouchableOpacity
-              style={styles.dateTimeButton}
+              style={styles.pickerField}
               onPress={openDatePicker}
-              activeOpacity={0.7}
-            >
-              <View style={styles.dateTimeButtonContent}>
-                <MaterialCommunityIcons name="calendar" size={24} color={colors.primary} />
-                <View style={styles.dateTimeTextContainer}>
-                  <Text style={styles.dateTimeLabel}>Fecha</Text>
-                  <Text style={styles.dateTimeValue}>
-                    {new Date(formData.departureTime).toLocaleDateString('es-ES', {
-                      weekday: 'short',
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </Text>
-                </View>
+              activeOpacity={0.7}>
+              <MaterialCommunityIcons name="calendar" size={20} color="#999" />
+              <View style={styles.pickerFieldContent}>
+                <Text style={styles.pickerFieldLabel}>Selecciona una fecha</Text>
+                <Text style={styles.pickerFieldValue}>
+                  {formatDate(new Date(formData.departureTime)) || '00/00/0000'}
+                </Text>
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+              <MaterialCommunityIcons
+                name={showDatePicker ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#999"
+              />
             </TouchableOpacity>
 
+            {/* Time Field */}
             <TouchableOpacity
-              style={styles.dateTimeButton}
+              style={styles.pickerField}
               onPress={openTimePicker}
-              activeOpacity={0.7}
-            >
-              <View style={styles.dateTimeButtonContent}>
-                <MaterialCommunityIcons name="clock-outline" size={24} color={colors.primary} />
-                <View style={styles.dateTimeTextContainer}>
-                  <Text style={styles.dateTimeLabel}>Hora</Text>
-                  <Text style={styles.dateTimeValue}>
-                    {new Date(formData.departureTime).toLocaleTimeString('es-ES', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                </View>
+              activeOpacity={0.7}>
+              <MaterialCommunityIcons name="clock-outline" size={20} color="#999" />
+              <View style={styles.pickerFieldContent}>
+                <Text style={styles.pickerFieldLabel}>Selecciona una hora de salida</Text>
+                <Text style={styles.pickerFieldValue}>
+                  {formatTime(new Date(formData.departureTime)) || '00:00'}
+                </Text>
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+              <MaterialCommunityIcons
+                name={showTimePicker ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#999"
+              />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.hint}>
-            Selecciona la fecha y hora de salida del viaje
-          </Text>
-        </View>
+          {/* Passengers Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Pasajeros</Text>
+            <TouchableOpacity
+              style={styles.pickerField}
+              onPress={() => setShowSeatsPicker(true)}
+              activeOpacity={0.7}>
+              <MaterialCommunityIcons name="account" size={20} color="#999" />
+              <View style={styles.pickerFieldContent}>
+                <Text style={styles.pickerFieldLabel}>Seleccione los cupos</Text>
+                <Text style={styles.pickerFieldValue}>{formData.availableSeats}</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-down" size={20} color="#999" />
+            </TouchableOpacity>
+          </View>
 
-        {/* Date Picker Modal */}
-        <Modal
-          visible={showDatePicker}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowDatePicker(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Seleccionar Fecha</Text>
-                <TouchableOpacity
-                  onPress={() => setShowDatePicker(false)}
-                  style={styles.modalCloseButton}
-                >
-                  <Text style={styles.modalCancelText}>Cancelar</Text>
-                </TouchableOpacity>
+          {/* Price Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Precio</Text>
+            <View style={styles.priceField}>
+              <View style={styles.priceCurrency}>
+                <Text style={styles.currencyText}>USD</Text>
+                <View style={styles.priceSeparator} />
               </View>
-              <View style={styles.pickerContainer}>
-                <View style={styles.pickerRow}>
-                  <View style={styles.pickerColumn}>
-                    <Text style={styles.pickerLabel}>Día</Text>
-                    <View style={styles.pickerControls}>
-                      <TouchableOpacity
-                        style={styles.pickerButton}
-                        onPress={() => adjustDate(-1)}
-                      >
-                        <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                      </TouchableOpacity>
-                      <Text style={styles.pickerValue}>
-                        {tempDate.getDate()}
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.pickerButton}
-                        onPress={() => adjustDate(1)}
-                      >
-                        <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <View style={styles.pickerColumn}>
-                    <Text style={styles.pickerLabel}>Mes</Text>
-                    <View style={styles.pickerControls}>
-                      <TouchableOpacity
-                        style={styles.pickerButton}
-                        onPress={() => adjustMonth(-1)}
-                      >
-                        <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                      </TouchableOpacity>
-                      <Text style={styles.pickerValue}>
-                        {tempDate.toLocaleDateString('es-ES', { month: 'short' })}
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.pickerButton}
-                        onPress={() => adjustMonth(1)}
-                      >
-                        <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <View style={styles.pickerColumn}>
-                    <Text style={styles.pickerLabel}>Año</Text>
-                    <View style={styles.pickerControls}>
-                      <TouchableOpacity
-                        style={styles.pickerButton}
-                        onPress={() => adjustMonth(-12)}
-                      >
-                        <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                      </TouchableOpacity>
-                      <Text style={styles.pickerValue}>
-                        {tempDate.getFullYear()}
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.pickerButton}
-                        onPress={() => adjustMonth(12)}
-                      >
-                        <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-                <View style={styles.selectedDatePreview}>
-                  <Text style={styles.selectedDateText}>
-                    {tempDate.toLocaleDateString('es-ES', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </Text>
-                </View>
-                <Button
-                  mode="contained"
-                  onPress={confirmDate}
-                  style={styles.confirmButton}
-                >
-                  Confirmar Fecha
-                </Button>
-              </View>
+              <TextInput
+                style={styles.priceInput}
+                placeholder="$ 0.00"
+                placeholderTextColor="#999"
+                value={priceValue}
+                onChangeText={(text) => {
+                  setPriceValue(text);
+                  const numValue = parseFloat(text);
+                  if (!isNaN(numValue)) {
+                    handleInputChange('price', numValue);
+                  }
+                }}
+                keyboardType="decimal-pad"
+              />
             </View>
           </View>
-        </Modal>
 
-        {/* Time Picker Modal */}
-        <Modal
-          visible={showTimePicker}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowTimePicker(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Seleccionar Hora</Text>
-                <TouchableOpacity
-                  onPress={() => setShowTimePicker(false)}
-                  style={styles.modalCloseButton}
-                >
-                  <Text style={styles.modalCancelText}>Cancelar</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.pickerContainer}>
-                <View style={styles.pickerRow}>
-                  <View style={styles.pickerColumn}>
-                    <Text style={styles.pickerLabel}>Hora</Text>
-                    <View style={styles.pickerControls}>
-                      <TouchableOpacity
-                        style={styles.pickerButton}
-                        onPress={() => adjustHour(1)}
-                      >
-                        <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                      </TouchableOpacity>
-                      <Text style={styles.pickerValue}>
-                        {tempDate.getHours().toString().padStart(2, '0')}
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.pickerButton}
-                        onPress={() => adjustHour(-1)}
-                      >
-                        <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <View style={styles.pickerColumn}>
-                    <Text style={styles.pickerLabel}>Minutos</Text>
-                    <View style={styles.pickerControls}>
-                      <TouchableOpacity
-                        style={styles.pickerButton}
-                        onPress={() => adjustMinute(15)}
-                      >
-                        <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                      </TouchableOpacity>
-                      <Text style={styles.pickerValue}>
-                        {tempDate.getMinutes().toString().padStart(2, '0')}
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.pickerButton}
-                        onPress={() => adjustMinute(-15)}
-                      >
-                        <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-                <View style={styles.selectedDatePreview}>
-                  <Text style={styles.selectedDateText}>
-                    {tempDate.toLocaleTimeString('es-ES', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                </View>
-                <Button
-                  mode="contained"
-                  onPress={confirmTime}
-                  style={styles.confirmButton}
-                >
-                  Confirmar Hora
-                </Button>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Available Seats */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Asientos Disponibles *</Text>
-          <View style={styles.seatsContainer}>
+          {/* Payment Methods Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Métodos de pago permitidos</Text>
             <TouchableOpacity
-              style={styles.seatButton}
-              onPress={() =>
-                handleInputChange('availableSeats', Math.max(1, formData.availableSeats - 1))
-              }
-            >
-              <MaterialCommunityIcons name="minus" size={24} color={colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.seatsValue}>{formData.availableSeats}</Text>
-            <TouchableOpacity
-              style={styles.seatButton}
-              onPress={() => handleInputChange('availableSeats', formData.availableSeats + 1)}
-            >
-              <MaterialCommunityIcons name="plus" size={24} color={colors.primary} />
+              style={styles.pickerField}
+              onPress={() => setShowPaymentPicker(true)}
+              activeOpacity={0.7}>
+              <MaterialCommunityIcons name="cash" size={20} color="#999" />
+              <View style={styles.pickerFieldContent}>
+                <Text style={styles.pickerFieldLabel}>
+                  Seleccione como desea recibir el pago
+                </Text>
+                <Text style={styles.pickerFieldValue}>
+                  {selectedPaymentMethod || 'Sin seleccionar'}
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-down" size={20} color="#999" />
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Price */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Precio (Opcional)</Text>
-          <TextInput
-            mode="outlined"
-            placeholder="Dejar vacío para aporte voluntario"
-            value={formData.price?.toString() || ''}
-            onChangeText={(text) => {
-              const numValue = parseFloat(text);
-              handleInputChange('price', isNaN(numValue) ? undefined : numValue);
-            }}
-            keyboardType="decimal-pad"
-            style={styles.input}
-            left={<TextInput.Icon icon="cash" />}
-          />
-          <Text style={styles.hint}>Deja vacío si es aporte voluntario</Text>
-        </View>
-
-        {/* Notes */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Notas (Opcional)</Text>
-          <TextInput
-            mode="outlined"
-            placeholder="Información adicional sobre el viaje..."
-            value={formData.notes}
-            onChangeText={(text) => handleInputChange('notes', text)}
-            multiline
-            numberOfLines={4}
-            style={styles.textArea}
-            left={<TextInput.Icon icon="note-text" />}
-          />
-        </View>
-
-        <Button
-          mode="contained"
-          onPress={handleSubmit}
-          loading={loading}
-          disabled={loading}
-          style={styles.submitButton}
-        >
-          Crear Viaje
-        </Button>
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => navigation.goBack()}>
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={handleSubmit}
+              disabled={loading}>
+              <Text style={styles.createButtonText}>
+                {loading ? 'Creando...' : 'Crear viaje'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Date Picker Modal */}
+      <Modal
+        visible={showDatePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDatePicker(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleccionar Fecha</Text>
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(false)}
+                style={styles.modalCloseButton}>
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pickerContainer}>
+              <View style={styles.pickerRow}>
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>Día</Text>
+                  <View style={styles.pickerControls}>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => adjustDate(-1)}>
+                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.pickerValue}>{tempDate.getDate()}</Text>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => adjustDate(1)}>
+                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>Mes</Text>
+                  <View style={styles.pickerControls}>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => {
+                        const newDate = new Date(tempDate);
+                        newDate.setMonth(newDate.getMonth() - 1);
+                        if (newDate >= new Date()) {
+                          setTempDate(newDate);
+                        }
+                      }}>
+                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.pickerValue}>
+                      {tempDate.toLocaleDateString('es-ES', { month: 'short' })}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => {
+                        const newDate = new Date(tempDate);
+                        newDate.setMonth(newDate.getMonth() + 1);
+                        setTempDate(newDate);
+                      }}>
+                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>Año</Text>
+                  <View style={styles.pickerControls}>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => {
+                        const newDate = new Date(tempDate);
+                        newDate.setFullYear(newDate.getFullYear() - 1);
+                        if (newDate >= new Date()) {
+                          setTempDate(newDate);
+                        }
+                      }}>
+                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.pickerValue}>{tempDate.getFullYear()}</Text>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => {
+                        const newDate = new Date(tempDate);
+                        newDate.setFullYear(newDate.getFullYear() + 1);
+                        setTempDate(newDate);
+                      }}>
+                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.modalConfirmButton} onPress={confirmDate}>
+                <Text style={styles.modalConfirmText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Time Picker Modal */}
+      <Modal
+        visible={showTimePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTimePicker(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleccionar Hora</Text>
+              <TouchableOpacity
+                onPress={() => setShowTimePicker(false)}
+                style={styles.modalCloseButton}>
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pickerContainer}>
+              <View style={styles.pickerRow}>
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>Hora</Text>
+                  <View style={styles.pickerControls}>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => adjustHour(-1)}>
+                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.pickerValue}>
+                      {tempDate.getHours().toString().padStart(2, '0')}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => adjustHour(1)}>
+                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>Minutos</Text>
+                  <View style={styles.pickerControls}>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => adjustMinute(-1)}>
+                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.pickerValue}>
+                      {tempDate.getMinutes().toString().padStart(2, '0')}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => adjustMinute(1)}>
+                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.modalConfirmButton} onPress={confirmTime}>
+                <Text style={styles.modalConfirmText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Seats Picker Modal */}
+      <Modal
+        visible={showSeatsPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSeatsPicker(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleccionar Cupos</Text>
+              <TouchableOpacity
+                onPress={() => setShowSeatsPicker(false)}
+                style={styles.modalCloseButton}>
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pickerContainer}>
+              <View style={styles.pickerRow}>
+                <View style={styles.pickerColumn}>
+                  <Text style={styles.pickerLabel}>Cupos</Text>
+                  <View style={styles.pickerControls}>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => adjustSeats(-1)}>
+                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.pickerValue}>{formData.availableSeats}</Text>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => adjustSeats(1)}>
+                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={() => setShowSeatsPicker(false)}>
+                <Text style={styles.modalConfirmText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Payment Method Picker Modal */}
+      <Modal
+        visible={showPaymentPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPaymentPicker(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Método de Pago</Text>
+              <TouchableOpacity
+                onPress={() => setShowPaymentPicker(false)}
+                style={styles.modalCloseButton}>
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pickerContainer}>
+              {['Efectivo', 'Transferencia', 'Ambos'].map((method) => (
+                <TouchableOpacity
+                  key={method}
+                  style={[
+                    styles.paymentOption,
+                    selectedPaymentMethod === method && styles.paymentOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedPaymentMethod(method);
+                    setShowPaymentPicker(false);
+                  }}>
+                  <Text
+                    style={[
+                      styles.paymentOptionText,
+                      selectedPaymentMethod === method && styles.paymentOptionTextSelected,
+                    ]}>
+                    {method}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Success and Error Modals */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title="¡Viaje Creado!"
+        message="Tu viaje ha sido creado exitosamente y ya está disponible para otros usuarios."
+        onClose={() => {
+          setShowSuccessModal(false);
+          if (createdTripId) {
+            navigation.navigate('TripDetail', { tripId: createdTripId });
+          } else {
+            navigation.goBack();
+          }
+        }}
+        icon="check-circle"
+      />
+
+      <ErrorModal
+        visible={showErrorModal}
+        message={errorMessage}
+        onClose={() => {
+          setShowErrorModal(false);
+          setErrorMessage('');
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -531,30 +685,58 @@ export const CreateTripScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    paddingTop: globalStyles.screenHeight * 0.06,
-    paddingBottom: globalStyles.bottomNavigatorHeight,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
   },
-  backButton: {
-    padding: 8,
+  headerButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.black,
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.primary,
   },
   headerRight: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  notificationButton: {
     width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accent,
+  },
+  bookmarkButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -563,74 +745,216 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
+    padding: 20,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.black,
-    marginBottom: 16,
-  },
-  inputContainer: {
+  userSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.black,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: colors.white,
-  },
-  textArea: {
-    backgroundColor: colors.white,
-    minHeight: 100,
-  },
-  hint: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-  },
-  dateTimeContainer: {
     gap: 12,
   },
-  dateTimeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.white,
-    padding: 16,
-    borderRadius: 12,
+  userAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderColor: '#E0E0E0',
   },
-  dateTimeButtonContent: {
+  userAvatarPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    marginBottom: 2,
+  },
+  userCareer: {
+    fontSize: 14,
+    color: '#999',
+  },
+  locationCard: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    position: 'relative',
+  },
+  locationField: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 8,
+    gap: 12,
+  },
+  locationConnector: {
+    position: 'absolute',
+    left: 20,
+    top: 42,
+    width: 2,
+    height: 20,
+    backgroundColor: colors.primary,
+    zIndex: 0,
+  },
+  locationDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.primary,
+  },
+  locationInput: {
     flex: 1,
-  },
-  dateTimeTextContainer: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  dateTimeLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    fontWeight: '500',
-  },
-  dateTimeValue: {
     fontSize: 16,
-    color: colors.black,
+    color: colors.primaryDark,
+  },
+  mapSection: {
+    marginBottom: 24,
+  },
+  mapSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  mapSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  mapPlaceholder: {
+    height: 200,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  mapPlaceholderText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#999',
+  },
+  mapInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#F5F5F5',
+    padding: 12,
+    borderRadius: 12,
+  },
+  mapInfoText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 12,
+  },
+  pickerField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginBottom: 12,
+    gap: 12,
+  },
+  pickerFieldContent: {
+    flex: 1,
+  },
+  pickerFieldLabel: {
+    fontSize: 14,
     fontWeight: '600',
+    color: colors.primaryDark,
+    marginBottom: 4,
+  },
+  pickerFieldValue: {
+    fontSize: 14,
+    color: '#999',
+  },
+  priceField: {
+    flexDirection: 'row',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  priceCurrency: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#F5F5F5',
+  },
+  currencyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primaryDark,
+  },
+  priceSeparator: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#E0E0E0',
+    marginLeft: 12,
+  },
+  priceInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontSize: 16,
+    color: colors.primaryDark,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: '#E8F5E9',
+    borderWidth: 2,
+    borderColor: colors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.success,
+  },
+  createButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
   },
   modalOverlay: {
     flex: 1,
@@ -641,114 +965,86 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingBottom: 20,
-    maxHeight: '50%',
+    padding: 20,
+    maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.black,
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
   modalCloseButton: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
   },
-  modalCloseText: {
+  modalCancelText: {
     fontSize: 16,
     color: colors.primary,
     fontWeight: '600',
   },
-  modalCancelText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
-  },
   pickerContainer: {
-    padding: 20,
+    paddingVertical: 20,
   },
   pickerRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   pickerColumn: {
     alignItems: 'center',
-    flex: 1,
   },
   pickerLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#999',
     marginBottom: 12,
-    fontWeight: '500',
-    textTransform: 'uppercase',
   },
   pickerControls: {
     alignItems: 'center',
+    gap: 8,
   },
   pickerButton: {
     padding: 8,
-    minWidth: 48,
-    alignItems: 'center',
   },
   pickerValue: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.black,
-    marginVertical: 8,
-    minHeight: 48,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    minWidth: 60,
     textAlign: 'center',
-    lineHeight: 48,
   },
-  selectedDatePreview: {
-    backgroundColor: '#F5F5F5',
-    padding: 16,
+  modalConfirmButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 16,
     borderRadius: 12,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  selectedDateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.black,
-    textTransform: 'capitalize',
-  },
-  confirmButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 4,
-  },
-  seatsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
+    alignItems: 'center',
+    marginTop: 20,
   },
-  seatButton: {
-    padding: 8,
+  modalConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
   },
-  seatsValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.black,
-    marginHorizontal: 24,
-    minWidth: 40,
-    textAlign: 'center',
+  paymentOption: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+    marginBottom: 12,
   },
-  submitButton: {
-    marginTop: 8,
-    paddingVertical: 8,
+  paymentOptionSelected: {
     backgroundColor: colors.primary,
+  },
+  paymentOptionText: {
+    fontSize: 16,
+    color: colors.primaryDark,
+  },
+  paymentOptionTextSelected: {
+    color: colors.white,
   },
 });
-

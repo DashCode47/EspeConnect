@@ -113,15 +113,24 @@ export const postService = {
   async createPost(data: any) {
     try {
       const isFormData = data instanceof FormData;
-      const response = await api.post<Post>('/posts', data, {
-        headers: isFormData ? {
-          'Content-Type': 'multipart/form-data',
-        } : {
-          'Content-Type': 'application/json',
-        },
-      });
+      const config: any = {
+        headers: {},
+      };
+      
+      // Para FormData, establecer multipart/form-data (el interceptor también lo manejará)
+      // Para JSON, establecer application/json
+      if (isFormData) {
+        config.headers['Content-Type'] = 'multipart/form-data';
+      } else {
+        config.headers['Content-Type'] = 'application/json';
+      }
+      
+      const response = await api.post<Post>('/posts', data, config);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        await AsyncStorage.removeItem('token');
+      }
       throw error;
     }
   },

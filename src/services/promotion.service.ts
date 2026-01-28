@@ -1,5 +1,4 @@
-import api from './api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../lib/supabase';
 
 export enum PromotionCategory {
   FOOD = 'FOOD',
@@ -16,9 +15,10 @@ export interface Promotion {
   imageUrl?: string;
   startDate: string;
   endDate: string;
-  location: string;
   category: PromotionCategory;
+  discount?: number;
   isActive: boolean;
+  establishmentId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,9 +29,10 @@ export interface CreatePromotionData {
   imageUrl?: string;
   startDate: string;
   endDate: string;
-  location: string;
   category: PromotionCategory;
+  discount?: number;
   isActive?: boolean;
+  establishmentId: string;
 }
 
 export interface UpdatePromotionData {
@@ -40,35 +41,9 @@ export interface UpdatePromotionData {
   imageUrl?: string;
   startDate?: string;
   endDate?: string;
-  location?: string;
   category?: PromotionCategory;
+  discount?: number;
   isActive?: boolean;
-}
-
-export interface PromotionsResponse {
-  status: string;
-  data: {
-    promotions: Promotion[];
-    pagination?: {
-      page: number;
-      limit: number;
-      total: number;
-      pages: number;
-    };
-    category?: string;
-  };
-}
-
-export interface PromotionResponse {
-  status: string;
-  data: {
-    promotion: Promotion;
-  };
-}
-
-export interface DeletePromotionResponse {
-  status: string;
-  message: string;
 }
 
 export interface GetPromotionsParams {
@@ -78,125 +53,163 @@ export interface GetPromotionsParams {
   limit?: number;
 }
 
-const getAuthHeaders = async () => {
-  try {
-    const token = await AsyncStorage.getItem('token');
-    return {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    };
-  } catch (error) {
-    console.error('Error getting headers:', error);
-    throw error;
-  }
-};
-
 export const promotionService = {
   // Get all promotions with optional filters
   async getPromotions(params?: GetPromotionsParams) {
-    try {
-      const queryParams = new URLSearchParams();
-      
-      if (params?.category) {
-        queryParams.append('category', params.category);
-      }
-      if (params?.isActive !== undefined) {
-        queryParams.append('isActive', params.isActive.toString());
-      }
-      if (params?.page) {
-        queryParams.append('page', params.page.toString());
-      }
-      if (params?.limit) {
-        queryParams.append('limit', params.limit.toString());
-      }
+    let query = supabase
+      .from('Promotion')
+      .select('*', { count: 'exact' });
 
-      const url = `/promotions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await api.get<PromotionsResponse>(url);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
+    if (params?.category) {
+      query = query.eq('category', params.category);
+    }
+    if (params?.isActive !== undefined) {
+      query = query.eq('isActive', params.isActive);
+    }
+
+    // Pagination
+    const page = params?.page || 1;
+    const limit = params?.limit || 10;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    query = query
+      .order('createdAt', { ascending: false })
+      .range(from, to);
+
+    const { data, error, count } = await query;
+
+    if (error) {
       throw error;
     }
+
+    return {
+      promotions: data as Promotion[],
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        pages: Math.ceil((count || 0) / limit),
+      },
+    };
   },
 
   // Get a single promotion by ID
   async getPromotion(promotionId: string) {
-    try {
-      const response = await api.get<PromotionResponse>(`/promotions/${promotionId}`);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
+    const { data, error } = await supabase
+      .from('Promotion')
+      .select('*')
+      .eq('id', promotionId)
+      .single();
+
+    if (error) {
       throw error;
     }
+
+    return data as Promotion;
   },
 
   // Get promotions by category
   async getPromotionsByCategory(category: PromotionCategory, page?: number, limit?: number) {
-    try {
-      const queryParams = new URLSearchParams();
-      if (page) {
-        queryParams.append('page', page.toString());
-      }
-      if (limit) {
-        queryParams.append('limit', limit.toString());
-      }
+    return this.getPromotions({
+      category,
+      page: page || 1,
+      limit: limit || 10,
+    });
+  },
 
-      const url = `/promotions/category/${category}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await api.get<PromotionsResponse>(url);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
-      throw error;
-    }
+  // Get active promotions only
+  async getActivePromotions(params?: Omit<GetPromotionsParams, 'isActive'>) {
+    return this.getPromotions({
+      ...params,
+      isActive: true,
+    });
   },
 
   // Create a new promotion (requires authentication)
   async createPromotion(data: CreatePromotionData) {
-    try {
-      const headers = await getAuthHeaders();
-      const response = await api.post<PromotionResponse>('/promotions', data, headers);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
+    const { data: promotion, error } = await supabase
+      .from('Promotion')
+      .insert({
+        ...data,
+        isActive: data.isActive ?? true,
+      })
+      .select()
+      .single();
+
+    if (error) {
       throw error;
     }
+
+    return promotion as Promotion;
   },
 
   // Update a promotion (requires authentication)
   async updatePromotion(promotionId: string, data: UpdatePromotionData) {
-    try {
-      const headers = await getAuthHeaders();
-      const response = await api.put<PromotionResponse>(`/promotions/${promotionId}`, data, headers);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
+    const { data: promotion, error } = await supabase
+      .from('Promotion')
+      .update({
+        ...data,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('id', promotionId)
+      .select()
+      .single();
+
+    if (error) {
       throw error;
     }
+
+    return promotion as Promotion;
   },
 
   // Delete a promotion (requires authentication)
   async deletePromotion(promotionId: string) {
-    try {
-      const headers = await getAuthHeaders();
-      const response = await api.delete<DeletePromotionResponse>(`/promotions/${promotionId}`, headers);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        await AsyncStorage.removeItem('token');
-      }
+    const { error } = await supabase
+      .from('Promotion')
+      .delete()
+      .eq('id', promotionId);
+
+    if (error) {
       throw error;
     }
-  }
-}; 
+
+    return { success: true };
+  },
+
+  // Upload promotion image
+  async uploadImage(file: { uri: string; type: string; name: string }) {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const formData = new FormData();
+    formData.append('file', {
+      uri: file.uri,
+      type: file.type,
+      name: file.name,
+    } as any);
+
+    const { data, error } = await supabase.storage
+      .from('promotions')
+      .upload(fileName, formData, {
+        contentType: file.type,
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('promotions')
+      .getPublicUrl(data.path);
+
+    return publicUrl;
+  },
+};

@@ -11,12 +11,13 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { Appbar, Chip, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HomeStackParamList } from '../../navigation/types';
 import { Post, postService } from '../../services/post.service';
+import { Product, ProductCategory, marketplaceService } from '../../services/marketplace.service';
 import { PostCard } from '../../components/PostCard';
 import { MarketplaceCard } from '../../components/MarketplaceCard';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -29,45 +30,57 @@ type PostScreenNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'F
 
 type PostType = 'CONFESSION' | 'MARKETPLACE' | 'LOST_AND_FOUND';
 
+// Category mapping for filtering
+const categoryMapping: { [key: string]: ProductCategory | undefined } = {
+  'Todos': undefined,
+  'Libros': 'BOOKS',
+  'Uniformes': 'UNIFORMS',
+  'Tecnología': 'TECHNOLOGY',
+  'Hogar': 'HOME',
+  'Otros': 'OTHER',
+};
+
 export const PostScreen = () => {
   const insets = useSafeAreaInsets();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedType, setSelectedType] = useState<PostType>('MARKETPLACE');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const navigation = useNavigation<PostScreenNavigationProp>();
   const theme = useTheme();
   const { isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    // Verify token on component mount
-    const verifyToken = async () => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        console.log('Current token:', token);
-        if (!token) {
-          console.warn('No token found in storage');
-        }
-      } catch (error) {
-        console.error('Error checking token:', error);
-      }
-    };
-    verifyToken();
-  }, []);
+  // Fetch products from Supabase
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const category = categoryMapping[selectedCategory];
+      const response = await marketplaceService.getProducts({
+        category,
+        search: searchQuery || undefined,
+      });
+      setProducts(response.products);
+    } catch (error: any) {
+      console.error('Error fetching products:', error);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-  const fetchPosts = async (type: PostType, shouldRefresh = false) => {
+  // Fetch posts for other types (CONFESSION, LOST_AND_FOUND)
+  const fetchPosts = async (type: PostType) => {
     try {
       setLoading(true);
       const response = await postService.getPosts(type);
       setPosts(response.data.posts);
     } catch (error: any) {
       console.error('Error fetching posts:', error);
-      // Check if the error is due to authentication
-      if (error.response?.status === 401) {
-        console.error('Authentication error fetching posts');
-        // You might want to handle the unauthorized error here
-      }
+      setPosts([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -76,13 +89,31 @@ export const PostScreen = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchPosts(selectedType);
+      if (selectedType === 'MARKETPLACE') {
+        fetchProducts();
+      } else {
+        fetchPosts(selectedType);
+      }
     }
-  }, [selectedType, isAuthenticated]);
+  }, [selectedType, isAuthenticated, selectedCategory]);
+
+  // Debounced search
+  useEffect(() => {
+    if (selectedType === 'MARKETPLACE' && isAuthenticated) {
+      const timer = setTimeout(() => {
+        fetchProducts();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [searchQuery]);
 
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchPosts(selectedType, true);
+    if (selectedType === 'MARKETPLACE') {
+      fetchProducts();
+    } else {
+      fetchPosts(selectedType);
+    }
   };
 
   const handleCreatePost = () => {
@@ -90,14 +121,6 @@ export const PostScreen = () => {
   };
 
   const renderItem = ({ item }: { item: Post }) => {
-    if (selectedType === 'MARKETPLACE') {
-      return (
-        <MarketplaceCard
-          post={item}
-          onPress={() => navigation.navigate('PostDetails', { postData: item })}
-        />
-      );
-    }
     return (
       <PostCard
         post={item}
@@ -107,14 +130,6 @@ export const PostScreen = () => {
   };
 
   const renderMarketplaceGrid = () => {
-    const filteredPosts = searchQuery
-      ? posts.filter(
-          (post) =>
-            (post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              post.content.toLowerCase().includes(searchQuery.toLowerCase()))
-        )
-      : posts;
-
     if (loading) {
       return (
         <View style={styles.loadingContainer}>
@@ -123,10 +138,29 @@ export const PostScreen = () => {
       );
     }
 
+    if (products.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <MaterialCommunityIcons name="package-variant" size={64} color="#ccc" />
+          <Text style={styles.emptyText}>No hay productos disponibles</Text>
+        </View>
+      );
+    }
+
     return (
-      <ScrollView
-        style={styles.scrollView}
+      <FlatList
+        data={products}
+        numColumns={2}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <MarketplaceCard
+            product={item}
+            onPress={() => navigation.navigate('PostDetails', { productData: item })}
+          />
+        )}
         contentContainerStyle={styles.gridContainer}
+        columnWrapperStyle={styles.gridRow}
+        style={styles.flatListStyle}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -135,13 +169,29 @@ export const PostScreen = () => {
             tintColor={colors.primary}
           />
         }
-      >
-        {filteredPosts.map((item, index) => (
-          <View key={item.id} style={styles.gridItem}>
-            {renderItem({ item })}
-          </View>
-        ))}
-      </ScrollView>
+        ListHeaderComponent={
+          <>
+            {/* Promotional Banner */}
+            <LinearGradient
+              colors={['rgba(16, 90, 57, 0.2)', 'rgba(16, 90, 57, 0.4)', '#105A39', '#16965D', 'rgba(22, 150, 93, 0.4)', 'rgba(22, 150, 93, 0.2)']}
+              locations={[0, 0.15, 0.3, 0.7, 0.85, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.promoBanner}>
+              <Text style={styles.promoBannerText}>
+                Ofertas Especiales para Estudiantes - ¡Ahorra en tu semestre!
+              </Text>
+            </LinearGradient>
+
+            {/* Products Near You Section */}
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="map-marker" size={18} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Productos Cerca de Ti</Text>
+            </View>
+          </>
+        }
+        ListFooterComponent={<View style={{ height: 100 }} />}
+      />
     );
   };
 
@@ -180,42 +230,75 @@ export const PostScreen = () => {
     </View>
   );
 
+  const categories = ['Todos', 'Libros', 'Uniformes', 'Tecnología', 'Hogar', 'Otros'];
+
   if (selectedType === 'MARKETPLACE') {
     return (
       <SafeAreaView style={styles.container}>
         {/* Header */}
         <View style={styles.marketplaceHeader}>
           <View style={styles.headerTop}>
-            <Text style={styles.headerTitle}>Marketplace</Text>
-            <TouchableOpacity style={styles.iconButton}>
-              <MaterialCommunityIcons name="bell-outline" size={24} color={colors.black} />
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}>
+              <MaterialCommunityIcons name="chevron-left" size={24} color={colors.white} />
             </TouchableOpacity>
+            <Text style={styles.headerTitle}>Market</Text>
+            <View style={styles.headerRight}>
+              <TouchableOpacity style={styles.notificationButton}>
+                <MaterialCommunityIcons name="bell" size={20} color={colors.white} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.bookmarkButton}>
+                <MaterialCommunityIcons name="bookmark" size={20} color={colors.white} />
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
               <MaterialCommunityIcons
                 name="magnify"
                 size={20}
-                color="#666"
+                color="#B6B6B6"
                 style={styles.searchIcon}
               />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Buscar en Marketplace..."
-                placeholderTextColor="#999"
+                placeholder="Buscar productos..."
+                placeholderTextColor="#B6B6B6"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
             </View>
             <TouchableOpacity style={styles.filterButton}>
-              <MaterialCommunityIcons name="tune" size={20} color={colors.black} />
+              <MaterialCommunityIcons name="tune" size={20} color={colors.white} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Chips for filtering
-        {renderPostTypeChips()} */}
-
+        {/* Category Chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryChipsScrollView}
+          contentContainerStyle={styles.categoryChipsContainer}>
+          {categories.map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.categoryChip,
+                selectedCategory === category && styles.categoryChipActive,
+              ]}
+              onPress={() => setSelectedCategory(category)}>
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  selectedCategory === category && styles.categoryChipTextActive,
+                ]}>
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
         {/* Grid Content */}
         {renderMarketplaceGrid()}
 
@@ -223,8 +306,7 @@ export const PostScreen = () => {
         <TouchableOpacity
           style={[styles.fab, { bottom: insets.bottom + 74 }]}
           onPress={handleCreatePost}
-          activeOpacity={0.8}
-        >
+          activeOpacity={0.8}>
           <MaterialCommunityIcons name="plus" size={32} color={colors.white} />
         </TouchableOpacity>
       </SafeAreaView>
@@ -237,9 +319,9 @@ export const PostScreen = () => {
         <Appbar.Content title="Posts" titleStyle={{color: '#000000'}} />
         <Appbar.Action icon="plus" onPress={handleCreatePost} iconColor="#FFFFFF" />
       </Appbar.Header>
-      
+
       {renderPostTypeChips()}
-      
+
       {loading ? (
         <ActivityIndicator size="large" style={styles.loader} color={colors.primary} />
       ) : (
@@ -248,8 +330,8 @@ export const PostScreen = () => {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
+            <RefreshControl
+              refreshing={refreshing}
               onRefresh={handleRefresh}
               colors={[colors.primary]}
               tintColor={colors.primary}
@@ -276,9 +358,9 @@ const styles = StyleSheet.create({
   },
   marketplaceHeader: {
     backgroundColor: colors.white,
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
     gap: 16,
   },
   headerTop: {
@@ -286,14 +368,38 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.black,
-  },
-  iconButton: {
+  backButton: {
     width: 40,
     height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.primaryDark,
+    borderRadius: 8,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  notificationButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bookmarkButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -307,28 +413,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F5F5F5',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    height: 40,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
   },
   searchIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    color: colors.black,
+    fontSize: 16,
+    color: '#131413',
     paddingVertical: 0,
   },
   filterButton: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+  },
+  categoryChipsContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 10,
+    alignItems: 'center',
+  },
+  categoryChip: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.primary,
     backgroundColor: colors.white,
+    height: 40,
+  },
+  categoryChipActive: {
+    backgroundColor: colors.primary,
+  },
+  categoryChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  categoryChipTextActive: {
+    color: colors.white,
   },
   chipContainer: {
     flexDirection: 'row',
@@ -347,15 +477,45 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  categoryChipsScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  flatListStyle: {
+    flex: 1,
+  },
   gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 8,
     paddingBottom: 100,
   },
-  gridItem: {
-    width: '50%',
-    padding: 4,
+  gridRow: {
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  promoBanner: {
+    marginTop: 16,
+    marginBottom: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    width: '100%',
+  },
+  promoBannerText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+    textAlign: 'center',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
   listContent: {
     padding: 16,
@@ -397,4 +557,4 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
   },
-}); 
+});

@@ -3,6 +3,7 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {BenefitsStackParamList} from './types';
 import {BENEFIT_DETAILS} from '../config/constants';
 import BenefitDetail from '../screens/benefits/BenefitDetail';
+import { BenefitsScreen } from '../screens/benefits/BenefitsScreen';
 
 const Stack = createNativeStackNavigator<BenefitsStackParamList>();
 
@@ -12,6 +13,7 @@ export const BenefitsNavigator = () => {
       screenOptions={{
         headerShown: false,
       }}>
+      <Stack.Screen name="BenefitsList" component={BenefitsScreen} />
       <Stack.Screen name={BENEFIT_DETAILS} component={BenefitDetail} />
     </Stack.Navigator>
   );

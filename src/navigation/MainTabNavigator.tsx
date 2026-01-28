@@ -2,14 +2,14 @@ import React, {useState} from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from './types';
 import { HomeStack } from './HomeStack';
-import { ProfileScreen } from '../screens/ProfileScreen';
 import { AnimatedNavigator } from '../components/AnimatedNavigator';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PostStack } from './PostStack';
+import { MarketplaceStack } from './MarketplaceStack';
 import { ComunityStack } from './ComunityStack';
 import { RideStack } from './RideStack';
 import { EventStack } from './EventStack';
+import { BenefitsNavigator } from './BenefitsNavigator';
 import { useNavbar } from '../contexts/NavbarContext';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -69,7 +69,11 @@ export const MainTabNavigator = () => {
         />
         <Tab.Screen
           name="posts"
-          component={PostStack}
+          component={BenefitsNavigator}
+        />
+        <Tab.Screen
+          name="marketplace"
+          component={MarketplaceStack}
         />
         <Tab.Screen
           name="events"
@@ -78,10 +82,6 @@ export const MainTabNavigator = () => {
         <Tab.Screen
           name="rides"
           component={RideStack}
-        />
-        <Tab.Screen
-          name="profile"
-          component={ProfileScreen}
         />
       </Tab.Navigator>
     </View>

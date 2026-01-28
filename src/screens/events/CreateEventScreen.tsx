@@ -42,6 +42,7 @@ export const CreateEventScreen = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
   const [tempTime, setTempTime] = useState({ hours: 9, minutes: 0 });
   const [tempEndDate, setTempEndDate] = useState(new Date());
@@ -373,19 +374,7 @@ export const CreateEventScreen = () => {
           <Text style={styles.label}>Categoría</Text>
           <TouchableOpacity
             style={styles.selectContainer}
-            onPress={() => {
-              Alert.alert(
-                'Seleccionar Categoría',
-                '',
-                [
-                  ...categories.map((cat) => ({
-                    text: cat.label,
-                    onPress: () => setCategoria(cat.key),
-                  })),
-                  { text: 'Cancelar', style: 'cancel' },
-                ]
-              );
-            }}>
+            onPress={() => setShowCategoryModal(true)}>
             <Text
               style={[
                 styles.selectText,
@@ -881,6 +870,38 @@ export const CreateEventScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Category Modal */}
+      <Modal
+        visible={showCategoryModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCategoryModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleccionar Categoría</Text>
+              <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
+              </TouchableOpacity>
+            </View>
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat.key}
+                style={styles.modalOption}
+                onPress={() => {
+                  setCategoria(cat.key);
+                  setShowCategoryModal(false);
+                }}>
+                <Text style={styles.modalOptionText}>{cat.label}</Text>
+                {categoria === cat.key && (
+                  <MaterialCommunityIcons name="check" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1103,6 +1124,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     fontWeight: '500',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: colors.primaryDark,
   },
   pickerContainer: {
     padding: 20,
