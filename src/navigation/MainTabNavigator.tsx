@@ -43,11 +43,11 @@ export const MainTabNavigator = () => {
           return (
             <View style={{ 
               position: 'absolute', 
-              bottom: 0, 
+              bottom: insets.bottom > 0 ? insets.bottom : 0, 
               left: 0, 
               right: 0,
-              paddingBottom: insets.bottom,
               zIndex: 1000,
+              pointerEvents: 'box-none',
             }}>
               <AnimatedNavigator
                 currentRoute={currentRoute}

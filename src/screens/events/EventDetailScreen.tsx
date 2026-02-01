@@ -6,17 +6,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  SafeAreaView,
   StatusBar,
   ImageBackground,
   Linking,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../config/colors';
-import { globalStyles } from '../../config/globalStyles';
+
 import { eventService, Event, EventCategory } from '../../services/event.service';
 import { EventStackParamList } from '../../navigation/types';
 import LinearGradient from 'react-native-linear-gradient';
@@ -33,8 +33,7 @@ export const EventDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [attending, setAttending] = useState(false);
   const [attendingLoading, setAttendingLoading] = useState(false);
-  
-  // Ocultar el navbar en esta pantalla
+
   useHideNavbar(true);
 
   useEffect(() => {
@@ -57,10 +56,8 @@ export const EventDetailScreen = () => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', {
-      weekday: 'long',
       day: 'numeric',
-      month: 'long',
-      year: 'numeric',
+      month: 'short',
     });
   };
 
@@ -72,25 +69,22 @@ export const EventDetailScreen = () => {
     });
   };
 
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('es-ES', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const getCategoryLabel = (category: EventCategory) => {
+    switch (category) {
+      case EventCategory.ACADEMIC: return 'Académico';
+      case EventCategory.SPORTS: return 'Deportivo';
+      case EventCategory.SOCIAL: return 'Social';
+      case EventCategory.PRIVATE: return 'Privado';
+      case EventCategory.OTHER: return 'Otro';
+      default: return 'Evento';
+    }
   };
 
   const handleShare = () => {
-    // Implementar compartir evento
     console.log('Share event');
   };
 
   const handleMapPress = () => {
-    // Abrir mapa con la ubicación del evento
     if (event?.ubicacion) {
       const encodedLocation = encodeURIComponent(event.ubicacion);
       const url = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
@@ -100,7 +94,7 @@ export const EventDetailScreen = () => {
 
   const handleAttend = async () => {
     if (!event) return;
-    
+
     try {
       setAttendingLoading(true);
       if (attending) {
@@ -124,47 +118,34 @@ export const EventDetailScreen = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text>Cargando evento...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!event) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text>Evento no encontrado</Text>
+          <MaterialCommunityIcons name="calendar-remove" size={64} color="#ccc" />
+          <Text style={styles.errorText}>Evento no encontrado</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color={colors.black} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detalle del Evento</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={handleShare}>
-          <MaterialCommunityIcons name="share-variant" size={28} color={colors.black} />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={{
-          paddingBottom: globalStyles.bottomNavigatorHeight + 100,
-        }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}>
+
         {/* Hero Image */}
         <View style={styles.heroContainer}>
           {event.imagen ? (
@@ -173,399 +154,161 @@ export const EventDetailScreen = () => {
               style={styles.heroImage}
               resizeMode="cover">
               <LinearGradient
-                colors={['transparent', '#F5F5F5']}
-                style={styles.heroGradient}
+                colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.15)']}
+                style={StyleSheet.absoluteFillObject}
               />
             </ImageBackground>
           ) : (
             <View style={[styles.heroImage, styles.heroPlaceholder]}>
-              <MaterialCommunityIcons name="calendar-star" size={64} color="#999" />
-              <LinearGradient
-                colors={['transparent', '#F5F5F5']}
-                style={styles.heroGradient}
-              />
+              <MaterialCommunityIcons name="calendar-star" size={80} color="rgba(255,255,255,0.4)" />
             </View>
           )}
+
+          {/* Floating Back & Share Buttons */}
+          <View style={[styles.heroButtonsRow, { top: insets.top + 12 }]}>
+            <TouchableOpacity
+              style={styles.heroButton}
+              onPress={() => navigation.goBack()}>
+              <MaterialCommunityIcons name="arrow-left" size={22} color={colors.white} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.heroButton}
+              onPress={handleShare}>
+              <MaterialCommunityIcons name="share-variant" size={20} color={colors.white} />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Content Card */}
+        {/* Content Card (overlapping hero) */}
         <View style={styles.contentCard}>
+          {/* Category Badge */}
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>
+              {getCategoryLabel(event.categoria)}
+            </Text>
+          </View>
+
           {/* Event Title */}
           <Text style={styles.eventTitle}>{event.nombre}</Text>
 
-          {/* Organizer Info */}
-          <View style={styles.organizerContainer}>
-            <View style={styles.organizerAvatar}>
-              {event.creador.avatarUrl ? (
-                <Image
-                  source={{ uri: event.creador.avatarUrl }}
-                  style={styles.organizerAvatarImage}
-                />
-              ) : (
-                <MaterialCommunityIcons name="account-circle" size={40} color={colors.primary} />
-              )}
+          {/* Date / Time / Location Row */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoItem}>
+              <MaterialCommunityIcons name="calendar-month" size={18} color={colors.primary} />
+              <Text style={styles.infoText}>{formatDate(event.fechaInicio)}</Text>
             </View>
-            <View style={styles.organizerInfo}>
-              <Text style={styles.organizerName}>{event.creador.name}</Text>
-              <Text style={styles.organizerLabel}>
-                {event.creador.career || 'Organizador'}
+            <View style={styles.infoDivider} />
+            <View style={styles.infoItem}>
+              <MaterialCommunityIcons name="clock-outline" size={18} color={colors.primary} />
+              <Text style={styles.infoText}>{formatTime(event.fechaInicio)}</Text>
+            </View>
+            <View style={styles.infoDivider} />
+            <View style={styles.infoItem}>
+              <MaterialCommunityIcons name="map-marker-outline" size={18} color={colors.primary} />
+              <Text style={styles.infoText} numberOfLines={1}>{event.ubicacion}</Text>
+            </View>
+          </View>
+
+          {/* Attendees count */}
+          {event.asistentesCount > 0 && (
+            <View style={styles.attendeesRow}>
+              <MaterialCommunityIcons name="account-group-outline" size={18} color="#888" />
+              <Text style={styles.attendeesText}>
+                {event.asistentesCount} {event.asistentesCount === 1 ? 'asistente confirmado' : 'asistentes confirmados'}
               </Text>
             </View>
-          </View>
+          )}
 
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* Quick Details */}
-          <View style={styles.detailsContainer}>
-            {/* Date */}
-            <View style={styles.detailRow}>
-              <View style={styles.detailIconContainer}>
-                <MaterialCommunityIcons
-                  name="calendar-month"
-                  size={24}
-                  color={colors.primary}
-                />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailTitle}>
-                  {formatDate(event.fechaInicio)}
-                </Text>
-                <Text style={styles.detailSubtitle}>
-                  {formatTime(event.fechaInicio)}
-                  {event.fechaFin && ` - ${formatTime(event.fechaFin)}`}
-                </Text>
-              </View>
-            </View>
-
-            {/* Location */}
-            <View style={styles.detailRow}>
-              <View style={styles.detailIconContainer}>
-                <MaterialCommunityIcons
-                  name="map-marker"
-                  size={24}
-                  color={colors.primary}
-                />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailTitle}>{event.ubicacion}</Text>
-                <Text style={styles.detailSubtitle}>Ubicación del evento</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.mapButton}
-                onPress={handleMapPress}>
-                <MaterialCommunityIcons name="map" size={20} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Price */}
-            {event.precio > 0 && (
-              <View style={styles.detailRow}>
-                <View style={styles.detailIconContainer}>
-                  <MaterialCommunityIcons
-                    name="currency-usd"
-                    size={24}
-                    color={colors.primary}
-                  />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailTitle}>${event.precio.toFixed(2)}</Text>
-                  <Text style={styles.detailSubtitle}>Precio de entrada</Text>
-                </View>
-              </View>
-            )}
-
-            {/* Category */}
-            <View style={styles.detailRow}>
-              <View style={styles.detailIconContainer}>
-                <MaterialCommunityIcons
-                  name="tag"
-                  size={24}
-                  color={colors.primary}
-                />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailTitle}>
-                  {event.categoria === EventCategory.ACADEMIC && 'Académico'}
-                  {event.categoria === EventCategory.SPORTS && 'Deportivo'}
-                  {event.categoria === EventCategory.SOCIAL && 'Social'}
-                  {event.categoria === EventCategory.PRIVATE && 'Privado'}
-                  {event.categoria === EventCategory.OTHER && 'Otro'}
-                </Text>
-                <Text style={styles.detailSubtitle}>Categoría</Text>
-              </View>
-            </View>
-
-            {/* Attendees Count */}
-            {event.asistentesCount > 0 && (
-              <View style={styles.detailRow}>
-                <View style={styles.detailIconContainer}>
-                  <MaterialCommunityIcons
-                    name="account-group"
-                    size={24}
-                    color={colors.primary}
-                  />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailTitle}>
-                    {event.asistentesCount} {event.asistentesCount === 1 ? 'asistente' : 'asistentes'}
-                  </Text>
-                  <Text style={styles.detailSubtitle}>Confirmados</Text>
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* Description Section */}
-          <View style={styles.descriptionContainer}>
-            <Text style={styles.descriptionTitle}>Acerca del Evento</Text>
+          {/* Description */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Descripción</Text>
             <Text style={styles.descriptionText}>
-              {event.descripcion ||
-                'No hay descripción disponible.'}
+              {event.descripcion || 'No hay descripción disponible.'}
             </Text>
+          </View>
+
+          {/* Price info */}
+          {event.precio > 0 && (
+            <View style={styles.priceRow}>
+              <MaterialCommunityIcons name="ticket-outline" size={20} color={colors.primary} />
+              <Text style={styles.priceLabel}>Entrada:</Text>
+              <Text style={styles.priceValue}>${event.precio.toFixed(2)}</Text>
+            </View>
+          )}
+
+          {/* Map Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Ubicación</Text>
+            <TouchableOpacity style={styles.mapPlaceholder} onPress={handleMapPress} activeOpacity={0.8}>
+              <View style={styles.mapContent}>
+                <View style={styles.mapPinContainer}>
+                  <MaterialCommunityIcons name="map-marker" size={32} color={colors.primary} />
+                </View>
+                <Text style={styles.mapLocationText} numberOfLines={2}>{event.ubicacion}</Text>
+                <Text style={styles.mapHint}>Toca para abrir en Maps</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Organizer Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Organizador</Text>
+            <View style={styles.organizerCard}>
+              <View style={styles.organizerAvatar}>
+                {event.creador.avatarUrl ? (
+                  <Image
+                    source={{ uri: event.creador.avatarUrl }}
+                    style={styles.organizerAvatarImage}
+                  />
+                ) : (
+                  <MaterialCommunityIcons name="account" size={28} color={colors.primary} />
+                )}
+              </View>
+              <View style={styles.organizerInfo}>
+                <Text style={styles.organizerName}>{event.creador.name}</Text>
+                <Text style={styles.organizerLabel}>
+                  {event.creador.career || 'Organizador'}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
       </ScrollView>
 
-      {/* Floating Action Button Bar */}
-      <View
-        style={[
-          styles.footer,
-          {
-            paddingBottom: insets.bottom + 16,
-            paddingTop: 16,
-          },
-        ]}>
-        <View style={styles.footerLeft}>
-          <Text style={styles.footerLabel}>Asistencia</Text>
-          <Text style={styles.footerPrice}>
-            {event.precio > 0 ? `$${event.precio.toFixed(2)}` : 'Gratuita'}
-          </Text>
-        </View>
+      {/* Fixed Bottom Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity
           style={[styles.attendButton, attending && styles.attendButtonActive]}
           onPress={handleAttend}
-          disabled={attendingLoading}>
-          <MaterialCommunityIcons
-            name={attending ? 'check-circle' : 'ticket-confirmation'}
-            size={24}
-            color={attending ? colors.white : colors.black}
-          />
-          <Text style={[styles.attendButtonText, attending && styles.attendButtonTextActive]}>
-            {attending ? 'Asistencia Confirmada' : '¡Quiero Asistir!'}
-          </Text>
+          disabled={attendingLoading}
+          activeOpacity={0.85}>
+          {attendingLoading ? (
+            <ActivityIndicator size="small" color={attending ? colors.white : colors.primaryDark} />
+          ) : (
+            <>
+              <MaterialCommunityIcons
+                name={attending ? 'check-circle' : 'ticket-confirmation-outline'}
+                size={22}
+                color={attending ? colors.white : colors.primaryDark}
+              />
+              <Text style={[styles.attendButtonText, attending && styles.attendButtonTextActive]}>
+                {attending ? 'Asistencia Confirmada' : 'Asistir'}
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.black,
-    flex: 1,
-    textAlign: 'center',
+    backgroundColor: '#f6f8f7',
   },
   scrollView: {
     flex: 1,
-  },
-  heroContainer: {
-    position: 'relative',
-    width: '100%',
-    minHeight: 240,
-  },
-  heroImage: {
-    width: '100%',
-    minHeight: 240,
-    justifyContent: 'flex-end',
-  },
-  heroPlaceholder: {
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 96,
-  },
-  contentCard: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    marginTop: -16,
-    padding: 20,
-    marginHorizontal: 8,
-  },
-  eventTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.black,
-    marginBottom: 16,
-  },
-  organizerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 16,
-  },
-  organizerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: `${colors.primary}20`,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  organizerAvatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  organizerInfo: {
-    flex: 1,
-  },
-  organizerName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.black,
-  },
-  organizerLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E0E0E0',
-    marginVertical: 24,
-  },
-  detailsContainer: {
-    gap: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  detailIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: `${colors.primary}20`,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.black,
-  },
-  detailSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-  },
-  mapButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: `${colors.primary}20`,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  descriptionContainer: {
-    marginTop: 32,
-  },
-  descriptionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.black,
-    marginBottom: 8,
-  },
-  descriptionText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.black,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  footerLeft: {
-    flexShrink: 0,
-  },
-  footerLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  footerPrice: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.black,
-  },
-  attendButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.secondary,
-    borderRadius: 24,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    shadowColor: colors.secondary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  attendButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.black,
-  },
-  attendButtonActive: {
-    backgroundColor: colors.primary,
-  },
-  attendButtonTextActive: {
-    color: colors.white,
   },
   loadingContainer: {
     flex: 1,
@@ -576,6 +319,274 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#999',
+  },
+
+  // Hero
+  heroContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 360,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+    borderBottomLeftRadius: 48,
+    borderBottomRightRadius: 48,
+    overflow: 'hidden',
+  },
+  heroPlaceholder: {
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroButtonsRow: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  heroButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Content Card
+  contentCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    marginTop: -40,
+    marginHorizontal: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+
+  // Category Badge
+  categoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accent,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginBottom: 12,
+  },
+  categoryBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  // Title
+  eventTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.primary,
+    marginBottom: 16,
+    letterSpacing: -0.5,
+  },
+
+  // Info Row (date / time / location)
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f6f8f7',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  infoText: {
+    fontSize: 13,
+    color: '#555',
+    fontWeight: '500',
+    flexShrink: 1,
+  },
+  infoDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#ddd',
+    marginHorizontal: 8,
+  },
+
+  // Attendees
+  attendeesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  attendeesText: {
+    fontSize: 13,
+    color: '#888',
+  },
+
+  // Sections
+  section: {
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    marginBottom: 12,
+  },
+
+  // Description
+  descriptionText: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: '#555',
+  },
+
+  // Price
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    backgroundColor: `${colors.primary}10`,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  priceLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  priceValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
+  // Map
+  mapPlaceholder: {
+    backgroundColor: '#eaf4ef',
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 140,
+  },
+  mapContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  mapPinContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: `${colors.primary}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mapLocationText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primaryDark,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  mapHint: {
+    fontSize: 12,
+    color: '#999',
+  },
+
+  // Organizer
+  organizerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#f6f8f7',
+    borderRadius: 16,
+    padding: 14,
+  },
+  organizerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: `${colors.primary}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  organizerAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  organizerInfo: {
+    flex: 1,
+  },
+  organizerName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  organizerLabel: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 2,
+  },
+
+  // Bottom Bar
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(255,255,255,0.97)',
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  attendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: colors.accent,
+    borderRadius: 20,
+    paddingVertical: 16,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  attendButtonActive: {
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+  },
+  attendButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  attendButtonTextActive: {
+    color: colors.white,
   },
 });
-

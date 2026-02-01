@@ -17,8 +17,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { tripService, CreateTripData } from '../../services/trip.service';
 import { colors } from '../../config/colors';
-import { UbicacionActual } from '../../assets/svg/UbicacionActual';
-import { Destino } from '../../assets/svg/Destino';
 import { RideStackParamList } from '../../navigation/types';
 import { useHideNavbar } from '../../hooks/useHideNavbar';
 import { globalStyles } from '../../config/globalStyles';
@@ -53,7 +51,24 @@ export const CreateTripScreen = () => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [createdTripId, setCreatedTripId] = useState<string | null>(null);
-  
+  const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleColor, setVehicleColor] = useState<{ name: string; color: string }>({ name: 'Blanco', color: '#FFFFFF' });
+  const [vehiclePlate, setVehiclePlate] = useState('');
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  const vehicleColors = [
+    { name: 'Blanco', color: '#FFFFFF' },
+    { name: 'Negro', color: '#222222' },
+    { name: 'Gris', color: '#9E9E9E' },
+    { name: 'Rojo', color: '#EF4444' },
+    { name: 'Azul', color: '#3B82F6' },
+    { name: 'Verde', color: '#22C55E' },
+    { name: 'Amarillo', color: '#EAB308' },
+    { name: 'Naranja', color: '#F97316' },
+    { name: 'Plata', color: '#C0C0C0' },
+    { name: 'Café', color: '#92400E' },
+  ];
+
   useHideNavbar(true);
 
   const handleInputChange = (field: keyof CreateTripData, value: any) => {
@@ -241,46 +256,90 @@ export const CreateTripScreen = () => {
             </View>
           </View>
 
-          {/* Location Card */}
-          <View style={styles.locationCard}>
-            <View style={styles.locationField}>
-              <UbicacionActual color={colors.primary} size={20} />
+          {/* Route Inputs */}
+          <View style={styles.routeSection}>
+            <View style={styles.routeInputWrapper}>
+              <MaterialCommunityIcons
+                name="circle-outline"
+                size={20}
+                color={colors.primary}
+                style={styles.routeInputIcon}
+              />
               <TextInput
-                style={styles.locationInput}
-                placeholder="Ubicación actual"
+                style={styles.routeInput}
+                placeholder="¿Desde dónde sales?"
                 placeholderTextColor="#999"
                 value={formData.origin}
                 onChangeText={(text) => handleInputChange('origin', text)}
               />
             </View>
-            <View style={styles.locationConnector} />
-            <View style={styles.locationField}>
-              <Destino color={colors.primary} size={20} />
+
+            <View style={styles.routeDottedLine} />
+
+            <View style={styles.routeInputWrapper}>
+              <MaterialCommunityIcons
+                name="map-marker"
+                size={20}
+                color={colors.accent}
+                style={styles.routeInputIcon}
+              />
               <TextInput
-                style={styles.locationInput}
-                placeholder="Universidad"
-                placeholderTextColor={colors.primary}
+                style={styles.routeInput}
+                placeholder="¿A dónde vas?"
+                placeholderTextColor="#999"
                 value={formData.destination}
                 onChangeText={(text) => handleInputChange('destination', text)}
               />
             </View>
           </View>
 
-          {/* Map Section */}
-          <View style={styles.mapSection}>
-            <View style={styles.mapSectionHeader}>
-              <Text style={styles.mapSectionTitle}>Tu ubicación</Text>
-              <TouchableOpacity>
-                <MaterialCommunityIcons name="fullscreen" size={20} color={colors.primaryDark} />
-              </TouchableOpacity>
+          {/* Vehicle Section */}
+          <View style={styles.vehicleSection}>
+            <View style={styles.vehicleSectionHeader}>
+              <MaterialCommunityIcons name="car" size={22} color={colors.primary} />
+              <Text style={styles.vehicleSectionTitle}>Tu Vehículo</Text>
             </View>
-            <View style={styles.mapPlaceholder}>
-              <MaterialCommunityIcons name="map" size={48} color="#ccc" />
-              <Text style={styles.mapPlaceholderText}>Mapa</Text>
-            </View>
-            <View style={styles.mapInfo}>
-              <Text style={styles.mapInfoText}>Duración aproximada: 30m</Text>
-              <Text style={styles.mapInfoText}>Distancia: 100m</Text>
+
+            <Text style={styles.vehicleLabel}>Modelo del Auto</Text>
+            <TextInput
+              style={styles.vehicleInput}
+              placeholder="Ej. Nissan Versa 2020"
+              placeholderTextColor="#999"
+              value={vehicleModel}
+              onChangeText={setVehicleModel}
+            />
+
+            <View style={styles.vehicleRow}>
+              <View style={styles.vehicleRowItem}>
+                <Text style={styles.vehicleLabel}>Color</Text>
+                <TouchableOpacity
+                  style={styles.colorPickerButton}
+                  onPress={() => setShowColorPicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[
+                      styles.colorDot,
+                      { backgroundColor: vehicleColor.color },
+                      vehicleColor.color === '#FFFFFF' && styles.colorDotWhite,
+                    ]}
+                  />
+                  <Text style={styles.colorPickerText}>{vehicleColor.name}</Text>
+                  <MaterialCommunityIcons name="chevron-down" size={18} color="#999" style={{ marginLeft: 'auto' }} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.vehicleRowItem}>
+                <Text style={styles.vehicleLabel}>Placa (Opcional)</Text>
+                <TextInput
+                  style={[styles.vehicleInput, styles.vehiclePlateInput]}
+                  placeholder="ABC-123"
+                  placeholderTextColor="#999"
+                  value={vehiclePlate}
+                  onChangeText={(text) => setVehiclePlate(text.toUpperCase())}
+                  autoCapitalize="characters"
+                />
+              </View>
             </View>
           </View>
 
@@ -654,6 +713,55 @@ export const CreateTripScreen = () => {
         </View>
       </Modal>
 
+      {/* Color Picker Modal */}
+      <Modal
+        visible={showColorPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowColorPicker(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleccionar Color</Text>
+              <TouchableOpacity
+                onPress={() => setShowColorPicker(false)}
+                style={styles.modalCloseButton}>
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.colorGrid}>
+              {vehicleColors.map((vc) => (
+                <TouchableOpacity
+                  key={vc.name}
+                  style={[
+                    styles.colorOption,
+                    vehicleColor.name === vc.name && styles.colorOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setVehicleColor(vc);
+                    setShowColorPicker(false);
+                  }}>
+                  <View
+                    style={[
+                      styles.colorOptionDot,
+                      { backgroundColor: vc.color },
+                      vc.color === '#FFFFFF' && styles.colorDotWhite,
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.colorOptionText,
+                      vehicleColor.name === vc.name && styles.colorOptionTextSelected,
+                    ]}>
+                    {vc.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Success and Error Modals */}
       <SuccessModal
         visible={showSuccessModal}
@@ -783,82 +891,162 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
   },
-  locationCard: {
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    padding: 20,
+  routeSection: {
     marginBottom: 24,
-    borderWidth: 2,
-    borderColor: colors.primary,
     position: 'relative',
   },
-  locationField: {
+  routeInputWrapper: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 8,
-    gap: 12,
   },
-  locationConnector: {
+  routeInputIcon: {
     position: 'absolute',
-    left: 20,
-    top: 42,
-    width: 2,
-    height: 20,
-    backgroundColor: colors.primary,
-    zIndex: 0,
+    left: 16,
+    zIndex: 1,
   },
-  locationDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.primary,
-  },
-  locationInput: {
+  routeInput: {
     flex: 1,
-    fontSize: 16,
+    height: 56,
+    paddingLeft: 48,
+    paddingRight: 16,
+    backgroundColor: '#f6f8f7',
+    borderRadius: 18,
+    fontSize: 15,
+    fontWeight: '500',
     color: colors.primaryDark,
   },
-  mapSection: {
+  routeDottedLine: {
+    position: 'absolute',
+    left: 25,
+    top: 48,
+    height: 28,
+    width: 0,
+    borderLeftWidth: 2,
+    borderStyle: 'dotted',
+    borderLeftColor: '#ddd',
+    zIndex: 0,
+  },
+  vehicleSection: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
     marginBottom: 24,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: `${colors.primary}1A`,
   },
-  mapSectionHeader: {
+  vehicleSectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: 8,
+    marginBottom: 20,
   },
-  mapSectionTitle: {
+  vehicleSectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.primaryDark,
   },
-  mapPlaceholder: {
-    height: 200,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  mapPlaceholderText: {
-    marginTop: 8,
-    fontSize: 14,
+  vehicleLabel: {
+    fontSize: 12,
+    fontWeight: '700',
     color: '#999',
+    marginBottom: 6,
+    marginLeft: 4,
   },
-  mapInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#F5F5F5',
-    padding: 12,
-    borderRadius: 12,
-  },
-  mapInfoText: {
-    fontSize: 14,
+  vehicleInput: {
+    height: 48,
+    backgroundColor: '#f6f8f7',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    fontWeight: '500',
     color: colors.primaryDark,
+    marginBottom: 16,
+  },
+  vehicleRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  vehicleRowItem: {
+    flex: 1,
+  },
+  colorPickerButton: {
+    height: 48,
+    backgroundColor: '#f6f8f7',
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    gap: 8,
+    marginBottom: 16,
+  },
+  colorDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  colorDotWhite: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  colorPickerText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.primaryDark,
+  },
+  vehiclePlateInput: {
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingVertical: 10,
+  },
+  colorOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: '#F5F5F5',
+    width: '47%',
+  },
+  colorOptionSelected: {
+    backgroundColor: `${colors.primary}15`,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  colorOptionDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  colorOptionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.primaryDark,
+  },
+  colorOptionTextSelected: {
+    fontWeight: '700',
+    color: colors.primary,
   },
   section: {
     marginBottom: 24,

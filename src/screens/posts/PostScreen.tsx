@@ -32,7 +32,7 @@ type PostType = 'CONFESSION' | 'MARKETPLACE' | 'LOST_AND_FOUND';
 
 // Category mapping for filtering
 const categoryMapping: { [key: string]: ProductCategory | undefined } = {
-  'Todos': undefined,
+  'Todo': undefined,
   'Libros': 'BOOKS',
   'Uniformes': 'UNIFORMS',
   'Tecnología': 'TECHNOLOGY',
@@ -48,7 +48,7 @@ export const PostScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedType, setSelectedType] = useState<PostType>('MARKETPLACE');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todo');
   const navigation = useNavigation<PostScreenNavigationProp>();
   const theme = useTheme();
   const { isAuthenticated } = useAuth();
@@ -230,7 +230,14 @@ export const PostScreen = () => {
     </View>
   );
 
-  const categories = ['Todos', 'Libros', 'Uniformes', 'Tecnología', 'Hogar', 'Otros'];
+  const categories = [
+    { label: 'Todo', icon: 'view-grid' },
+    { label: 'Libros', icon: 'book-open-variant' },
+    { label: 'Tecnología', icon: 'laptop' },
+    { label: 'Uniformes', icon: 'tshirt-crew' },
+    { label: 'Hogar', icon: 'sofa' },
+    { label: 'Otros', icon: 'dots-horizontal' },
+  ];
 
   if (selectedType === 'MARKETPLACE') {
     return (
@@ -281,23 +288,32 @@ export const PostScreen = () => {
           showsHorizontalScrollIndicator={false}
           style={styles.categoryChipsScrollView}
           contentContainerStyle={styles.categoryChipsContainer}>
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category}
-              style={[
-                styles.categoryChip,
-                selectedCategory === category && styles.categoryChipActive,
-              ]}
-              onPress={() => setSelectedCategory(category)}>
-              <Text
+          {categories.map((cat) => {
+            const isActive = selectedCategory === cat.label;
+            return (
+              <TouchableOpacity
+                key={cat.label}
                 style={[
-                  styles.categoryChipText,
-                  selectedCategory === category && styles.categoryChipTextActive,
-                ]}>
-                {category}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                  styles.categoryChip,
+                  isActive && styles.categoryChipActive,
+                ]}
+                onPress={() => setSelectedCategory(cat.label)}
+                activeOpacity={0.8}>
+                <MaterialCommunityIcons
+                  name={cat.icon}
+                  size={20}
+                  color={isActive ? '#fff' : colors.primaryDark}
+                />
+                <Text
+                  style={[
+                    styles.categoryChipText,
+                    isActive && styles.categoryChipTextActive,
+                  ]}>
+                  {cat.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
         {/* Grid Content */}
         {renderMarketplaceGrid()}
@@ -441,24 +457,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.white,
-    height: 40,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: colors.primaryDark,
+    backgroundColor: '#fff',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 3,
   },
   categoryChipActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryDark,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
   },
   categoryChipText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
   categoryChipTextActive: {
-    color: colors.white,
+    color: '#fff',
   },
   chipContainer: {
     flexDirection: 'row',

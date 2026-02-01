@@ -3,23 +3,15 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   Animated,
-  Text,
 } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../config/colors';
-import { BarraHome } from '../assets/svg/BarraHome';
-import { BarraViajes } from '../assets/svg/BarraViajes';
-import { BarraBeneficios } from '../assets/svg/BarraBeneficios';
-import { BarraEventos } from '../assets/svg/BarraEventos';
-import { BarraMarketplace } from '../assets/svg/BarraMarketplace';
-
-const { width } = Dimensions.get('window');
 
 interface NavigationItem {
   key: string;
-  IconComponent: React.ComponentType<{ color?: string; size?: number }>;
-  label: string;
+  icon: string;
+  iconActive: string;
 }
 
 interface AnimatedNavigatorProps {
@@ -28,85 +20,77 @@ interface AnimatedNavigatorProps {
 }
 
 const navigationItems: NavigationItem[] = [
-  { key: 'home', IconComponent: BarraHome, label: 'Explorar' },
-  { key: 'posts', IconComponent: BarraBeneficios, label: 'Beneficios' },
-  { key: 'marketplace', IconComponent: BarraMarketplace, label: 'Market' },
-  { key: 'rides', IconComponent: BarraViajes, label: 'Viajes' },
-  { key: 'events', IconComponent: BarraEventos, label: 'Eventos' },
+  { key: 'home', icon: 'home-outline', iconActive: 'home' },
+  { key: 'posts', icon: 'ticket-percent-outline', iconActive: 'ticket-percent' },
+  { key: 'marketplace', icon: 'store-outline', iconActive: 'store' },
+  { key: 'rides', icon: 'car-outline', iconActive: 'car' },
+  { key: 'events', icon: 'calendar-outline', iconActive: 'calendar' },
 ];
 
-const ITEM_WIDTH = width / navigationItems.length;
-
 export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigatorProps) => {
-  const indicatorPosition = useRef(new Animated.Value(0)).current;
+  // Animation refs for each item
+  const scaleAnims = useRef(
+    navigationItems.map(() => new Animated.Value(1))
+  ).current;
 
   useEffect(() => {
-    const index = navigationItems.findIndex(item => item.key === currentRoute);
-    const targetPosition = index * ITEM_WIDTH;
-    
-    Animated.spring(indicatorPosition, {
-      toValue: targetPosition,
-      useNativeDriver: true,
-      tension: 100,
-      friction: 8,
-    }).start();
+    // Animate scale for active item
+    navigationItems.forEach((item, index) => {
+      const isActive = item.key === currentRoute;
+      Animated.spring(scaleAnims[index], {
+        toValue: isActive ? 1 : 1,
+        useNativeDriver: true,
+        tension: 100,
+        friction: 8,
+      }).start();
+    });
   }, [currentRoute]);
 
-  const handlePress = (route: string) => {
+  const handlePress = (route: string, index: number) => {
+    // Quick scale animation on press
+    Animated.sequence([
+      Animated.timing(scaleAnims[index], {
+        toValue: 0.9,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnims[index], {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 200,
+        friction: 10,
+      }),
+    ]).start();
+    
     onNavigate(route);
   };
 
   return (
     <View style={styles.wrapper}>
-      <View style={styles.container}>
-        {/* Background indicator for active item */}
-        <Animated.View
-          style={[
-            styles.indicator,
-            {
-              transform: [
-                {
-                  translateX: indicatorPosition.interpolate({
-                    inputRange: [0, (navigationItems.length - 1) * ITEM_WIDTH],
-                    outputRange: [0, (navigationItems.length - 1) * ITEM_WIDTH],
-                  }),
-                },
-              ],
-            },
-          ]}
-        />
-
+      <View style={styles.navContainer}>
         {navigationItems.map((item, index) => {
           const isActive = currentRoute === item.key;
-          const Icon = item.IconComponent;
           
           return (
-            <TouchableOpacity
+            <Animated.View
               key={item.key}
-              style={styles.item}
-              onPress={() => handlePress(item.key)}
-              activeOpacity={0.7}
-            >
-              <View
+              style={[
+                { transform: [{ scale: scaleAnims[index] }] },
+              ]}>
+              <TouchableOpacity
                 style={[
-                  styles.itemContent,
-                  isActive && styles.itemContentActive,
+                  styles.navItem,
+                  isActive && styles.navItemActive,
                 ]}
-              >
-                <Icon
-                  color={isActive ? colors.primary : '#999'}
+                onPress={() => handlePress(item.key, index)}
+                activeOpacity={0.7}>
+                <MaterialCommunityIcons
+                  name={isActive ? item.iconActive : item.icon}
                   size={24}
+                  color={isActive ? colors.white : '#9CA3AF'}
                 />
-                <Text
-                  style={[
-                    styles.label,
-                    isActive && styles.labelActive,
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </Animated.View>
           );
         })}
       </View>
@@ -117,52 +101,43 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 24,
     left: 0,
     right: 0,
-    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'box-none',
   },
-  container: {
+  navContainer: {
     flexDirection: 'row',
-    height: 70,
-    backgroundColor: colors.white,
-    position: 'relative',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#1E2A25',
+    borderRadius: 32,
+    paddingVertical: 6,
+    paddingLeft: 8,
+    paddingRight: 24,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  indicator: {
-    position: 'absolute',
-    width: ITEM_WIDTH - 16,
-    height: 54,
-    borderRadius: 12,
-    backgroundColor: '#E8F5E9',
-    top: 8,
-    left: 8,
-    zIndex: 0,
-  },
-  item: {
-    flex: 1,
+  navItem: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
-  itemContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    width: '100%',
-  },
-  itemContentActive: {},
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#999',
-    marginTop: 4,
-  },
-  labelActive: {
-    color: colors.primary,
-    fontWeight: '600',
+  navItemActive: {
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });

@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useRef} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   Image,
   TextInput,
 } from 'react-native';
-import Carousel, { ICarouselInstance } from 'react-native-reanimated-carousel';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {HomeStackParamList} from '../../navigation/types';
@@ -124,14 +123,6 @@ const PromotionCard: React.FC<PromotionCardProps> = ({promotion, establishment, 
           </Text>
         ) : null}
         
-        {/* Price Section - Only show if discount exists */}
-        {promotion.discount !== undefined && promotion.discount > 0 ? (
-          <View style={styles.promotionCardPriceContainer}>
-            <Text style={styles.promotionCardCurrentPrice}>
-              -{promotion.discount}% {isCurrentlyActive() ? 'hoy' : ''}
-            </Text>
-          </View>
-        ) : null}
 
         {/* Action Buttons */}
         <View style={styles.promotionCardActions}>
@@ -163,8 +154,6 @@ export const HomeScreen: React.FC = () => {
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
   const [promotionsWithEstablishments, setPromotionsWithEstablishments] = useState<Array<{promotion: Promotion; establishment: Establishment}>>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
-  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
-  const bannerCarouselRef = useRef<ICarouselInstance>(null);
   const screenWidth = Dimensions.get('window').width;
   const {
     profile,
@@ -204,12 +193,6 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  // Resetear el índice activo cuando cambien los banners
-  useEffect(() => {
-    if (banners.length > 0 && activeBannerIndex >= banners.length) {
-      setActiveBannerIndex(0);
-    }
-  }, [banners.length]);
 
   const fetchBanners = async () => {
     try {
@@ -224,14 +207,11 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleBannerSnapToItem = (index: number) => {
-    setActiveBannerIndex(index);
-  };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <StatusBar barStyle="dark-content" backgroundColor="#f6f8f7" />
         <HomeSkeletonLoader />
       </SafeAreaView>
     );
@@ -239,8 +219,14 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      
+      <StatusBar barStyle="dark-content" backgroundColor="#f6f8f7" />
+
+      {/* Background Blobs */}
+      <View style={styles.bgBlobContainer} pointerEvents="none">
+        <View style={styles.bgBlobPrimary} />
+        <View style={styles.bgBlobAccent} />
+      </View>
+
       {/* Top Navigation Bar */}
       <View style={styles.topNavBar}>
         <TouchableOpacity
@@ -309,58 +295,49 @@ export const HomeScreen: React.FC = () => {
           </TouchableOpacity>
         </View> */}
 
-        {/* Banner Carousel */}
+        {/* Banner Cards */}
         {banners.length > 0 && (
           <View style={styles.bannerSection}>
-            <Carousel
-              ref={bannerCarouselRef}
-              loop={true}
-              width={screenWidth}
-              height={200}
-              data={banners}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.bannerContainer} activeOpacity={0.9}>
-                  {item.imageUrl ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.bannerScrollContent}
+              snapToInterval={296}
+              decelerationRate="fast"
+            >
+              {banners.map((banner) => (
+                <TouchableOpacity
+                  key={banner.id}
+                  style={styles.bannerCard}
+                  activeOpacity={0.9}
+                >
+                  {banner.imageUrl ? (
                     <Image
-                      source={{ uri: item.imageUrl }}
-                      style={styles.bannerImage}
+                      source={{ uri: banner.imageUrl }}
+                      style={styles.bannerCardImage}
                       resizeMode="cover"
-                      onLoad={() => console.log('Banner image loaded:', item.imageUrl)}
-                      onError={(e) => console.log('Banner image error:', item.imageUrl, e.nativeEvent.error)}
                     />
                   ) : (
-                    <View style={[styles.bannerImage, { backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' }]}>
-                      <MaterialCommunityIcons name="image" size={48} color={colors.white} />
+                    <View style={[styles.bannerCardImage, styles.bannerCardImagePlaceholder]}>
+                      <MaterialCommunityIcons name="image" size={48} color="rgba(255,255,255,0.5)" />
                     </View>
                   )}
-                  <View style={styles.bannerOverlay}>
-                    <Text style={styles.bannerTitle}>{item.title}</Text>
-                    {item.description && (
-                      <Text style={styles.bannerDescription}>{item.description}</Text>
-                    )}
+                  {/* Gradient overlay */}
+                  <View style={styles.bannerCardGradient} />
+                  {/* Content */}
+                  <View style={styles.bannerCardContent}>
+                    <Text style={styles.bannerCardTitle} numberOfLines={2}>
+                      {banner.title}
+                    </Text>
+                    {banner.description ? (
+                      <Text style={styles.bannerCardDescription} numberOfLines={2}>
+                        {banner.description}
+                      </Text>
+                    ) : null}
                   </View>
                 </TouchableOpacity>
-              )}
-              onSnapToItem={handleBannerSnapToItem}
-              autoPlay={banners.length > 1}
-              autoPlayInterval={4000}
-              enabled={banners.length > 1}
-              defaultIndex={0}
-            />
-            {/* Banner Pagination Dots */}
-            {banners.length > 1 && (
-              <View style={styles.bannerPaginationContainer}>
-                {banners.map((_, index) => (
-                  <View
-                    key={`banner-dot-${index}`}
-                    style={[
-                      styles.bannerPaginationDot,
-                      index === activeBannerIndex && styles.bannerPaginationDotActive,
-                    ]}
-                  />
-                ))}
-              </View>
-            )}
+              ))}
+            </ScrollView>
           </View>
         )}
 
@@ -469,8 +446,35 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#f6f8f7',
     paddingTop: 20,
+  },
+  bgBlobContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 500,
+    overflow: 'hidden',
+    zIndex: 0,
+  },
+  bgBlobPrimary: {
+    position: 'absolute',
+    top: -80,
+    left: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: `${colors.primary}1A`,
+  },
+  bgBlobAccent: {
+    position: 'absolute',
+    top: 40,
+    right: -80,
+    width: 288,
+    height: 288,
+    borderRadius: 144,
+    backgroundColor: `${colors.accent}33`,
   },
   topNavBar: {
     flexDirection: 'row',
@@ -478,7 +482,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   profileButton: {
     width: 40,
@@ -823,51 +827,56 @@ const styles = StyleSheet.create({
   },
   bannerSection: {
     marginBottom: 24,
+    paddingVertical: 4,
   },
-  bannerContainer: {
-    width: Dimensions.get('window').width,
-    height: 200,
+  bannerScrollContent: {
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  bannerCard: {
+    width: 280,
+    height: 340,
+    borderRadius: 20,
+    overflow: 'hidden',
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  bannerImage: {
+  bannerCardImage: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
   },
-  bannerOverlay: {
+  bannerCardImagePlaceholder: {
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bannerCardGradient: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.primary,
+    opacity: 0.55,
+  },
+  bannerCardContent: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     padding: 20,
-    paddingBottom: 30,
   },
-  bannerTitle: {
-    fontSize: 24,
+  bannerCardTitle: {
+    fontSize: 21,
     fontWeight: '700',
-    color: colors.white,
-    marginBottom: 8,
+    color: '#fff',
+    marginBottom: 4,
+    lineHeight: 26,
   },
-  bannerDescription: {
+  bannerCardDescription: {
     fontSize: 14,
-    color: colors.white,
-    opacity: 0.9,
-  },
-  bannerPaginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 12,
-  },
-  bannerPaginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E0E0E0',
-  },
-  bannerPaginationDotActive: {
-    backgroundColor: colors.primary,
-    width: 24,
+    color: 'rgba(255,255,255,0.8)',
+    lineHeight: 20,
   },
 });

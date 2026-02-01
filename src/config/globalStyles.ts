@@ -7,12 +7,14 @@ export const globalStyles = {
   screenWidth: width,
   screenHeight: height,
   
-  // Bottom navigator height (80px + padding)
-  bottomNavigatorHeight: 80 + (Platform.OS === 'ios' ? 24 : 16),
+  // Bottom navigator height (floating navbar: 48px height + 24px bottom + padding)
+  bottomNavigatorHeight: 48 + 24 + (Platform.OS === 'ios' ? 24 : 16),
   
   // Safe area utilities
   getBottomSafeArea: (insets: { bottom: number }) => {
-    return insets.bottom + 80 + (Platform.OS === 'ios' ? 24 : 16);
+    // Floating navbar: 48px height + 24px from bottom + safe area
+    const baseHeight = 48 + 24 + 16;
+    return Math.max(insets.bottom, 0) + baseHeight;
   },
   
   // Common padding
