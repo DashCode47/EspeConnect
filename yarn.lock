@@ -1858,55 +1858,55 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
-"@supabase/auth-js@2.93.2":
-  version "2.93.2"
-  resolved "https://registry.npmjs.org/@supabase/auth-js/-/auth-js-2.93.2.tgz"
-  integrity sha512-uifI5vkhvHCQjn+LUPL5QlsuDMP4oVBD5SiliREgYuTJvCkbPLOcAPGrw88q7VUX9S0J0QuJn+37hrcTITisuw==
+"@supabase/auth-js@2.93.3":
+  version "2.93.3"
+  resolved "https://registry.npmjs.org/@supabase/auth-js/-/auth-js-2.93.3.tgz"
+  integrity sha512-JdnkHZPKexVGSNONtu89RHU4bxz3X9kxx+f5ZnR5osoCIX+vs/MckwWRPZEybAEvlJXt5xjomDb3IB876QCxWQ==
   dependencies:
     tslib "2.8.1"
 
-"@supabase/functions-js@2.93.2":
-  version "2.93.2"
-  resolved "https://registry.npmjs.org/@supabase/functions-js/-/functions-js-2.93.2.tgz"
-  integrity sha512-reSp7yj4KmvAFfmN+N7vYsHXOIZQh9cmRBh+VrZlm7qgIIUdYmzKuD85TvFnWApqcdI2pPnuZGKWE/2B4GXT1A==
+"@supabase/functions-js@2.93.3":
+  version "2.93.3"
+  resolved "https://registry.npmjs.org/@supabase/functions-js/-/functions-js-2.93.3.tgz"
+  integrity sha512-qWO0gHNDm/5jRjROv/nv9L6sYabCWS1kzorOLUv3kqCwRvEJLYZga93ppJPrZwOgoZfXmJzvpjY8fODA4HQfBw==
   dependencies:
     tslib "2.8.1"
 
-"@supabase/postgrest-js@2.93.2":
-  version "2.93.2"
-  resolved "https://registry.npmjs.org/@supabase/postgrest-js/-/postgrest-js-2.93.2.tgz"
-  integrity sha512-W2AWDsYwRT217II5yD3jWaX3fJjB7DwyNi2KNi4sphdUI3DKY4fP2XYVDGfeb1clEFL18gw+GBhyQb3BcpNWkw==
+"@supabase/postgrest-js@2.93.3":
+  version "2.93.3"
+  resolved "https://registry.npmjs.org/@supabase/postgrest-js/-/postgrest-js-2.93.3.tgz"
+  integrity sha512-+iJ96g94skO2e4clsRSmEXg22NUOjh9BziapsJSAvnB1grOBf/BA8vGtCHjNOA+Z6lvKXL1jwBqcL9+fS1W/Lg==
   dependencies:
     tslib "2.8.1"
 
-"@supabase/realtime-js@2.93.2":
-  version "2.93.2"
-  resolved "https://registry.npmjs.org/@supabase/realtime-js/-/realtime-js-2.93.2.tgz"
-  integrity sha512-YpAmJn7DLbMeYfQilcf3f0DKoY8O8TRbTF2oRpWFzHXTlEA+YWms8fBqM13Mf7RE72ouSNKDYyf5K2pWRSHvFw==
+"@supabase/realtime-js@2.93.3":
+  version "2.93.3"
+  resolved "https://registry.npmjs.org/@supabase/realtime-js/-/realtime-js-2.93.3.tgz"
+  integrity sha512-gnYpcFzwy8IkezRP4CDbT5I8jOsiOjrWrqTY1B+7jIriXsnpifmlM6RRjLBm9oD7OwPG0/WksniGPdKW67sXOA==
   dependencies:
     "@types/phoenix" "^1.6.6"
     "@types/ws" "^8.18.1"
     tslib "2.8.1"
     ws "^8.18.2"
 
-"@supabase/storage-js@2.93.2":
-  version "2.93.2"
-  resolved "https://registry.npmjs.org/@supabase/storage-js/-/storage-js-2.93.2.tgz"
-  integrity sha512-abRSVClfIQn+SqpdqL7S7b3VeyS8270/o0gqmGFtiidb7Lu0COsIV6Mor/mK9xE99KYWzyd37vwYYwv/jaANhw==
+"@supabase/storage-js@2.93.3":
+  version "2.93.3"
+  resolved "https://registry.npmjs.org/@supabase/storage-js/-/storage-js-2.93.3.tgz"
+  integrity sha512-cw4qXiLrx3apglDM02Tx/w/stvFlrkKocC6vCvuFAz3JtVEl1zH8MUfDQDTH59kJAQVaVdbewrMWSoBob7REnA==
   dependencies:
     iceberg-js "^0.8.1"
     tslib "2.8.1"
 
-"@supabase/supabase-js@^2.93.2":
-  version "2.93.2"
-  resolved "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.93.2.tgz"
-  integrity sha512-G3bZZi6rPwXcPtyHLXQTeHKa5ADZ2UW/+hv8YhwZFwngz4TlPnR4+TeO37EwU5+d/reD02qXozOZgz+QHv1Jtg==
+"@supabase/supabase-js@^2.93.3":
+  version "2.93.3"
+  resolved "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.93.3.tgz"
+  integrity sha512-paUqEqdBI9ztr/4bbMoCgeJ6M8ZTm2fpfjSOlzarPuzYveKFM20ZfDZqUpi9CFfYagYj5Iv3m3ztUjaI9/tM1w==
   dependencies:
-    "@supabase/auth-js" "2.93.2"
-    "@supabase/functions-js" "2.93.2"
-    "@supabase/postgrest-js" "2.93.2"
-    "@supabase/realtime-js" "2.93.2"
-    "@supabase/storage-js" "2.93.2"
+    "@supabase/auth-js" "2.93.3"
+    "@supabase/functions-js" "2.93.3"
+    "@supabase/postgrest-js" "2.93.3"
+    "@supabase/realtime-js" "2.93.3"
+    "@supabase/storage-js" "2.93.3"
 
 "@types/babel__core@^7.1.14":
   version "7.20.5"
@@ -3859,6 +3859,11 @@ fs.realpath@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/fs.realpath/-/fs.realpath-1.0.0.tgz"
   integrity sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==
+
+fsevents@^2.3.2:
+  version "2.3.3"
+  resolved "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz"
+  integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
 
 function-bind@^1.1.2:
   version "1.1.2"

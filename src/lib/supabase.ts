@@ -9,18 +9,24 @@ import { createClient } from '@supabase/supabase-js';
 import Config from 'react-native-config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Get Supabase credentials from environment variables
-const supabaseUrl = Config.SUPABASE_URL;
-const supabaseAnonKey = Config.SUPABASE_ANON_KEY;
+// Get Supabase credentials from environment variables safely
+let supabaseUrl = '';
+let supabaseAnonKey = '';
+
+try {
+  if (Config) {
+    supabaseUrl = Config.SUPABASE_URL ?? '';
+    supabaseAnonKey = Config.SUPABASE_ANON_KEY ?? '';
+  }
+} catch (error) {
+  console.error('Error accessing Config - Native module might not be linked:', error);
+}
 
 // Validate that environment variables are set
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables. Please check your .env file.\n' +
-    'Required variables:\n' +
-    '- SUPABASE_URL\n' +
-    '- SUPABASE_ANON_KEY\n\n' +
-    'Get these from: https://supabase.com/dashboard/project/[your-project]/settings/api'
+  console.warn(
+    '⚠️ Missing Supabase environment variables! Check your .env file.\n' +
+    'The app will likely fail when calling Supabase services.'
   );
 }
 
