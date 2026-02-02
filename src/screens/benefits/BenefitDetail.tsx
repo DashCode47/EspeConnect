@@ -4,7 +4,6 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  Dimensions,
   TouchableOpacity,
   StatusBar,
   SafeAreaView,
@@ -20,8 +19,6 @@ import { Promotion } from '../../services/promotion.service';
 import { Establishment } from '../../services/establishment.service';
 import EstablishmentModal from '../../components/EstablishmentModal';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 interface RouteParams {
   data: {
     promotion: Promotion;
@@ -36,7 +33,7 @@ const BenefitDetail = () => {
   const { data } = route.params as RouteParams;
   const promotion = data.promotion;
   const establishment = data.establishment;
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
   const [showEstablishmentModal, setShowEstablishmentModal] = useState(false);
 
   useHideNavbar(true);
@@ -53,6 +50,18 @@ const BenefitDetail = () => {
     return categoryMap[category] || category;
   };
 
+  // Helper function to get category icon
+  const getCategoryIcon = (category: string) => {
+    const iconMap: { [key: string]: string } = {
+      'FOOD': 'food',
+      'DRINKS': 'cup',
+      'EVENTS': 'calendar-star',
+      'PARTIES': 'party-popper',
+      'OTHER': 'tag',
+    };
+    return iconMap[category] || 'tag';
+  };
+
   // Format date
   const formatDate = (dateString: string) => {
     try {
@@ -63,42 +72,40 @@ const BenefitDetail = () => {
     }
   };
 
-  // Check if promotion is still active based on dates
-  const isCurrentlyActive = () => {
-    try {
-      const now = new Date();
-      const startDate = new Date(promotion.startDate);
-      const endDate = new Date(promotion.endDate);
-      return now >= startDate && now <= endDate && promotion.isActive;
-    } catch {
-      return promotion.isActive;
-    }
+  // Share handler
+  const handleShare = () => {
+    // TODO: Implement share functionality
+    console.log('Share promotion');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* Header */}
+      {/* Simplified Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="chevron-left" size={24} color={colors.primaryDark} />
+          style={styles.headerButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primaryDark} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detalles</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.notificationButton}>
-            <MaterialCommunityIcons name="bell" size={20} color={colors.white} />
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => setIsFavorite(!isFavorite)}
+            activeOpacity={0.7}>
+            <MaterialCommunityIcons
+              name={isFavorite ? 'heart' : 'heart-outline'}
+              size={24}
+              color={colors.primaryDark}
+            />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.bookmarkButton}
-            onPress={() => setIsBookmarked(!isBookmarked)}>
-            <MaterialCommunityIcons
-              name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-              size={20}
-              color={colors.white}
-            />
+            style={styles.headerButton}
+            onPress={handleShare}
+            activeOpacity={0.7}>
+            <MaterialCommunityIcons name="share-variant" size={24} color={colors.primaryDark} />
           </TouchableOpacity>
         </View>
       </View>
@@ -107,126 +114,136 @@ const BenefitDetail = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}>
-        
-        {/* Business/Vendor Card */}
-        {(establishment.name || establishment.imageUrl) && (
-          <TouchableOpacity 
-            style={styles.businessCard}
-            onPress={() => setShowEstablishmentModal(true)}
-            activeOpacity={0.7}>
-            <View style={styles.businessLeft}>
-              <View style={styles.businessAvatar}>
-                {establishment.imageUrl ? (
-                  <Image source={{ uri: establishment.imageUrl }} style={styles.avatarImage} />
-                ) : (
-                  <MaterialCommunityIcons name="store" size={20} color="#666" />
-                )}
-              </View>
-              <View style={styles.businessInfo}>
-                {establishment.name ? (
-                  <Text style={styles.businessName} numberOfLines={1}>
-                    {establishment.name}
-                  </Text>
-                ) : null}
-                {promotion.category ? (
-                  <Text style={styles.businessCategory}>
-                    {getCategoryName(promotion.category)}
-                  </Text>
-                ) : null}
-              </View>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={24} color={colors.primaryDark} />
-          </TouchableOpacity>
-        )}
 
-        {/* Product Image */}
-        <View style={styles.imageContainer}>
-          {establishment.imageUrl ? (
-            <Image source={{ uri: establishment.imageUrl }} style={styles.productImage} resizeMode="cover" />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <MaterialCommunityIcons name="image" size={64} color="#D9D9D9" />
-            </View>
-          )}
+        {/* Hero Image Section with Decorative Elements */}
+        <View style={styles.heroSection}>
+          {/* Decorative blob */}
+          <View style={styles.decorativeBlob} />
+
+          <View style={styles.imageWrapper}>
+            {/* Gradient Overlay */}
+            <View style={styles.imageGradient} />
+
+            {establishment.imageUrl || promotion.imageUrl ? (
+              <Image
+                source={{ uri: establishment.imageUrl || promotion.imageUrl }}
+                style={styles.heroImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <MaterialCommunityIcons name="image" size={64} color="#D9D9D9" />
+              </View>
+            )}
+
+            {/* Floating Discount Badge */}
+            {promotion.discount !== undefined && promotion.discount > 0 && (
+              <View style={styles.discountBadge}>
+                <MaterialCommunityIcons name="percent" size={20} color={colors.primary} />
+                <Text style={styles.discountBadgeText}>{promotion.discount}% OFF</Text>
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* Info Row: Location, Start Date, End Date */}
-        {(establishment.address || promotion.startDate || promotion.endDate) && (
-          <View style={styles.infoRow}>
-            {establishment.address ? (
-              <View style={styles.infoItem}>
-                <MaterialCommunityIcons name="map-marker" size={12} color="#E95649" />
-                <Text style={styles.infoText} numberOfLines={1}>
-                  {establishment.address}
-                </Text>
+        {/* Title Section */}
+        <View style={styles.titleSection}>
+          {promotion.title && (
+            <Text style={styles.title}>
+              {promotion.title}
+            </Text>
+          )}
+
+          {/* Category and Expiration Chips */}
+          <View style={styles.chipsContainer}>
+            {promotion.category && (
+              <View style={styles.categoryChip}>
+                <MaterialCommunityIcons
+                  name={getCategoryIcon(promotion.category)}
+                  size={18}
+                  color={colors.primary}
+                />
+                <Text style={styles.categoryChipText}>{getCategoryName(promotion.category)}</Text>
               </View>
-            ) : null}
-            {promotion.startDate ? (
-              <View style={styles.infoItem}>
-                <MaterialCommunityIcons name="calendar" size={12} color={colors.accent} />
-                <Text style={styles.infoText}>
-                  {formatDate(promotion.startDate)}
-                </Text>
+            )}
+
+            {promotion.endDate && (
+              <View style={styles.expirationChip}>
+                <MaterialCommunityIcons name="clock-outline" size={18} color="#64748B" />
+                <Text style={styles.expirationChipText}>Vence el: {formatDate(promotion.endDate)}</Text>
               </View>
-            ) : null}
-            {promotion.endDate ? (
-              <View style={styles.infoItem}>
-                <MaterialCommunityIcons name="calendar-clock" size={13} color="#363636" />
-                <Text style={styles.infoText}>
-                  Hasta {formatDate(promotion.endDate)}
-                </Text>
-              </View>
-            ) : null}
+            )}
+          </View>
+        </View>
+
+        {/* Description Section */}
+        {promotion.description && (
+          <View style={styles.descriptionSection}>
+            <Text style={styles.description}>
+              {promotion.description}
+            </Text>
           </View>
         )}
 
-        {/* Title */}
-        {promotion.title ? (
-          <Text style={styles.productTitle}>{promotion.title}</Text>
-        ) : null}
+        {/* Establishment Card */}
+        {establishment.name && (
+          <View style={styles.establishmentSection}>
+            <Text style={styles.sectionLabel}>DISPONIBLE EN</Text>
 
-        {/* Description */}
-        {promotion.description ? (
-          <Text style={styles.productDescription}>
-            {promotion.description}
-          </Text>
-        ) : null}
-
-        {/* Promotional Badges */}
-        {(promotion.discount !== undefined && promotion.discount > 0) || establishment.address ? (
-          <View style={styles.badgesContainer}>
-            {promotion.discount !== undefined && promotion.discount > 0 ? (
-              <View style={styles.promoBadge}>
-                <Text style={styles.promoBadgeText}>
-                  -{promotion.discount}% {isCurrentlyActive() ? 'hoy' : ''}
-                </Text>
+            <TouchableOpacity
+              style={styles.establishmentCard}
+              onPress={() => setShowEstablishmentModal(true)}
+              activeOpacity={0.7}>
+              <View style={styles.establishmentLeft}>
+                <View style={styles.establishmentAvatar}>
+                  {establishment.imageUrl ? (
+                    <Image
+                      source={{ uri: establishment.imageUrl }}
+                      style={styles.establishmentAvatarImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <MaterialCommunityIcons name="store" size={24} color="#94A3B8" />
+                  )}
+                </View>
+                <View style={styles.establishmentInfo}>
+                  <Text style={styles.establishmentName} numberOfLines={1}>
+                    {establishment.name}
+                  </Text>
+                  {establishment.address && (
+                    <Text style={styles.establishmentAddress} numberOfLines={1}>
+                      {establishment.address}
+                    </Text>
+                  )}
+                </View>
               </View>
-            ) : null}
-            {establishment.address ? (
-              <View style={styles.promoBadge}>
-                <Text style={styles.promoBadgeText}>{establishment.address}</Text>
+              <View style={styles.chevronButton}>
+                <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
               </View>
-            ) : null}
+            </TouchableOpacity>
           </View>
-        ) : null}
+        )}
+
+        {/* Terms Preview */}
+        <View style={styles.termsSection}>
+          <View style={styles.termsContent}>
+            <MaterialCommunityIcons name="information-outline" size={16} color="#94A3B8" />
+            <Text style={styles.termsText}>
+              Válido solo para productos seleccionados. No acumulable con otras promociones.
+            </Text>
+          </View>
+        </View>
       </ScrollView>
 
-      {/* Price and Apply Button Footer */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        {promotion.discount !== undefined && promotion.discount > 0 ? (
-          <View style={styles.priceContainer}>
-            <Text style={styles.currentPrice}>
-              -{promotion.discount}% {isCurrentlyActive() ? 'hoy' : ''}
-            </Text>
-          </View>
-        ) : null}
-        {promotion.discount !== undefined && promotion.discount > 0 ? (
-          <TouchableOpacity style={styles.applyButton}>
-            <Text style={styles.applyButtonText}>
-              -{promotion.discount}%
-            </Text>
-          </TouchableOpacity>
-        ) : null}
+      {/* Sticky Bottom CTA */}
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
+        <TouchableOpacity
+          style={styles.ctaButton}
+          activeOpacity={0.9}>
+          <View style={styles.ctaAccent} />
+          <Text style={styles.ctaButtonText}>Canjear Beneficio</Text>
+          <MaterialCommunityIcons name="ticket-confirmation" size={24} color={colors.accent} />
+        </TouchableOpacity>
       </View>
 
       {/* Establishment Modal */}
@@ -242,48 +259,26 @@ const BenefitDetail = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: '#F6F8F7',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.white,
+    backgroundColor: 'transparent',
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.primaryDark,
   },
   headerRight: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bookmarkButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
+    gap: 16,
   },
   scrollView: {
     flex: 1,
@@ -291,176 +286,269 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  businessCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FBFBFB',
-    borderRadius: 10,
-    padding: 16,
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 1,
+  heroSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    position: 'relative',
   },
-  businessLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
+  decorativeBlob: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 128,
+    height: 128,
+    backgroundColor: 'rgba(247, 182, 52, 0.2)',
+    borderRadius: 64,
+    transform: [{ translateX: 32 }, { translateY: -32 }],
   },
-  businessAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 2,
-    backgroundColor: '#D9D9D9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: {
+  imageWrapper: {
     width: '100%',
-    height: '100%',
-  },
-  businessInfo: {
-    flex: 1,
-  },
-  businessName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primaryDark,
-    lineHeight: 17.6, // 16 * 1.1
-    marginBottom: 2,
-  },
-  businessCategory: {
-    fontSize: 8,
-    fontWeight: '600',
-    color: '#B6B6B6',
-    lineHeight: 8.8, // 8 * 1.1
-  },
-  imageContainer: {
-    width: SCREEN_WIDTH - 40,
-    height: (SCREEN_WIDTH - 40) * 0.75,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 12,
+    aspectRatio: 4 / 3,
+    borderRadius: 40,
+    borderTopRightRadius: 10,
+    borderBottomLeftRadius: 16,
     overflow: 'hidden',
+    position: 'relative',
+    shadowColor: '#105b39',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
   },
-  productImage: {
+  heroImage: {
     width: '100%',
     height: '100%',
   },
   imagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#E2E8F0',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    gap: 20,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  infoText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#383938',
-    letterSpacing: 2,
-  },
-  productTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.primaryDark,
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  productDescription: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: '#666',
-    lineHeight: 20,
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  badgesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  promoBadge: {
-    height: 32,
-    backgroundColor: '#F0F7F4',
-    borderWidth: 1.5,
-    borderColor: '#0E6940',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  promoBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0E6940',
-    lineHeight: 13.2, // 12 * 1.1
-  },
-  footer: {
+  imageGradient: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    height: '40%',
+    backgroundColor: 'transparent',
+    zIndex: 10,
+  },
+  discountBadge: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    zIndex: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  discountBadgeText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  titleSection: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#0F172A',
+    lineHeight: 38,
+    marginBottom: 16,
+    letterSpacing: -0.5,
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  categoryChip: {
+    height: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(16, 91, 57, 0.1)',
+    paddingLeft: 12,
+    paddingRight: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 91, 57, 0.05)',
+  },
+  categoryChipText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  expirationChip: {
+    height: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    paddingLeft: 12,
+    paddingRight: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  expirationChipText: {
+    color: '#475569',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  descriptionSection: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 8,
+  },
+  description: {
+    fontSize: 18,
+    fontWeight: '400',
+    color: '#475569',
+    lineHeight: 28,
+  },
+  establishmentSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94A3B8',
+    letterSpacing: 2,
+    paddingHorizontal: 4,
+    marginBottom: 12,
+  },
+  establishmentCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FBFBFB',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
-  priceContainer: {
+  establishmentLeft: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 12,
+    alignItems: 'center',
+    gap: 16,
+    flex: 1,
   },
-  currentPrice: {
-    fontSize: 24,
+  establishmentAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  establishmentAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  establishmentInfo: {
+    flex: 1,
+  },
+  establishmentName: {
+    fontSize: 18,
     fontWeight: '700',
-    color: colors.primaryDark,
+    color: '#0F172A',
+    lineHeight: 22,
+    marginBottom: 2,
   },
-  originalPrice: {
-    fontSize: 16,
+  establishmentAddress: {
+    fontSize: 14,
     fontWeight: '400',
-    color: '#999',
-    textDecorationLine: 'line-through',
+    color: '#64748B',
   },
-  applyButton: {
+  chevronButton: {
+    width: 32,
     height: 32,
-    backgroundColor: '#0E6940',
-    borderRadius: 10,
-    paddingHorizontal: 24,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  applyButtonText: {
+  termsSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  termsContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  termsText: {
+    flex: 1,
     fontSize: 12,
+    color: '#94A3B8',
+    lineHeight: 18,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  ctaButton: {
+    width: '100%',
+    height: 56,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  ctaAccent: {
+    position: 'absolute',
+    left: -16,
+    top: -16,
+    width: 48,
+    height: 48,
+    backgroundColor: 'rgba(247, 182, 52, 0.2)',
+    borderRadius: 24,
+  },
+  ctaButtonText: {
+    fontSize: 18,
     fontWeight: '700',
-    color: colors.white,
-    lineHeight: 13.2, // 12 * 1.1
+    color: '#FFFFFF',
   },
 });
 

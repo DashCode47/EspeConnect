@@ -10,6 +10,8 @@ import {
   SafeAreaView,
   Modal,
   Dimensions,
+  Pressable,
+  TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -19,34 +21,49 @@ import { colors } from '../config/colors';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserStore } from '../store/userStore';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-interface MenuItem {
-  id: string;
-  label: string;
-  subtitle: string;
-  icon: string;
-  iconBgColor: string;
-  iconColor: string;
-  onPress: () => void;
-}
+// New Theme Colors
+const THEME = {
+  primary: '#105b32',
+  accent: '#F7B634',
+  bgLight: '#f6f8f7',
+  surface: '#ffffff',
+  textMain: '#0f172a',
+  textMuted: '#64748b',
+};
 
-interface StatItem {
-  id: string;
-  icon: string;
-  value: string | number;
-  label: string;
-  featured?: boolean;
-}
+const INTEREST_ICONS: Record<string, string> = {
+  'Música': 'music-note',
+  'Arte': 'palette-outline',
+  'Tecnología': 'laptop',
+  'Carpooling': 'car-outline',
+  'Deportes': 'soccer',
+  'Lectura': 'book-open-variant',
+  'Viajes': 'airplane',
+  'Fotografía': 'camera-outline',
+};
+
+const DEFAULT_INTERESTS = ['Música', 'Arte', 'Tecnología', 'Carpooling', 'Deportes', 'Lectura', 'Viajes', 'Fotografía'];
+
 
 export const ProfileScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { logout } = useAuth();
-  const { profile, isLoading, fetchProfile } = useUserStore();
+  const { profile, isLoading, fetchProfile, updateProfile } = useUserStore();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Form states
+  const [editName, setEditName] = useState('');
+  const [editCareer, setEditCareer] = useState('');
+  const [editGender, setEditGender] = useState('');
+  const [editInterests, setEditInterests] = useState<string[]>([]);
 
   useEffect(() => {
+    console.log(profile);
     if (!profile) {
       fetchProfile();
     }
@@ -57,50 +74,43 @@ export const ProfileScreen = () => {
     setShowLogoutModal(false);
   };
 
-  const stats: StatItem[] = [
-    { id: 'credits', icon: 'school', value: 12, label: 'Créditos' },
-    { id: 'savings', icon: 'piggy-bank', value: '450€', label: 'Ahorro', featured: true },
-    { id: 'trips', icon: 'car', value: 8, label: 'Viajes' },
-  ];
+  const handleEditOpen = () => {
+    if (profile) {
+      setEditName(profile.name || '');
+      setEditCareer(profile.career || '');
+      setEditGender(profile.gender || '');
+      setEditInterests(profile.interests || []);
+      setShowEditModal(true);
+    }
+  };
 
-  const menuItems: MenuItem[] = [
-    {
-      id: 'posts',
-      label: 'Mis Publicaciones',
-      subtitle: 'Gestiona tus ventas',
-      icon: 'storefront',
-      iconBgColor: '#E8F5E9',
-      iconColor: colors.primary,
-      onPress: () => console.log('Navigate to My Posts'),
-    },
-    {
-      id: 'trips',
-      label: 'Historial de Viajes',
-      subtitle: 'Tus rutas compartidas',
-      icon: 'history',
-      iconBgColor: '#FFF8E1',
-      iconColor: colors.accent,
-      onPress: () => console.log('Navigate to Trip History'),
-    },
-    {
-      id: 'coupons',
-      label: 'Mis Cupones',
-      subtitle: 'Descuentos activos',
-      icon: 'tag-multiple',
-      iconBgColor: '#F3E5F5',
-      iconColor: '#9C27B0',
-      onPress: () => console.log('Navigate to Coupons'),
-    },
-    {
-      id: 'settings',
-      label: 'Configuración',
-      subtitle: 'Privacidad y cuenta',
-      icon: 'cog',
-      iconBgColor: '#F5F5F5',
-      iconColor: '#757575',
-      onPress: () => console.log('Navigate to Settings'),
-    },
-  ];
+  const handleUpdateProfile = async () => {
+    try {
+      setIsSaving(true);
+      await updateProfile({
+        name: editName,
+        career: editCareer,
+        gender: editGender,
+        interests: editInterests,
+      });
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const toggleInterest = (interest: string) => {
+    setEditInterests(prev =>
+      prev.includes(interest)
+        ? prev.filter(i => i !== interest)
+        : [...prev, interest]
+    );
+  };
+
+  const currentAvailableInterests = Array.from(new Set([...DEFAULT_INTERESTS, ...editInterests]));
+
 
   if (isLoading && !profile) {
     return (
@@ -124,33 +134,157 @@ export const ProfileScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Background Gradient Header */}
-      <LinearGradient
-        colors={['#e0f2eb', '#F6F8F7']}
-        style={styles.headerGradient}
-      >
-        {/* Decorative Blobs */}
-        <View style={styles.blobAccent} />
-        <View style={styles.blobPrimary} />
-      </LinearGradient>
+      {/* Background Decor */}
+      <View style={styles.backgroundContainer} pointerEvents="none">
+        <View style={styles.dottedPattern} />
 
-      {/* Top Navigation */}
+        <View style={styles.topRightBlob} />
+        <View style={styles.middleLeftBlob} />
+        <View style={styles.bottomRightBlob} />
+
+        <MaterialCommunityIcons
+          name="star-outline"
+          size={24}
+          color={THEME.accent}
+          style={[styles.floatingIcon, { top: 120, left: 30, opacity: 0.15 }]}
+        />
+        <MaterialCommunityIcons
+          name="circle-outline"
+          size={32}
+          color={THEME.primary}
+          style={[styles.floatingIcon, { top: 200, right: 40, opacity: 0.1 }]}
+        />
+      </View>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={showEditModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { height: '85%', paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Editar Perfil</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={THEME.textMain} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.formSection}>
+                <Text style={styles.inputLabel}>Nombre Completo</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Tu nombre"
+                  placeholderTextColor={THEME.textMuted}
+                />
+              </View>
+
+              <View style={styles.formSection}>
+                <Text style={styles.inputLabel}>Carrera</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editCareer}
+                  onChangeText={setEditCareer}
+                  placeholder="Tu carrera"
+                  placeholderTextColor={THEME.textMuted}
+                />
+              </View>
+
+              <View style={styles.formSection}>
+                <Text style={styles.inputLabel}>Género</Text>
+                <View style={styles.chipRow}>
+                  {['Masculino', 'Femenino', 'Otro'].map((g) => (
+                    <TouchableOpacity
+                      key={g}
+                      style={[styles.genderChip, editGender === g && styles.genderChipActive]}
+                      onPress={() => setEditGender(g)}
+                    >
+                      <Text style={[styles.genderChipText, editGender === g && styles.genderChipTextActive]}>
+                        {g}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.formSection}>
+                <Text style={styles.inputLabel}>Intereses</Text>
+                <View style={[styles.interestsWrap, { marginTop: 8 }]}>
+                  {currentAvailableInterests.map((interest) => (
+                    <TouchableOpacity
+                      key={interest}
+                      style={[
+                        styles.interestTag,
+                        editInterests.includes(interest) && styles.interestTagActive
+                      ]}
+                      onPress={() => toggleInterest(interest)}
+                    >
+                      <MaterialCommunityIcons
+                        name={(INTEREST_ICONS[interest] || 'tag-outline') as any}
+                        size={18}
+                        color={editInterests.includes(interest) ? THEME.accent : THEME.primary}
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={[
+                        styles.interestText,
+                        editInterests.includes(interest) && { color: THEME.accent }
+                      ]}>
+                        {interest}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={[styles.modalButtons, { marginTop: 24 }]}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowEditModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalConfirmButton, { backgroundColor: THEME.primary }]}
+                onPress={handleUpdateProfile}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalConfirmButtonText}>Guardar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.topNav, { paddingTop: insets.top > 0 ? 0 : 16 }]}>
+        {/* Header Nav */}
+        <View style={styles.topNav}>
           <TouchableOpacity
             style={styles.navButton}
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
+            <MaterialCommunityIcons name="chevron-left" size={28} color={THEME.primary} />
           </TouchableOpacity>
-          
+
+          <Text style={styles.sectionTitle}>Mi Perfil</Text>
+
           <TouchableOpacity
-            style={styles.navButton}
-            onPress={() => console.log('Edit profile')}
+            style={[styles.navButton, styles.editButton]}
+            onPress={handleEditOpen}
             activeOpacity={0.7}
           >
-            <MaterialCommunityIcons name="pencil" size={24} color={colors.primary} />
+            <MaterialCommunityIcons name="pencil" size={20} color={THEME.primary} />
           </TouchableOpacity>
         </View>
 
@@ -158,119 +292,140 @@ export const ProfileScreen = () => {
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: insets.bottom + 32 },
+            { paddingBottom: insets.bottom + 20 },
           ]}
           showsVerticalScrollIndicator={false}
         >
           {/* Profile Header */}
           <View style={styles.profileHeader}>
-            {/* Avatar with decorative border */}
             <View style={styles.avatarWrapper}>
-              <LinearGradient
-                colors={[colors.accent, colors.primary, colors.accent]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatarBorderGradient}
-              >
+              <View style={styles.avatarBlob}>
                 <View style={styles.avatarContainer}>
                   {profile.avatarUrl ? (
                     <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
                   ) : (
                     <View style={styles.avatarPlaceholder}>
-                      <MaterialCommunityIcons name="account" size={64} color="#999" />
+                      <MaterialCommunityIcons name="account" size={64} color="#CBD5E1" />
                     </View>
                   )}
                 </View>
-              </LinearGradient>
-              
-              {/* Camera button */}
-              <TouchableOpacity style={styles.cameraButton} activeOpacity={0.8}>
-                <MaterialCommunityIcons name="camera" size={16} color={colors.primary} />
-              </TouchableOpacity>
+              </View>
+              <View style={styles.statusIndicator} />
             </View>
 
-            {/* User Info */}
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{profile.name}</Text>
-              <View style={styles.idBadge}>
-                <Text style={styles.idBadgeText}>
-                  ID: {profile.espeId || 'A00123456'}
+              <View style={styles.careerBadge}>
+                <MaterialCommunityIcons name="school-outline" size={16} color={THEME.primary} />
+                <Text style={styles.careerBadgeText}>
+                  {profile.career || 'Estudiante'}
                 </Text>
               </View>
             </View>
           </View>
 
-          {/* Stats Bubbles */}
-          <View style={styles.statsContainer}>
-            {stats.map((stat) => (
-              <View
-                key={stat.id}
-                style={[
-                  styles.statBubble,
-                  stat.featured && styles.statBubbleFeatured,
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name={stat.icon as any}
-                  size={28}
-                  color={stat.featured ? colors.accent : colors.accent}
-                />
-                <Text style={[
-                  styles.statValue,
-                  stat.featured && styles.statValueFeatured,
-                ]}>
-                  {stat.value}
-                </Text>
-                <Text style={[
-                  styles.statLabel,
-                  stat.featured && styles.statLabelFeatured,
-                ]}>
-                  {stat.label}
-                </Text>
+          {/* Stats Section */}
+          {/* <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>12</Text>
+              <Text style={styles.statLabel}>Eventos</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>4.8</Text>
+              <Text style={styles.statLabel}>Reputación</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>24</Text>
+              <Text style={styles.statLabel}>Ventas</Text>
+            </View>
+          </View> */}
+
+          {/* Personal Info Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionAccent} />
+              <Text style={styles.sectionTitle}>Datos Personales</Text>
+            </View>
+
+            <View style={styles.dataList}>
+              <View style={styles.dataItem}>
+                <View style={[styles.dataIconContainer, { backgroundColor: '#eff6ff' }]}>
+                  <MaterialCommunityIcons name="email-outline" size={24} color="#2563eb" />
+                </View>
+                <View>
+                  <Text style={styles.dataLabel}>Correo Institucional</Text>
+                  <Text style={styles.dataValue}>{profile.email || 'correo@espe.edu.ec'}</Text>
+                </View>
               </View>
-            ))}
+
+              <View style={styles.dataItem}>
+                <View style={[styles.dataIconContainer, { backgroundColor: '#fdf2f8' }]}>
+                  <MaterialCommunityIcons name="gender-female" size={24} color="#db2777" />
+                </View>
+                <View>
+                  <Text style={styles.dataLabel}>Género</Text>
+                  <Text style={styles.dataValue}>{profile.gender || 'No especificado'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.dataItem}>
+                <View style={[styles.dataIconContainer, { backgroundColor: '#fffbeb' }]}>
+                  <MaterialCommunityIcons name="cake-variant-outline" size={24} color="#d97706" />
+                </View>
+                <View>
+                  <Text style={styles.dataLabel}>Antigüedad</Text>
+                  <Text style={styles.dataValue}>Miembro desde Enero 2024</Text>
+                </View>
+              </View>
+            </View>
           </View>
 
-          {/* Menu Items */}
-          <View style={styles.menuContainer}>
-            {menuItems.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.menuItem}
-                onPress={item.onPress}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.menuItemIcon, { backgroundColor: item.iconBgColor }]}>
-                  <MaterialCommunityIcons
-                    name={item.icon as any}
-                    size={24}
-                    color={item.iconColor}
-                  />
-                </View>
-                <View style={styles.menuItemTextContainer}>
-                  <Text style={styles.menuItemLabel}>{item.label}</Text>
-                  <Text style={styles.menuItemSubtitle}>{item.subtitle}</Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={24} color="#D0D0D0" />
+          {/* Interests Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionAccent} />
+              <Text style={styles.sectionTitle}>Mis Intereses</Text>
+            </View>
+
+            <View style={styles.interestsWrap}>
+              {profile.interests && profile.interests.length > 0 ? (
+                profile.interests.map((interest, idx) => (
+                  <View key={idx} style={[styles.interestTag, idx === 1 && styles.interestTagActive]}>
+                    <MaterialCommunityIcons
+                      name={(INTEREST_ICONS[interest] || 'tag-outline') as any}
+                      size={18}
+                      color={idx === 1 ? THEME.accent : THEME.primary}
+                    />
+                    <Text style={styles.interestText}>{interest}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={[styles.textMuted, { fontSize: 14, fontStyle: 'italic' }]}>
+                  No has seleccionado intereses todavía.
+                </Text>
+              )}
+              <TouchableOpacity style={styles.addInterestButton} onPress={handleEditOpen}>
+                <MaterialCommunityIcons name="plus" size={20} color="#94A3B8" />
               </TouchableOpacity>
-            ))}
+            </View>
           </View>
 
-          {/* Logout Button */}
+          {/* Footer actions */}
           <View style={styles.logoutContainer}>
             <TouchableOpacity
               style={styles.logoutButton}
               onPress={() => setShowLogoutModal(true)}
-              activeOpacity={0.7}
             >
-              <MaterialCommunityIcons name="logout" size={20} color={colors.primary} />
+              <MaterialCommunityIcons name="logout" size={20} color="#ef4444" />
               <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
 
-      {/* Logout Confirmation Modal */}
+      {/* Logout Modal */}
       <Modal
         visible={showLogoutModal}
         transparent
@@ -282,27 +437,25 @@ export const ProfileScreen = () => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Cerrar Sesión</Text>
               <TouchableOpacity onPress={() => setShowLogoutModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
+                <MaterialCommunityIcons name="close" size={24} color={THEME.textMain} />
               </TouchableOpacity>
             </View>
-            
+
             <Text style={styles.modalMessage}>
-              ¿Estás seguro de que deseas cerrar sesión?
+              ¿Estás seguro de que deseas cerrar sesión? Perderás acceso a tus cupones activos.
             </Text>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.modalCancelButton}
                 onPress={() => setShowLogoutModal(false)}
-                activeOpacity={0.7}
               >
-                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+                <Text style={styles.modalCancelButtonText}>Volver</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={styles.modalConfirmButton}
                 onPress={handleLogout}
-                activeOpacity={0.7}
               >
                 <Text style={styles.modalConfirmButtonText}>Cerrar Sesión</Text>
               </TouchableOpacity>
@@ -317,95 +470,127 @@ export const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6F8F7',
+    backgroundColor: THEME.bgLight,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: THEME.bgLight,
   },
-  safeArea: {
-    flex: 1,
-  },
-  headerGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 320,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+  backgroundContainer: {
+    ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
+    backgroundColor: THEME.bgLight,
   },
-  blobAccent: {
+  dottedPattern: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.05,
+    // Note: In a real app we might use a small repeating image, 
+    // but for now we'll simulate the "doodle" feel with blobs.
+  },
+  topRightBlob: {
     position: 'absolute',
     top: -50,
-    left: -50,
+    right: -50,
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: `${colors.accent}33`,
+    backgroundColor: THEME.accent,
+    opacity: 0.1,
   },
-  blobPrimary: {
+  middleLeftBlob: {
     position: 'absolute',
-    top: 50,
-    right: -20,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: `${colors.primary}33`,
+    top: SCREEN_HEIGHT * 0.3,
+    left: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: THEME.primary,
+    opacity: 0.05,
+  },
+  bottomRightBlob: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: THEME.accent,
+    opacity: 0.08,
+  },
+  floatingIcon: {
+    position: 'absolute',
+  },
+  safeArea: {
+    flex: 1,
   },
   topNav: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
   navButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  editButton: {
+    backgroundColor: 'rgba(247, 182, 52, 0.2)', // accent-yellow 20%
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 16,
+    paddingTop: 8,
   },
   profileHeader: {
     alignItems: 'center',
     paddingHorizontal: 24,
-    marginBottom: 24,
+    marginBottom: 32,
   },
   avatarWrapper: {
     position: 'relative',
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  avatarBorderGradient: {
+  avatarBlob: {
     width: 140,
     height: 140,
-    borderRadius: 70,
-    padding: 4,
+    backgroundColor: THEME.primary,
+    // Approximate the "rounded-blob" look
+    borderTopLeftRadius: 65,
+    borderTopRightRadius: 75,
+    borderBottomLeftRadius: 55,
+    borderBottomRightRadius: 70,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: THEME.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 8,
   },
   avatarContainer: {
-    width: 132,
-    height: 132,
-    borderRadius: 66,
+    width: 130,
+    height: 130,
+    backgroundColor: THEME.surface,
+    borderTopLeftRadius: 60,
+    borderTopRightRadius: 70,
+    borderBottomLeftRadius: 52,
+    borderBottomRightRadius: 65,
     overflow: 'hidden',
-    backgroundColor: colors.white,
     borderWidth: 4,
-    borderColor: colors.white,
+    borderColor: THEME.surface,
   },
   avatar: {
     width: '100%',
@@ -414,175 +599,215 @@ const styles = StyleSheet.create({
   avatarPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  cameraButton: {
+  statusIndicator: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
+    bottom: 5,
+    right: 15,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#22c55e',
     borderWidth: 3,
-    borderColor: colors.white,
+    borderColor: THEME.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
   },
   userInfo: {
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   userName: {
     fontSize: 28,
     fontWeight: '800',
-    color: colors.primary,
+    color: THEME.textMain,
     letterSpacing: -0.5,
   },
-  idBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+  careerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 91, 50, 0.1)', // primary 10%
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
+    gap: 6,
   },
-  idBadgeText: {
+  careerBadgeText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: `${colors.primary}B3`,
-    letterSpacing: 0.5,
+    fontWeight: '600',
+    color: THEME.primary,
   },
   statsContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
-  statBubble: {
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: `${colors.primary}1A`,
-    padding: 16,
-    borderRadius: 16,
-    minWidth: 100,
+    backgroundColor: THEME.surface,
+    marginHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 24,
+    marginBottom: 32,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowRadius: 15,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
-  statBubbleFeatured: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-    marginTop: -8,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.3,
-    elevation: 4,
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statDivider: {
+    width: 1,
+    height: '60%',
+    backgroundColor: '#f1f5f9',
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.primary,
-    marginTop: 4,
-  },
-  statValueFeatured: {
-    color: colors.white,
+    fontSize: 20,
+    fontWeight: '800',
+    color: THEME.textMain,
   },
   statLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#757575',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.textMuted,
     marginTop: 2,
   },
-  statLabelFeatured: {
-    color: 'rgba(255, 255, 255, 0.8)',
+  section: {
+    marginBottom: 32,
+    paddingHorizontal: 20,
   },
-  menuContainer: {
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 16,
-  },
-  menuItem: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    marginBottom: 16,
+    gap: 8,
+  },
+  sectionAccent: {
+    width: 4,
+    height: 20,
+    backgroundColor: THEME.accent,
+    borderRadius: 2,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: THEME.textMain,
+  },
+  dataList: {
+    gap: 12,
+  },
+  dataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.surface,
     padding: 16,
-    borderRadius: 16,
-    gap: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 5,
     elevation: 1,
   },
-  menuItemIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  dataIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  dataLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: THEME.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  dataValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: THEME.textMain,
+  },
+  interestsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  interestTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.surface,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 99,
+    borderWidth: 2,
+    borderColor: 'rgba(16, 91, 50, 0.1)',
+    gap: 8,
+  },
+  interestTagActive: {
+    borderColor: THEME.accent,
+    backgroundColor: 'rgba(247, 182, 52, 0.05)',
+  },
+  interestText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textMain,
+  },
+  addInterestButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#cbd5e1',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  menuItemTextContainer: {
-    flex: 1,
-  },
-  menuItemLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.primaryDark,
-    marginBottom: 2,
-  },
-  menuItemSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#757575',
-  },
   logoutContainer: {
-    paddingHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 16,
+    alignItems: 'center',
+    paddingBottom: 40,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
-    borderWidth: 1,
-    borderColor: `${colors.primary}4D`,
-    borderRadius: 9999,
-    paddingVertical: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 16,
   },
   logoutButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: colors.primary,
+    color: '#ef4444',
   },
-  errorText: {
-    fontSize: 16,
-    color: colors.error,
-    textAlign: 'center',
+  textMuted: {
+    color: THEME.textMuted,
   },
+  // Modal Styles Redesign
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 40,
+    backgroundColor: THEME.surface,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 20,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -591,16 +816,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primaryDark,
+    fontSize: 22,
+    fontWeight: '800',
+    color: THEME.textMain,
   },
   modalMessage: {
     fontSize: 16,
-    fontWeight: '400',
-    color: '#666',
-    marginBottom: 24,
+    color: THEME.textMuted,
     lineHeight: 24,
+    marginBottom: 32,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -608,30 +832,80 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: colors.white,
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalCancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primaryDark,
-  },
   modalConfirmButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: colors.accent,
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: '#ef4444',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalConfirmButtonText: {
     fontSize: 16,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  modalCancelButtonText: {
+    fontSize: 16,
     fontWeight: '700',
-    color: colors.white,
+    color: THEME.textMain,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ef4444',
+    textAlign: 'center',
+  },
+  // Form Styles
+  formSection: {
+    marginBottom: 20,
+    paddingHorizontal: 4,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textMuted,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  textInput: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    color: THEME.textMain,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  genderChip: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  genderChipActive: {
+    backgroundColor: 'rgba(16, 91, 50, 0.1)',
+    borderColor: THEME.primary,
+  },
+  genderChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textMuted,
+  },
+  genderChipTextActive: {
+    color: THEME.primary,
   },
 });

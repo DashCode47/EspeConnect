@@ -44,6 +44,8 @@ const getDayName = (date: Date, isToday: boolean): string => {
   return days[date.getDay()];
 };
 
+type TabType = 'eventos' | 'planes';
+
 export const EventsScreen = () => {
   const navigation = useNavigation<EventsScreenNavigationProp>();
   const insets = useSafeAreaInsets();
@@ -51,6 +53,7 @@ export const EventsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [activeTab, setActiveTab] = useState<TabType>('eventos');
   const featuredScrollRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -396,17 +399,41 @@ export const EventsScreen = () => {
 
       {/* Header */}
       <View style={styles.header}>
-        {/* <View style={styles.headerLeft}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>U</Text>
-          </View>
-        </View> */}
-        <Text style={styles.headerTitle}>Eventos</Text>
-        {/* <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.notificationButton}>
-            <MaterialCommunityIcons name="bell-outline" size={24} color={colors.primary} />
+        <Text style={styles.headerTitle}>Eventos y Planes</Text>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        <View style={styles.tabsWrapper}>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === 'eventos' && styles.tabActive,
+            ]}
+            onPress={() => setActiveTab('eventos')}
+            activeOpacity={0.7}>
+            <Text style={[
+              styles.tabText,
+              activeTab === 'eventos' && styles.tabTextActive,
+            ]}>
+              Eventos
+            </Text>
           </TouchableOpacity>
-        </View> */}
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === 'planes' && styles.tabActive,
+            ]}
+            onPress={() => setActiveTab('planes')}
+            activeOpacity={0.7}>
+            <Text style={[
+              styles.tabText,
+              activeTab === 'planes' && styles.tabTextActive,
+            ]}>
+              Planes
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -418,8 +445,11 @@ export const EventsScreen = () => {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
 
-        {/* Featured Section */}
-        {featuredEvents.length > 0 && (
+        {/* Content for Eventos Tab */}
+        {activeTab === 'eventos' && (
+          <>
+            {/* Featured Section */}
+            {featuredEvents.length > 0 && (
           <View style={styles.featuredSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Próximamente</Text>
@@ -483,15 +513,35 @@ export const EventsScreen = () => {
             </View>
           )}
         </View>
+          </>
+        )}
+
+        {/* Content for Planes Tab */}
+        {activeTab === 'planes' && (
+          <View style={styles.planesContainer}>
+            <View style={styles.emptyContainer}>
+              <MaterialCommunityIcons name="account-group" size={64} color="#D1D5DB" />
+              <Text style={styles.emptyTitle}>Próximamente: Planes</Text>
+              <Text style={styles.emptySubtitle}>
+                Podrás crear y unirte a planes con otros estudiantes
+              </Text>
+              <View style={styles.comingSoonBadge}>
+                <Text style={styles.comingSoonText}>COMING SOON</Text>
+              </View>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={handleCreateEvent}
-        activeOpacity={0.9}>
-        <MaterialCommunityIcons name="plus" size={28} color={colors.white} />
-      </TouchableOpacity>
+      {activeTab === 'eventos' && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={handleCreateEvent}
+          activeOpacity={0.9}>
+          <MaterialCommunityIcons name="plus" size={28} color={colors.white} />
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 };
@@ -938,5 +988,69 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 16,
     elevation: 8,
+  },
+
+  // Tabs
+  tabsContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: 'rgba(246, 248, 247, 0.95)',
+  },
+  tabsWrapper: {
+    backgroundColor: colors.white,
+    padding: 4,
+    borderRadius: 100,
+    flexDirection: 'row',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  tabActive: {
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  tabText: {
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: '#6B7280',
+  },
+  tabTextActive: {
+    color: colors.white,
+  },
+
+  // Planes Section
+  planesContainer: {
+    flex: 1,
+    paddingTop: 60,
+  },
+  comingSoonBadge: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 24,
+  },
+  comingSoonText: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
+    letterSpacing: 1.5,
   },
 });

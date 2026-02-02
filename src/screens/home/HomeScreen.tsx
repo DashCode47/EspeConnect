@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,21 +11,21 @@ import {
   Image,
   TextInput,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {HomeStackParamList} from '../../navigation/types';
-import {bannerService, Banner} from '../../services/bannerService';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { HomeStackParamList } from '../../navigation/types';
+import { bannerService, Banner } from '../../services/bannerService';
 import useHome from './Hooks/useHome';
-import {eventService, Event, EventCategory} from '../../services/event.service';
+import { eventService, Event, EventCategory } from '../../services/event.service';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {colors} from '../../config/colors';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {globalStyles} from '../../config/globalStyles';
-import {navigationRef} from '../../navigation/RootNavigator';
-import {BENEFIT_DETAILS, BENEFIT_STACK} from '../../config/constants';
-import {HomeSkeletonLoader} from '../../components/HomeSkeletonLoader';
-import {promotionService, Promotion} from '../../services/promotion.service';
-import {establishmentService, Establishment} from '../../services/establishment.service';
+import { colors } from '../../config/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { globalStyles } from '../../config/globalStyles';
+import { navigationRef } from '../../navigation/RootNavigator';
+import { BENEFIT_DETAILS, BENEFIT_STACK } from '../../config/constants';
+import { HomeSkeletonLoader } from '../../components/HomeSkeletonLoader';
+import { promotionService, Promotion } from '../../services/promotion.service';
+import { establishmentService, Establishment } from '../../services/establishment.service';
 import { HorizontalIcon } from '../../assets/svg/HorizontalIcon';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
@@ -36,7 +36,7 @@ interface PromotionCardProps {
   onPress: () => void;
 }
 
-const PromotionCard: React.FC<PromotionCardProps> = ({promotion, establishment, onPress}) => {
+const PromotionCard: React.FC<PromotionCardProps> = ({ promotion, establishment, onPress }) => {
   // Helper function to format category name
   const getCategoryName = (category: string) => {
     const categoryMap: { [key: string]: string } = {
@@ -68,7 +68,7 @@ const PromotionCard: React.FC<PromotionCardProps> = ({promotion, establishment, 
         <View style={styles.promotionCardHeaderLeft}>
           {promotion.imageUrl ? (
             <Image
-              source={{uri: promotion.imageUrl}}
+              source={{ uri: promotion.imageUrl }}
               style={styles.promotionCardAvatar}
             />
           ) : (
@@ -101,7 +101,7 @@ const PromotionCard: React.FC<PromotionCardProps> = ({promotion, establishment, 
       {/* Image - Main Large Image */}
       {establishment.imageUrl ? (
         <Image
-          source={{uri: establishment.imageUrl}}
+          source={{ uri: establishment.imageUrl }}
           style={styles.promotionCardImage}
           resizeMode="cover"
         />
@@ -116,16 +116,16 @@ const PromotionCard: React.FC<PromotionCardProps> = ({promotion, establishment, 
         {promotion.title ? (
           <Text style={styles.promotionCardMealTitle}>{promotion.title}</Text>
         ) : null}
-        
+
         {promotion.description ? (
           <Text style={styles.promotionCardDescription} numberOfLines={2}>
             {promotion.description}
           </Text>
         ) : null}
-        
+
 
         {/* Action Buttons */}
-        <View style={styles.promotionCardActions}>
+        {/* <View style={styles.promotionCardActions}>
           {establishment.address ? (
             <TouchableOpacity style={styles.promotionCardButtonOutline}>
               <Text style={styles.promotionCardButtonOutlineText} numberOfLines={1}>
@@ -140,7 +140,7 @@ const PromotionCard: React.FC<PromotionCardProps> = ({promotion, establishment, 
               </Text>
             </TouchableOpacity>
           ) : null}
-        </View>
+        </View> */}
       </View>
     </TouchableOpacity>
   );
@@ -152,7 +152,7 @@ export const HomeScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
-  const [promotionsWithEstablishments, setPromotionsWithEstablishments] = useState<Array<{promotion: Promotion; establishment: Establishment}>>([]);
+  const [promotionsWithEstablishments, setPromotionsWithEstablishments] = useState<Array<{ promotion: Promotion; establishment: Establishment }>>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const screenWidth = Dimensions.get('window').width;
   const {
@@ -176,15 +176,15 @@ export const HomeScreen: React.FC = () => {
 
       const establishmentsData = response.establishments || [];
       setEstablishments(establishmentsData);
-      
+
       // Extract all promotions with their establishments
-      const promotionsData: Array<{promotion: Promotion; establishment: Establishment}> = [];
+      const promotionsData: Array<{ promotion: Promotion; establishment: Establishment }> = [];
       establishmentsData.forEach(establishment => {
         establishment.promotions.forEach(promotion => {
-          promotionsData.push({promotion, establishment});
+          promotionsData.push({ promotion, establishment });
         });
       });
-      
+
       setPromotionsWithEstablishments(promotionsData.slice(0, 5));
     } catch (error) {
       console.error('Error fetching establishments:', error);
@@ -234,7 +234,7 @@ export const HomeScreen: React.FC = () => {
           onPress={() => navigation.navigate('Profile')}>
           {profile?.avatarUrl ? (
             <Image
-              source={{uri: profile.avatarUrl}}
+              source={{ uri: profile.avatarUrl }}
               style={styles.profileAvatar}
             />
           ) : (
@@ -262,7 +262,7 @@ export const HomeScreen: React.FC = () => {
           paddingBottom: globalStyles.getBottomSafeArea(insets) + 20,
         }}
         showsVerticalScrollIndicator={false}>
-        
+
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeTitle}>
@@ -356,7 +356,7 @@ export const HomeScreen: React.FC = () => {
                   onPress={() =>
                     navigationRef.current?.navigate(BENEFIT_STACK, {
                       screen: BENEFIT_DETAILS,
-                      params: { data: {promotion: item.promotion, establishment: item.establishment} },
+                      params: { data: { promotion: item.promotion, establishment: item.establishment } },
                     })
                   }
                   activeOpacity={0.7}>
@@ -409,7 +409,7 @@ export const HomeScreen: React.FC = () => {
                     onPress={() =>
                       navigationRef.current?.navigate(BENEFIT_STACK, {
                         screen: BENEFIT_DETAILS,
-                        params: {data: {promotion: item.promotion, establishment: item.establishment}},
+                        params: { data: { promotion: item.promotion, establishment: item.establishment } },
                       })
                     }
                   />
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: colors.primaryDark,
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
   bannerCardGradient: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.primary,
-    opacity: 0.55,
+    opacity: 0.2,
   },
   bannerCardContent: {
     position: 'absolute',

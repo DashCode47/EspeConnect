@@ -4,16 +4,15 @@ import {
   Text,
   StyleSheet,
   Modal,
-  ScrollView,
   TouchableOpacity,
   Image,
   Linking,
+  Pressable,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../config/colors';
 import { Establishment } from '../services/establishment.service';
-import { Promotion } from '../services/promotion.service';
 
 interface EstablishmentModalProps {
   visible: boolean;
@@ -28,15 +27,26 @@ const EstablishmentModal: React.FC<EstablishmentModalProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
 
-  const handlePhonePress = () => {
-    if (establishment.phone) {
-      Linking.openURL(`tel:${establishment.phone}`);
+  // Get category from first promotion if available
+  const getCategory = () => {
+    if (establishment.promotions && establishment.promotions.length > 0) {
+      const category = establishment.promotions[0].category;
+      const categoryMap: { [key: string]: string } = {
+        'FOOD': 'Comida',
+        'DRINKS': 'Bebidas',
+        'EVENTS': 'Eventos',
+        'PARTIES': 'Fiestas',
+        'OTHER': 'Otros',
+      };
+      return categoryMap[category] || category;
     }
+    return null;
   };
 
-  const handleEmailPress = () => {
-    if (establishment.email) {
-      Linking.openURL(`mailto:${establishment.email}`);
+  const handleWhatsAppPress = () => {
+    if (establishment.phone) {
+      const phoneNumber = establishment.phone.replace(/\D/g, '');
+      Linking.openURL(`whatsapp://send?phone=${phoneNumber}`);
     }
   };
 
@@ -46,35 +56,14 @@ const EstablishmentModal: React.FC<EstablishmentModalProps> = ({
     }
   };
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'FOOD':
-        return 'food';
-      case 'DRINKS':
-        return 'cup';
-      case 'EVENTS':
-        return 'calendar';
-      case 'OTHER':
-        return 'tag';
-      default:
-        return 'tag';
+  const handleLocationPress = () => {
+    if (establishment.address) {
+      const encodedAddress = encodeURIComponent(establishment.address);
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`);
     }
   };
 
-  const getCategoryName = (category: string) => {
-    switch (category) {
-      case 'FOOD':
-        return 'Comida';
-      case 'DRINKS':
-        return 'Bebidas';
-      case 'EVENTS':
-        return 'Entretenimiento';
-      case 'OTHER':
-        return 'Otros';
-      default:
-        return category;
-    }
-  };
+  const category = getCategory();
 
   return (
     <Modal
@@ -82,203 +71,135 @@ const EstablishmentModal: React.FC<EstablishmentModalProps> = ({
       transparent
       animationType="slide"
       onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={[styles.container, { maxHeight: '90%' }]}>
-          {/* Handle and Top Bar */}
-          <View style={styles.topBar}>
-            <TouchableOpacity
-              style={styles.handleContainer}
-              onPress={onClose}
-              activeOpacity={0.7}>
-              <View style={styles.handle} />
-            </TouchableOpacity>
+      {/* Dark Overlay */}
+      <Pressable style={styles.overlay} onPress={onClose}>
+        {/* Modal Container */}
+        <Pressable
+          style={[styles.modalContainer, { paddingBottom: insets.bottom + 32 }]}
+          onPress={(e) => e.stopPropagation()}>
+          {/* Drag Handle */}
+          <View style={styles.dragHandleContainer}>
+            <View style={styles.dragHandle} />
+          </View>
 
+          {/* Modal Content */}
+          <View style={styles.content}>
+            {/* Store Header */}
             <View style={styles.header}>
-              <View style={styles.headerSpacer} />
-              <Text style={styles.title} numberOfLines={1}>
-                {establishment.name || 'Establecimiento'}
-              </Text>
+              {/* Logo Avatar */}
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatar}>
+                  {establishment.imageUrl ? (
+                    <Image
+                      source={{ uri: establishment.imageUrl }}
+                      style={styles.avatarImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <MaterialCommunityIcons name="store" size={40} color="#94A3B8" />
+                  )}
+                </View>
+              </View>
+
+              {/* Store Info */}
+              <View style={styles.storeInfo}>
+                {/* Category Chip */}
+                {category && (
+                  <View style={styles.categoryContainer}>
+                    <View style={styles.categoryChip}>
+                      <Text style={styles.categoryText}>{category}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Store Name */}
+                <Text style={styles.storeName} numberOfLines={2}>
+                  {establishment.name}
+                </Text>
+
+                {/* Store Address/Subtitle */}
+                {establishment.address && (
+                  <Text style={styles.storeSubtitle} numberOfLines={1}>
+                    {establishment.address}
+                  </Text>
+                )}
+              </View>
+            </View>
+
+            {/* Description */}
+            {establishment.description && (
+              <View style={styles.descriptionContainer}>
+                <Text style={styles.description}>
+                  {establishment.description}
+                </Text>
+              </View>
+            )}
+
+            {/* Social Media Row */}
+            <View style={styles.socialRow}>
+              {/* Instagram - Placeholder for future implementation */}
               <TouchableOpacity
-                style={styles.closeButton}
-                onPress={onClose}
-                activeOpacity={0.7}>
-                <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
+                style={styles.socialButton}
+                activeOpacity={0.7}
+                disabled={true}>
+                <View style={[styles.socialIconContainer, styles.instagramBg]}>
+                  <MaterialCommunityIcons name="instagram" size={28} color="#E1306C" />
+                </View>
+                <Text style={styles.socialLabel}>Instagram</Text>
+              </TouchableOpacity>
+
+              {/* WhatsApp */}
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={handleWhatsAppPress}
+                activeOpacity={0.7}
+                disabled={!establishment.phone}>
+                <View
+                  style={[
+                    styles.socialIconContainer,
+                    styles.whatsappBg,
+                    !establishment.phone && styles.disabledButton,
+                  ]}>
+                  <MaterialCommunityIcons name="whatsapp" size={28} color="#25D366" />
+                </View>
+                <Text style={styles.socialLabel}>WhatsApp</Text>
+              </TouchableOpacity>
+
+              {/* Website */}
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={handleWebsitePress}
+                activeOpacity={0.7}
+                disabled={!establishment.website}>
+                <View
+                  style={[
+                    styles.socialIconContainer,
+                    styles.websiteBg,
+                    !establishment.website && styles.disabledButton,
+                  ]}>
+                  <MaterialCommunityIcons name="web" size={28} color="#3B82F6" />
+                </View>
+                <Text style={styles.socialLabel}>Web</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Primary Action Button */}
+            <View style={styles.ctaContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.ctaButton,
+                  !establishment.address && styles.ctaButtonDisabled,
+                ]}
+                onPress={handleLocationPress}
+                activeOpacity={0.9}
+                disabled={!establishment.address}>
+                <MaterialCommunityIcons name="map-marker" size={24} color="#111814" />
+                <Text style={styles.ctaButtonText}>Ir al local</Text>
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Scrollable Content */}
-          <ScrollView
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.scrollContent,
-              { paddingBottom: insets.bottom + 20 },
-            ]}>
-            {/* Description */}
-            {establishment.description && (
-              <Text style={styles.description}>{establishment.description}</Text>
-            )}
-
-            {/* Info List */}
-            <View style={styles.infoList}>
-              {/* Address */}
-              {establishment.address && (
-                <View style={styles.infoItem}>
-                  <View style={styles.infoLeft}>
-                    <View style={styles.infoIconContainer}>
-                      <MaterialCommunityIcons
-                        name="map-marker"
-                        size={24}
-                        color={colors.primaryDark}
-                      />
-                    </View>
-                    <View style={styles.infoTextContainer}>
-                      <Text style={styles.infoLabel}>Dirección</Text>
-                      <Text style={styles.infoValue} numberOfLines={2}>
-                        {establishment.address}
-                      </Text>
-                    </View>
-                  </View>
-                  <MaterialCommunityIcons
-                    name="chevron-right"
-                    size={20}
-                    color="#999"
-                  />
-                </View>
-              )}
-
-              {/* Contact (Phone) */}
-              {establishment.phone && (
-                <TouchableOpacity
-                  style={styles.infoItem}
-                  onPress={handlePhonePress}
-                  activeOpacity={0.7}>
-                  <View style={styles.infoLeft}>
-                    <View style={styles.infoIconContainer}>
-                      <MaterialCommunityIcons
-                        name="phone"
-                        size={24}
-                        color={colors.primaryDark}
-                      />
-                    </View>
-                    <View style={styles.infoTextContainer}>
-                      <Text style={styles.infoLabel}>Contacto</Text>
-                      <Text style={[styles.infoValue, styles.infoLink]} numberOfLines={2}>
-                        {establishment.phone}
-                      </Text>
-                    </View>
-                  </View>
-                  <MaterialCommunityIcons
-                    name="chevron-right"
-                    size={20}
-                    color="#999"
-                  />
-                </TouchableOpacity>
-              )}
-
-              {/* Email */}
-              {establishment.email && (
-                <TouchableOpacity
-                  style={styles.infoItem}
-                  onPress={handleEmailPress}
-                  activeOpacity={0.7}>
-                  <View style={styles.infoLeft}>
-                    <View style={styles.infoIconContainer}>
-                      <MaterialCommunityIcons
-                        name="email"
-                        size={24}
-                        color={colors.primaryDark}
-                      />
-                    </View>
-                    <View style={styles.infoTextContainer}>
-                      <Text style={styles.infoLabel}>Email</Text>
-                      <Text style={[styles.infoValue, styles.infoLink]} numberOfLines={2}>
-                        {establishment.email}
-                      </Text>
-                    </View>
-                  </View>
-                  <MaterialCommunityIcons
-                    name="chevron-right"
-                    size={20}
-                    color="#999"
-                  />
-                </TouchableOpacity>
-              )}
-
-              {/* Website */}
-              {establishment.website && (
-                <TouchableOpacity
-                  style={styles.infoItem}
-                  onPress={handleWebsitePress}
-                  activeOpacity={0.7}>
-                  <View style={styles.infoLeft}>
-                    <View style={styles.infoIconContainer}>
-                      <MaterialCommunityIcons
-                        name="web"
-                        size={24}
-                        color={colors.primaryDark}
-                      />
-                    </View>
-                    <View style={styles.infoTextContainer}>
-                      <Text style={styles.infoLabel}>Sitio Web</Text>
-                      <Text style={[styles.infoValue, styles.infoLink]} numberOfLines={2}>
-                        {establishment.website.replace(/^https?:\/\//, '')}
-                      </Text>
-                    </View>
-                  </View>
-                  <MaterialCommunityIcons
-                    name="chevron-right"
-                    size={20}
-                    color="#999"
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Divider */}
-            {(establishment.address ||
-              establishment.phone ||
-              establishment.email ||
-              establishment.website) &&
-              establishment.promotions &&
-              establishment.promotions.length > 0 && (
-                <View style={styles.divider} />
-              )}
-
-            {/* Promotions Section */}
-            {establishment.promotions && establishment.promotions.length > 0 && (
-              <View style={styles.promotionsSection}>
-                <Text style={styles.promotionsTitle}>Promociones para Estudiantes</Text>
-
-                {establishment.promotions.map((promotion) => (
-                  <View key={promotion.id} style={styles.promotionCard}>
-                    <View style={styles.promotionCardContent}>
-                      <View style={styles.promotionIconContainer}>
-                        <MaterialCommunityIcons
-                          name={getCategoryIcon(promotion.category)}
-                          size={24}
-                          color="#F59E0B"
-                        />
-                      </View>
-                      <View style={styles.promotionTextContainer}>
-                        <Text style={styles.promotionTitle}>
-                          {promotion.title || 'Promoción'}
-                        </Text>
-                        {promotion.description && (
-                          <Text style={styles.promotionDescription} numberOfLines={2}>
-                            {promotion.description}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-          </ScrollView>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 };
@@ -286,174 +207,178 @@ const EstablishmentModal: React.FC<EstablishmentModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(20, 20, 20, 0.6)',
     justifyContent: 'flex-end',
   },
-  container: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    flex: 1,
-    maxHeight: '90%',
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 48,
+    borderTopRightRadius: 48,
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 40,
+    elevation: 10,
   },
-  topBar: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  handleContainer: {
+  dragHandleContainer: {
     width: '100%',
     alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 4,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
+  dragHandle: {
+    width: 48,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#D1D5DB',
+  },
+  content: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+    paddingTop: 8,
+    gap: 24,
   },
   header: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  avatarContainer: {
+    position: 'relative',
+    flexShrink: 0,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 32,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  headerSpacer: {
-    width: 48,
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
-  title: {
+  storeInfo: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primaryDark,
-    textAlign: 'center',
-    lineHeight: 22,
+    paddingTop: 4,
   },
-  closeButton: {
+  categoryContainer: {
+    marginBottom: 4,
+  },
+  categoryChip: {
+    backgroundColor: 'rgba(46, 238, 130, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  categoryText: {
+    color: '#104e33',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  storeName: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#111814',
+    lineHeight: 30,
+  },
+  storeSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  descriptionContainer: {
+    backgroundColor: '#F6F8F7',
+    padding: 16,
+    borderRadius: 12,
+  },
+  description: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#111814',
+    lineHeight: 24,
+  },
+  socialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+  },
+  socialIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  scrollView: {
-    flex: 1,
+  instagramBg: {
+    backgroundColor: 'rgba(225, 48, 108, 0.1)',
   },
-  scrollContent: {
-    paddingBottom: 20,
+  whatsappBg: {
+    backgroundColor: 'rgba(37, 211, 102, 0.1)',
   },
-  description: {
-    fontSize: 16,
-    fontWeight: '400',
-    color: '#374151',
-    lineHeight: 24,
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 12,
+  websiteBg: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
-  infoList: {
-    paddingTop: 16,
+  disabledButton: {
+    opacity: 0.3,
   },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    minHeight: 72,
-  },
-  infoLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    flex: 1,
-  },
-  infoIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: `${colors.primary}33`,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  infoTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  infoLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.primaryDark,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: colors.primary,
-    lineHeight: 20,
-  },
-  infoLink: {
-    fontWeight: '500',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginHorizontal: 16,
-    marginVertical: 16,
-  },
-  promotionsSection: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
-  },
-  promotionsTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primaryDark,
-    lineHeight: 24,
-    marginBottom: 16,
-  },
-  promotionCard: {
-    marginBottom: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: colors.white,
-    padding: 16,
-  },
-  promotionCardContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  promotionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#FEF3C7',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  promotionTextContainer: {
-    flex: 1,
-  },
-  promotionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.primaryDark,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  promotionDescription: {
-    fontSize: 14,
-    fontWeight: '400',
+  socialLabel: {
+    fontSize: 12,
+    fontWeight: '600',
     color: '#6B7280',
-    lineHeight: 20,
+  },
+  ctaContainer: {
+    paddingTop: 8,
+  },
+  ctaButton: {
+    width: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  ctaButtonDisabled: {
+    backgroundColor: '#D1D5DB',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  ctaButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111814',
   },
 });
 
 export default EstablishmentModal;
-
