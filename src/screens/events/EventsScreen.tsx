@@ -22,6 +22,9 @@ import { colors } from '../../config/colors';
 import { globalStyles, FONT_FAMILY } from '../../config/globalStyles';
 import { eventService, Event, EventCategory } from '../../services/event.service';
 import { EventStackParamList } from '../../navigation/types';
+import { PlansTab } from './components/PlansTab';
+import { PlanDetailSheet } from '../../components/plans/PlanDetailSheet';
+import { planService } from '../../services/plan.service';
 
 type EventsScreenNavigationProp = NativeStackNavigationProp<EventStackParamList, 'EventsList'>;
 
@@ -54,6 +57,8 @@ export const EventsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState<TabType>('eventos');
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [planSheetVisible, setPlanSheetVisible] = useState(false);
   const featuredScrollRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -232,6 +237,39 @@ export const EventsScreen = () => {
 
   const handleCreateEvent = () => {
     navigation.navigate('CreateEvent');
+  };
+
+  const handlePlanPress = (planId: string) => {
+    setSelectedPlanId(planId);
+    setPlanSheetVisible(true);
+  };
+
+  const handleCreatePlan = () => {
+    // TODO: Navigate to create plan when screen is created
+    console.log('Create plan pressed');
+  };
+
+  const handleClosePlanSheet = () => {
+    setPlanSheetVisible(false);
+    setTimeout(() => {
+      setSelectedPlanId(null);
+    }, 300);
+  };
+
+  const handleJoinPlan = async () => {
+    if (!selectedPlanId) return;
+
+    try {
+      const plan = await planService.getPlanById(selectedPlanId);
+
+      if (plan.isParticipating) {
+        await planService.leavePlan(selectedPlanId);
+      } else {
+        await planService.joinPlan(selectedPlanId);
+      }
+    } catch (error) {
+      console.error('Error joining/leaving plan:', error);
+    }
   };
 
   const renderFeaturedCard = ({ item, index }: { item: Event; index: number }) => {
@@ -518,30 +556,28 @@ export const EventsScreen = () => {
 
         {/* Content for Planes Tab */}
         {activeTab === 'planes' && (
-          <View style={styles.planesContainer}>
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="account-group" size={64} color="#D1D5DB" />
-              <Text style={styles.emptyTitle}>Próximamente: Planes</Text>
-              <Text style={styles.emptySubtitle}>
-                Podrás crear y unirte a planes con otros estudiantes
-              </Text>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonText}>COMING SOON</Text>
-              </View>
-            </View>
-          </View>
+          <PlansTab
+            onPlanPress={handlePlanPress}
+            onCreatePress={handleCreatePlan}
+          />
         )}
       </ScrollView>
 
       {/* Floating Action Button */}
-      {activeTab === 'eventos' && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={handleCreateEvent}
-          activeOpacity={0.9}>
-          <MaterialCommunityIcons name="plus" size={28} color={colors.white} />
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={activeTab === 'eventos' ? handleCreateEvent : handleCreatePlan}
+        activeOpacity={0.9}>
+        <MaterialCommunityIcons name="plus" size={28} color={colors.white} />
+      </TouchableOpacity>
+
+      {/* Plan Detail Sheet */}
+      <PlanDetailSheet
+        planId={selectedPlanId}
+        visible={planSheetVisible}
+        onClose={handleClosePlanSheet}
+        onJoin={handleJoinPlan}
+      />
     </SafeAreaView>
   );
 };
@@ -1033,24 +1069,5 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: colors.white,
-  },
-
-  // Planes Section
-  planesContainer: {
-    flex: 1,
-    paddingTop: 60,
-  },
-  comingSoonBadge: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginTop: 24,
-  },
-  comingSoonText: {
-    fontSize: 12,
-    fontFamily: FONT_FAMILY.BOLD,
-    color: colors.primary,
-    letterSpacing: 1.5,
   },
 });
