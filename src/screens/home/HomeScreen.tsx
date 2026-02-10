@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
   bannerCardGradient: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.primary,
-    opacity: 0.2,
+    opacity: 0.1,
   },
   bannerCardContent: {
     position: 'absolute',
