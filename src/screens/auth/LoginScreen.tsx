@@ -61,7 +61,7 @@ export const LoginScreen = () => {
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">
-          
+
           {/* Logo */}
           <View style={styles.logoContainer}>
             <HorizontalIcon width={140} height={28} />

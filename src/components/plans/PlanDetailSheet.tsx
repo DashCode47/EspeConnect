@@ -304,41 +304,56 @@ export const PlanDetailSheet: React.FC<PlanDetailSheetProps> = ({
 
             {/* Bottom CTA */}
             <View style={styles.bottomCTA}>
-              <TouchableOpacity
-                style={[
-                  styles.joinButton,
-                  plan.isParticipating && styles.joinButtonActive,
-                  plan.isFull && !plan.isParticipating && styles.joinButtonDisabled,
-                ]}
-                onPress={handleJoinPress}
-                disabled={joiningLoading || (plan.isFull && !plan.isParticipating)}
-                activeOpacity={0.8}>
-                <LinearGradient
-                  colors={
-                    plan.isParticipating
-                      ? [`${colors.primary}30`, `${colors.primary}20`]
-                      : [colors.accent, `${colors.accent}CC`]
-                  }
-                  style={styles.joinButtonGradient}>
-                  {joiningLoading ? (
-                    <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="large" color={colors.primaryDark} />
-                    </View>
-                  ) : (
-                    <>
-                      <Text style={[styles.joinButtonText, plan.isParticipating && styles.joinButtonTextActive]}>
-                        {plan.isParticipating ? '✓ Ya estoy unido' : plan.isFull ? 'Plan lleno' : '¡Me uno!'}
-                      </Text>
-                      {!plan.isParticipating && !plan.isFull && (
-                        <MaterialCommunityIcons name="hand-wave" size={22} color={colors.primaryDark} />
+              {plan.isCreator ? (
+                <View style={styles.joinButton}>
+                  <LinearGradient
+                    colors={[`${colors.primary}20`, `${colors.primary}10`]}
+                    style={styles.joinButtonGradient}>
+                    <MaterialCommunityIcons name="crown" size={22} color={colors.primary} />
+                    <Text style={[styles.joinButtonText, { color: colors.primary }]}>
+                      Tu Plan
+                    </Text>
+                  </LinearGradient>
+                </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.joinButton,
+                      plan.isParticipating && styles.joinButtonActive,
+                      plan.isFull && !plan.isParticipating && styles.joinButtonDisabled,
+                    ]}
+                    onPress={handleJoinPress}
+                    disabled={joiningLoading || (plan.isFull && !plan.isParticipating)}
+                    activeOpacity={0.8}>
+                    <LinearGradient
+                      colors={
+                        plan.isParticipating
+                          ? [`${colors.primary}30`, `${colors.primary}20`]
+                          : [colors.accent, `${colors.accent}CC`]
+                      }
+                      style={styles.joinButtonGradient}>
+                      {joiningLoading ? (
+                        <View style={styles.loadingContainer}>
+                          <ActivityIndicator size="large" color={colors.primaryDark} />
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={[styles.joinButtonText, plan.isParticipating && styles.joinButtonTextActive]}>
+                            {plan.isParticipating ? '✓ Ya estoy unido' : plan.isFull ? 'Plan lleno' : '¡Me uno!'}
+                          </Text>
+                          {!plan.isParticipating && !plan.isFull && (
+                            <MaterialCommunityIcons name="hand-wave" size={22} color={colors.primaryDark} />
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-              <Text style={styles.disclaimer}>
-                Sin compromiso, puedes salirte cuando quieras.
-              </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  <Text style={styles.disclaimer}>
+                    Sin compromiso, puedes salirte cuando quieras.
+                  </Text>
+                </>
+              )}
             </View>
           </View>
         </Animated.View>

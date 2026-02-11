@@ -21,9 +21,10 @@ const CARD_WIDTH = (SCREEN_WIDTH - 60) / 2; // 2 columns with padding
 interface PlansTabProps {
   onPlanPress: (planId: string) => void;
   onCreatePress: () => void;
+  onMyPlansPress?: () => void;
 }
 
-export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress }) => {
+export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, onMyPlansPress }) => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<PlanCategory | 'ALL'>('ALL');
@@ -170,10 +171,23 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress }
     <View style={styles.container}>
       {/* Header Section */}
       <View style={styles.headerSection}>
-        <Text style={styles.sectionTitle}>Planes Sociales</Text>
-        <Text style={styles.sectionSubtitle}>
-          Únete a planes o crea el tuyo
-        </Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.sectionTitle}>Planes Sociales</Text>
+            <Text style={styles.sectionSubtitle}>
+              Únete a planes o crea el tuyo
+            </Text>
+          </View>
+          {onMyPlansPress && (
+            <TouchableOpacity
+              style={styles.myPlansButton}
+              onPress={onMyPlansPress}
+              activeOpacity={0.7}>
+              <MaterialCommunityIcons name="account-circle-outline" size={20} color={colors.primary} />
+              <Text style={styles.myPlansButtonText}>Mis Planes</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Category Filter */}
@@ -195,6 +209,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  myPlansButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: `${colors.primary}10`,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: `${colors.primary}30`,
+  },
+  myPlansButtonText: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
   },
   sectionTitle: {
     fontSize: 24,

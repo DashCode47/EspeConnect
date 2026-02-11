@@ -130,22 +130,28 @@ export const PlanCard: React.FC<PlanCardProps> = ({ plan, onPress, onJoin }) => 
         </View>
 
         {/* Join button */}
-        <TouchableOpacity
-          style={[
-            styles.joinButton,
-            plan.isParticipating && styles.joinButtonActive,
-            plan.isFull && !plan.isParticipating && styles.joinButtonDisabled,
-          ]}
-          onPress={onJoin}
-          disabled={plan.isFull && !plan.isParticipating}
-          activeOpacity={0.8}>
-          <Text style={[
-            styles.joinButtonText,
-            plan.isParticipating && styles.joinButtonTextActive,
-          ]}>
-            {plan.isParticipating ? '✓ Unido' : plan.isFull ? 'Lleno' : '¡Me uno!'}
-          </Text>
-        </TouchableOpacity>
+        {plan.isCreator ? (
+          <View style={[styles.joinButton, styles.joinButtonCreator]}>
+            <Text style={[styles.joinButtonText, styles.joinButtonTextCreator]}>Tu Plan</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.joinButton,
+              plan.isParticipating && styles.joinButtonActive,
+              plan.isFull && !plan.isParticipating && styles.joinButtonDisabled,
+            ]}
+            onPress={onJoin}
+            disabled={plan.isFull && !plan.isParticipating}
+            activeOpacity={0.8}>
+            <Text style={[
+              styles.joinButtonText,
+              plan.isParticipating && styles.joinButtonTextActive,
+            ]}>
+              {plan.isParticipating ? '✓ Unido' : plan.isFull ? 'Lleno' : '¡Me uno!'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -288,6 +294,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  joinButtonCreator: {
+    backgroundColor: `${colors.primary}15`,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   joinButtonActive: {
     backgroundColor: `${colors.primary}20`,
   },
@@ -298,6 +309,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONT_FAMILY.BOLD,
     color: colors.primaryDark,
+  },
+  joinButtonTextCreator: {
+    color: colors.primary,
   },
   joinButtonTextActive: {
     color: colors.primary,

@@ -66,17 +66,17 @@ export const RootNavigator = () => {
       const timeoutId = setTimeout(() => {
         if (!navigationRef.current) return;
 
-        if (!onboardingCompleted) {
-          // If onboarding not completed, navigate to Onboarding
-          navigationRef.current.reset({
-            index: 0,
-            routes: [{ name: 'Onboarding' }],
-          });
-        } else if (isAuthenticated) {
+        if (isAuthenticated) {
           // If authenticated, navigate to Main
           navigationRef.current.reset({
             index: 0,
             routes: [{ name: 'Main' }],
+          });
+        } else if (!onboardingCompleted) {
+          // If onboarding not completed, navigate to Onboarding
+          navigationRef.current.reset({
+            index: 0,
+            routes: [{ name: 'Onboarding' }],
           });
         } else {
           // If not authenticated, navigate to Auth
@@ -97,15 +97,18 @@ export const RootNavigator = () => {
 
   // Determine initial route based on onboarding and auth status
   const getInitialRouteName = (): keyof RootStackParamList => {
+    if (isAuthenticated) {
+      return 'Main';
+    }
     if (!onboardingCompleted) {
       return 'Onboarding';
     }
-    return isAuthenticated ? 'Main' : 'Auth';
+    return 'Auth';
   };
 
   return (
     <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator 
+      <Stack.Navigator
         screenOptions={{ headerShown: false }}
         initialRouteName={getInitialRouteName()}>
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />

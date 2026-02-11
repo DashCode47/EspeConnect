@@ -70,4 +70,7 @@ export type EventStackParamList = {
   EventsList: undefined;
   EventDetail: { eventId: string };
   CreateEvent: undefined;
+  CreatePlan: undefined;
+  MyPlans: undefined;
+  ManagePlanParticipants: { planId: string };
 };

@@ -245,8 +245,7 @@ export const EventsScreen = () => {
   };
 
   const handleCreatePlan = () => {
-    // TODO: Navigate to create plan when screen is created
-    console.log('Create plan pressed');
+    navigation.navigate('CreatePlan');
   };
 
   const handleClosePlanSheet = () => {
@@ -559,6 +558,7 @@ export const EventsScreen = () => {
           <PlansTab
             onPlanPress={handlePlanPress}
             onCreatePress={handleCreatePlan}
+            onMyPlansPress={() => navigation.navigate('MyPlans')}
           />
         )}
       </ScrollView>

@@ -319,6 +319,12 @@ class PlanService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Send system message before leaving (RLS requires active participant)
+      await this.sendMessage(planId, {
+        message: `${user.user_metadata?.name || 'Alguien'} salió del plan`,
+        message_type: PlanMessageType.SYSTEM,
+      });
+
       // Update participation with left_at timestamp
       const { error } = await supabase
         .from('plan_participants')
@@ -328,12 +334,6 @@ class PlanService {
         .is('left_at', null);
 
       if (error) throw error;
-
-      // Send system message
-      await this.sendMessage(planId, {
-        message: `${user.user_metadata?.name || 'Alguien'} salió del plan`,
-        message_type: PlanMessageType.SYSTEM,
-      });
     } catch (error) {
       console.error('Error leaving plan:', error);
       throw error;
@@ -517,6 +517,91 @@ class PlanService {
     return () => {
       supabase.removeChannel(channel);
     };
+  }
+
+  /**
+   * Get plans created by or joined by the current user
+   */
+  async getMyPlans(): Promise<Plan[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Get plan IDs where user is an active participant (includes creator)
+      const { data: participations, error: partError } = await supabase
+        .from('plan_participants')
+        .select('plan_id')
+        .eq('user_id', user.id)
+        .is('left_at', null);
+
+      if (partError) throw partError;
+
+      const planIds = (participations || []).map(p => p.plan_id);
+      if (planIds.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from('plans')
+        .select(`
+          *,
+          creator:profiles!creator_id(id, full_name, avatar_url, career),
+          participants:plan_participants(
+            id,
+            user_id,
+            role,
+            joined_at,
+            left_at,
+            user:profiles!user_id(id, full_name, avatar_url)
+          )
+        `)
+        .in('id', planIds)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map(plan => {
+        const mappedPlan = this.mapPlanData(plan);
+        const activeParticipants = mappedPlan.participants?.filter((p: any) => p.left_at === null) || [];
+        const participantsCount = activeParticipants.length;
+        const isParticipating = activeParticipants.some((p: any) => p.user_id === user.id);
+        const isCreator = mappedPlan.creator_id === user.id;
+        const isFull = mappedPlan.max_participants ? participantsCount >= mappedPlan.max_participants : false;
+
+        return {
+          ...mappedPlan,
+          participantsCount,
+          isParticipating,
+          isCreator,
+          isFull,
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching my plans:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a participant from a plan (creator action)
+   */
+  async removeParticipant(planId: string, userId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('plan_participants')
+        .update({ left_at: new Date().toISOString() })
+        .eq('plan_id', planId)
+        .eq('user_id', userId)
+        .is('left_at', null);
+
+      if (error) throw error;
+
+      await this.sendMessage(planId, {
+        message: 'Un participante fue removido del plan',
+        message_type: PlanMessageType.SYSTEM,
+      });
+    } catch (error) {
+      console.error('Error removing participant:', error);
+      throw error;
+    }
   }
 }
 
