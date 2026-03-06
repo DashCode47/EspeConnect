@@ -15,15 +15,16 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { tripService, CreateTripData } from '../../services/trip.service';
-import { colors } from '../../config/colors';
-import { RideStackParamList } from '../../navigation/types';
-import { useHideNavbar } from '../../hooks/useHideNavbar';
-import { globalStyles } from '../../config/globalStyles';
+import { CreateTripData } from '../../domain/repositories/trip.repository';
+import { useTripStore } from '../store/trip.store';
+import { colors } from '../../../../config/colors';
+import { RideStackParamList } from '../../../../navigation/types';
+import { useHideNavbar } from '../../../../hooks/useHideNavbar';
+import { globalStyles } from '../../../../config/globalStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useUserStore } from '../../store/userStore';
-import { SuccessModal } from '../../components/modals/SuccessModal';
-import { ErrorModal } from '../../components/modals/ErrorModal';
+import { useUserStore } from '../../../../store/userStore';
+import { SuccessModal } from '../../../../components/modals/SuccessModal';
+import { ErrorModal } from '../../../../components/modals/ErrorModal';
 
 type CreateTripScreenNavigationProp = NativeStackNavigationProp<RideStackParamList, 'CreateTrip'>;
 
@@ -31,6 +32,7 @@ export const CreateTripScreen = () => {
   const navigation = useNavigation<CreateTripScreenNavigationProp>();
   const insets = useSafeAreaInsets();
   const { profile } = useUserStore();
+  const { createTrip } = useTripStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<CreateTripData>({
     origin: '',
@@ -189,7 +191,7 @@ export const CreateTripScreen = () => {
 
     try {
       setLoading(true);
-      await tripService.createTrip({
+      await createTrip({
         ...formData,
         notes: formData.notes || undefined,
         price: priceValue && parseFloat(priceValue) > 0 ? parseFloat(priceValue) : undefined,
@@ -240,7 +242,7 @@ export const CreateTripScreen = () => {
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          
+
           {/* User Info */}
           <View style={styles.userSection}>
             {profile?.avatarUrl ? (
@@ -356,7 +358,7 @@ export const CreateTripScreen = () => {
           {/* Schedule Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Horario</Text>
-            
+
             {/* Date Field */}
             <TouchableOpacity
               style={styles.pickerField}

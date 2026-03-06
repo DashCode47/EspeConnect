@@ -89,7 +89,7 @@ Currently, `trip.service.ts` (500+ lines) does everything. In Clean Architecture
 ---
 
 ## 5. Next Steps
-1. [ ] Create the new directory structure.
+1. [x] Create the new directory structure.
 2. [ ] Identify and isolate the `Auth` module as it's the most widely used.
-3. [ ] Implement the `Trip` module refactor as a POC (Proof of Concept).
-4. [ ] Deprecate `src/services/` folder once all features are migrated.
+3. [x] Implement the `Trip` module refactor as a POC (Proof of Concept).
+4. [ ] Deprecate `src/services/` folder once all features are migrated (Partially done: `trip.service.ts` removed).

@@ -1,14 +1,14 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RideStackParamList } from './types';
-import { RidesScreen } from '../screens/rides/RidesScreen';
-import { RidePostScreen } from '../screens/rides/RidePostScreen';
-import { TripDetailScreen } from '../screens/rides/TripDetailScreen';
-import { CreateTripScreen } from '../screens/rides/CreateTripScreen';
-import { EditTripScreen } from '../screens/rides/EditTripScreen';
-import { MyTripsScreen } from '../screens/rides/MyTripsScreen';
-import { RateDriverScreen } from '../screens/rides/RateDriverScreen';
-import { ManageTripRequestsScreen } from '../screens/rides/ManageTripRequestsScreen';
+import { RidesScreen } from '../features/trips/presentation/screens/RidesScreen';
+import { RidePostScreen } from '../features/trips/presentation/screens/RidePostScreen';
+import { TripDetailScreen } from '../features/trips/presentation/screens/TripDetailScreen';
+import { CreateTripScreen } from '../features/trips/presentation/screens/CreateTripScreen';
+import { EditTripScreen } from '../features/trips/presentation/screens/EditTripScreen';
+import { MyTripsScreen } from '../features/trips/presentation/screens/MyTripsScreen';
+import { RateDriverScreen } from '../features/trips/presentation/screens/RateDriverScreen';
+import { ManageTripRequestsScreen } from '../features/trips/presentation/screens/ManageTripRequestsScreen';
 
 const Stack = createNativeStackNavigator<RideStackParamList>();
 

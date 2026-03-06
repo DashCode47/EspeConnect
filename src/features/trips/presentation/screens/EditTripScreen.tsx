@@ -9,13 +9,15 @@ import {
   Modal,
 } from 'react-native';
 import { Text, TextInput, Button } from 'react-native-paper';
-import { SuccessModal } from '../../components/modals/SuccessModal';
+import { Trip } from '../../domain/entities/trip.entity';
+import { UpdateTripData } from '../../domain/repositories/trip.repository';
+import { useTripStore } from '../store/trip.store';
+import { colors } from '../../../../config/colors';
+import { RideStackParamList } from '../../../../navigation/types';
+import { SuccessModal } from '../../../../components/modals/SuccessModal';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { tripService, UpdateTripData, Trip } from '../../services/trip.service';
-import { colors } from '../../config/colors';
-import { RideStackParamList } from '../../navigation/types';
 
 type EditTripScreenRouteProp = RouteProp<RideStackParamList, 'EditTrip'>;
 type EditTripScreenNavigationProp = NativeStackNavigationProp<RideStackParamList, 'EditTrip'>;
@@ -24,6 +26,7 @@ export const EditTripScreen = () => {
   const route = useRoute<EditTripScreenRouteProp>();
   const navigation = useNavigation<EditTripScreenNavigationProp>();
   const { tripId } = route.params;
+  const { fetchTripById, updateTrip } = useTripStore();
 
   const [loading, setLoading] = useState(false);
   const [loadingTrip, setLoadingTrip] = useState(true);
@@ -48,18 +51,21 @@ export const EditTripScreen = () => {
   const fetchTrip = async () => {
     try {
       setLoadingTrip(true);
-      const response = await tripService.getTripById(tripId);
-      const tripData = response.data.trip;
-      setTrip(tripData);
-      setFormData({
-        origin: tripData.origin,
-        destination: tripData.destination,
-        departureTime: tripData.departureTime,
-        availableSeats: tripData.availableSeats,
-        price: tripData.price || undefined,
-        notes: tripData.notes || '',
-      });
-      setTempDate(new Date(tripData.departureTime));
+      const tripData = await fetchTripById(tripId);
+      if (tripData) {
+        setTrip(tripData);
+        setFormData({
+          origin: tripData.origin,
+          destination: tripData.destination,
+          departureTime: tripData.departureTime,
+          availableSeats: tripData.availableSeats,
+          price: tripData.price || undefined,
+          notes: tripData.notes || '',
+        });
+        setTempDate(new Date(tripData.departureTime));
+      } else {
+        throw new Error('Viaje no encontrado');
+      }
     } catch (error: any) {
       console.error('Error fetching trip:', error);
       Alert.alert('Error', 'No se pudo cargar el viaje');
@@ -159,7 +165,7 @@ export const EditTripScreen = () => {
     }
     if (trip && formData.availableSeats !== undefined) {
       const acceptedPassengers = trip.requests?.filter(
-        (req) => req.status === 'ACCEPTED'
+        (req: any) => req.status === 'ACCEPTED'
       ).length || 0;
       if (formData.availableSeats < acceptedPassengers) {
         Alert.alert(
@@ -213,7 +219,7 @@ export const EditTripScreen = () => {
 
     try {
       setLoading(true);
-      await tripService.updateTrip(tripId, updateData);
+      await updateTrip(tripId, updateData);
       setShowSuccessModal(true);
     } catch (error: any) {
       console.error('Error updating trip:', error);
@@ -301,7 +307,7 @@ export const EditTripScreen = () => {
         {/* Date and Time */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Fecha y Hora de Salida</Text>
-          
+
           <View style={styles.dateTimeContainer}>
             <TouchableOpacity
               style={styles.dateTimeButton}
@@ -315,11 +321,11 @@ export const EditTripScreen = () => {
                   <Text style={styles.dateTimeValue}>
                     {formData.departureTime
                       ? new Date(formData.departureTime).toLocaleDateString('es-ES', {
-                          weekday: 'short',
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })
                       : 'No seleccionada'}
                   </Text>
                 </View>
@@ -339,9 +345,9 @@ export const EditTripScreen = () => {
                   <Text style={styles.dateTimeValue}>
                     {formData.departureTime
                       ? new Date(formData.departureTime).toLocaleTimeString('es-ES', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
                       : 'No seleccionada'}
                   </Text>
                 </View>
@@ -543,7 +549,7 @@ export const EditTripScreen = () => {
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Asientos Disponibles</Text>
           <Text style={styles.hint}>
-            Pasajeros aceptados: {trip.requests?.filter((req) => req.status === 'ACCEPTED').length || 0}
+            Pasajeros aceptados: {trip.requests?.filter((req: any) => req.status === 'ACCEPTED').length || 0}
           </Text>
           <View style={styles.seatsContainer}>
             <TouchableOpacity

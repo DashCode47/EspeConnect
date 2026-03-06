@@ -11,9 +11,11 @@ import { Text, Button } from 'react-native-paper';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { tripService, Trip, CreateRatingData } from '../../services/trip.service';
-import { colors } from '../../config/colors';
-import { RideStackParamList } from '../../navigation/types';
+import { Trip } from '../../domain/entities/trip.entity';
+import { CreateRatingData } from '../../domain/repositories/trip.repository';
+import { useTripStore } from '../store/trip.store';
+import { colors } from '../../../../config/colors';
+import { RideStackParamList } from '../../../../navigation/types';
 
 type RateDriverScreenRouteProp = RouteProp<RideStackParamList, 'RateDriver'>;
 type RateDriverScreenNavigationProp = NativeStackNavigationProp<
@@ -25,6 +27,7 @@ export const RateDriverScreen = () => {
   const route = useRoute<RateDriverScreenRouteProp>();
   const navigation = useNavigation<RateDriverScreenNavigationProp>();
   const { tripId } = route.params;
+  const { fetchTripById, rateDriver } = useTripStore();
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,8 +42,8 @@ export const RateDriverScreen = () => {
   const fetchTrip = async () => {
     try {
       setLoading(true);
-      const response = await tripService.getTripById(tripId);
-      setTrip(response.data.trip);
+      const tripData = await fetchTripById(tripId);
+      setTrip(tripData);
     } catch (error: any) {
       console.error('Error fetching trip:', error);
       Alert.alert('Error', 'No se pudo cargar el viaje');
@@ -66,7 +69,7 @@ export const RateDriverScreen = () => {
         rating,
         comment: comment.trim() || undefined,
       };
-      await tripService.rateDriver(tripId, ratingData);
+      await rateDriver(tripId, ratingData);
       Alert.alert('Éxito', 'Calificación enviada exitosamente', [
         {
           text: 'OK',
@@ -178,12 +181,12 @@ export const RateDriverScreen = () => {
               {rating === 1
                 ? 'Muy malo'
                 : rating === 2
-                ? 'Malo'
-                : rating === 3
-                ? 'Regular'
-                : rating === 4
-                ? 'Bueno'
-                : 'Excelente'}
+                  ? 'Malo'
+                  : rating === 3
+                    ? 'Regular'
+                    : rating === 4
+                      ? 'Bueno'
+                      : 'Excelente'}
             </Text>
           )}
         </View>

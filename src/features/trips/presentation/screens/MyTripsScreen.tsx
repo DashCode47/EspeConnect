@@ -13,15 +13,18 @@ import { Chip } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { tripService, Trip, TripType } from '../../services/trip.service';
-import { useUserStore } from '../../store/userStore';
-import { RideCard, Ride } from '../../components/rides/RideCard';
-import { colors } from '../../config/colors';
-import { RideStackParamList } from '../../navigation/types';
-import { useHideNavbar } from '../../hooks/useHideNavbar';
-import { ErrorModal } from '../../components/modals/ErrorModal';
+import { Trip, TripType } from '../../domain/entities/trip.entity';
+import { TripRepositoryImpl } from '../../data/repositories/trip.repository.impl';
+import { useUserStore } from '../../../../store/userStore';
+import { RideCard, Ride } from '../../../../components/rides/RideCard';
+import { colors } from '../../../../config/colors';
+import { RideStackParamList } from '../../../../navigation/types';
+import { useHideNavbar } from '../../../../hooks/useHideNavbar';
+import { ErrorModal } from '../../../../components/modals/ErrorModal';
 
 type MyTripsScreenNavigationProp = NativeStackNavigationProp<RideStackParamList, 'MyTrips'>;
+
+const repository = new TripRepositoryImpl();
 
 export const MyTripsScreen = () => {
   const navigation = useNavigation<MyTripsScreenNavigationProp>();
@@ -52,10 +55,15 @@ export const MyTripsScreen = () => {
 
     try {
       setLoading(true);
-      const response = await tripService.getUserTrips(profile.id, {
+      const result = await repository.getUserTrips(profile.id, {
         type: tripType,
       });
-      setTrips(response.data.trips);
+      if (result.isRight()) {
+        setTrips(result.value);
+      } else {
+        setErrorMessage(result.value.message);
+        setShowErrorModal(true);
+      }
     } catch (error: any) {
       console.error('Error fetching trips:', error);
       setErrorMessage('Error al cargar tus viajes');
@@ -204,8 +212,8 @@ export const MyTripsScreen = () => {
             {tripType === 'created'
               ? 'Aún no has creado ningún viaje'
               : tripType === 'joined'
-              ? 'Aún no te has unido a ningún viaje'
-              : 'No tienes viajes registrados'}
+                ? 'Aún no te has unido a ningún viaje'
+                : 'No tienes viajes registrados'}
           </Text>
         </View>
       ) : (
@@ -246,8 +254,8 @@ export const MyTripsScreen = () => {
                         trip.status === 'ACTIVE'
                           ? 'check-circle'
                           : trip.status === 'FULL'
-                          ? 'account-group'
-                          : 'cancel'
+                            ? 'account-group'
+                            : 'cancel'
                       }
                       size={16}
                       color={colors.white}
@@ -260,8 +268,8 @@ export const MyTripsScreen = () => {
                         trip.status === 'ACTIVE'
                           ? '#4CAF50'
                           : trip.status === 'FULL'
-                          ? '#FF9800'
-                          : '#F44336',
+                            ? '#FF9800'
+                            : '#F44336',
                     },
                   ]}
                   textStyle={styles.statusChipText}
@@ -269,8 +277,8 @@ export const MyTripsScreen = () => {
                   {trip.status === 'ACTIVE'
                     ? 'Activo'
                     : trip.status === 'FULL'
-                    ? 'Completo'
-                    : 'Cancelado'}
+                      ? 'Completo'
+                      : 'Cancelado'}
                 </Chip>
               </View>
               <TouchableOpacity

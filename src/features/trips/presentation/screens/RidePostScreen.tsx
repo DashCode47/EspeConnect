@@ -3,14 +3,14 @@ import { View, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RidePostHeader } from '../../components/rides/RidePostHeader';
-import { RidePostCard } from '../../components/rides/RidePostCard';
-import { CommentInput } from '../../components/rides/CommentInput';
-import { CommentList } from '../../components/CommentList';
-import { Post, postService } from '../../services/post.service';
-import { Comment, commentService } from '../../services/comment.service';
-import { useUserStore } from '../../store/userStore';
-import { colors } from '../../config/colors';
+import { RidePostHeader } from '../../../../components/rides/RidePostHeader';
+import { RidePostCard } from '../../../../components/rides/RidePostCard';
+import { CommentInput } from '../../../../components/rides/CommentInput';
+import { CommentList } from '../../../../components/CommentList';
+import { Post, postService } from '../../../../services/post.service';
+import { Comment, commentService } from '../../../../services/comment.service';
+import { useUserStore } from '../../../../store/userStore';
+import { colors } from '../../../../config/colors';
 
 type RidePostScreenRouteProp = RouteProp<any, 'RidePost'>;
 type RidePostScreenNavigationProp = NativeStackNavigationProp<any>;
@@ -69,13 +69,13 @@ export const RidePostScreen = () => {
     try {
       setLoading(true);
       const response = await commentService.getComments(post.id, pageToLoad);
-      
+
       if (pageToLoad === 1) {
         setComments(response.data.comments);
       } else {
         setComments(prev => [...prev, ...response.data.comments]);
       }
-      
+
       setHasMore(pageToLoad < response.data.pagination.pages);
       setPage(pageToLoad);
     } catch (error) {
@@ -87,7 +87,7 @@ export const RidePostScreen = () => {
 
   const checkIfLiked = () => {
     if (!post || !profile) return;
-    
+
     const hasLiked = post.reactions?.some(
       reaction => reaction.userId === profile.id && reaction.type === 'like'
     );
@@ -172,8 +172,8 @@ export const RidePostScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <RidePostHeader />
-      
-      <ScrollView 
+
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -190,7 +190,7 @@ export const RidePostScreen = () => {
           comments={displayPost.comments || 0}
           isLiked={isLiked}
           onLikePress={handleLike}
-          onCommentPress={() => {}}
+          onCommentPress={() => { }}
           onSharePress={handleShare}
         />
 

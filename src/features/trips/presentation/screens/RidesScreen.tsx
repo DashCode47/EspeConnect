@@ -14,12 +14,12 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { colors } from '../../config/colors';
-import { RideStackParamList } from '../../navigation/types';
-import { TripStatus } from '../../services/trip.service';
-import { useUserStore } from '../../store/userStore';
-import { useTripStore } from '../../store/tripStore';
-import { globalStyles, FONT_FAMILY } from '../../config/globalStyles';
+import { colors } from '../../../../config/colors';
+import { RideStackParamList } from '../../../../navigation/types';
+import { TripStatus, Trip, Rating, TripRequest } from '../../domain/entities/trip.entity';
+import { useUserStore } from '../../../../store/userStore';
+import { useTripStore } from '../store/trip.store';
+import { globalStyles, FONT_FAMILY } from '../../../../config/globalStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type RidesScreenNavigationProp = NativeStackNavigationProp<RideStackParamList, 'RidesList'>;
@@ -71,14 +71,14 @@ export const RidesScreen = () => {
   const now = new Date();
   // Public trips: future only, exclude own trips
   const trips = allTrips
-    .filter(t => new Date(t.departureTime) > now)
-    .filter(t => !profile?.id || t.driverId !== profile.id);
+    .filter((t: Trip) => new Date(t.departureTime) > now)
+    .filter((t: Trip) => !profile?.id || t.driverId !== profile.id);
 
   // Offer-mode trips: own future trips
   const myTrips = allMyTrips
-    .filter(t => t.driverId === profile?.id && new Date(t.departureTime) > now);
+    .filter((t: Trip) => t.driverId === profile?.id && new Date(t.departureTime) > now);
 
-  const filteredTrips = trips.filter((trip) => {
+  const filteredTrips = trips.filter((trip: Trip) => {
     const originMatch = !origin || normalize(trip.origin).includes(normalize(origin));
     const destMatch = !destination || normalize(trip.destination).includes(normalize(destination));
     return originMatch && destMatch;
@@ -153,7 +153,7 @@ export const RidesScreen = () => {
     }
     // Calculate from ratings if available
     if (trip.ratings && trip.ratings.length > 0) {
-      const avg = trip.ratings.reduce((acc, r) => acc + r.rating, 0) / trip.ratings.length;
+      const avg = trip.ratings.reduce((acc: number, r: Rating) => acc + r.rating, 0) / trip.ratings.length;
       return avg.toFixed(1);
     }
     return '5.0';
@@ -407,7 +407,7 @@ export const RidesScreen = () => {
               </View>
             ) : (
               <View style={styles.tripsList}>
-                {filteredTrips.map((trip, index) => renderTripCard(trip, index))}
+                {filteredTrips.map((trip: Trip, index: number) => renderTripCard(trip, index))}
               </View>
             )}
 
@@ -471,7 +471,7 @@ export const RidesScreen = () => {
               </View>
             ) : (
               <View style={styles.activeRoutesList}>
-                {myTrips.map((trip) => (
+                {myTrips.map((trip: Trip) => (
                   <TouchableOpacity
                     key={trip.id}
                     style={styles.activeRouteCard}
@@ -504,15 +504,15 @@ export const RidesScreen = () => {
 
                       <View style={[
                         styles.activeRouteStatus,
-                        (trip.requests?.filter(r => r.status === 'ACCEPTED').length ?? 0) > 0
+                        (trip.requests?.filter((r: TripRequest) => r.status === 'ACCEPTED').length ?? 0) > 0
                           ? styles.activeRouteStatusConfirmed
                           : styles.activeRouteStatusPending
                       ]}>
-                        {(trip.requests?.filter(r => r.status === 'ACCEPTED').length ?? 0) > 0 ? (
+                        {(trip.requests?.filter((r: TripRequest) => r.status === 'ACCEPTED').length ?? 0) > 0 ? (
                           <>
                             <View style={styles.statusDot} />
                             <Text style={styles.statusTextConfirmed}>
-                              {trip.requests?.filter(r => r.status === 'ACCEPTED').length} Pasajeros confirmados
+                              {trip.requests?.filter((r: TripRequest) => r.status === 'ACCEPTED').length} Pasajeros confirmados
                             </Text>
                           </>
                         ) : (
@@ -547,12 +547,12 @@ export const RidesScreen = () => {
                     <View style={styles.activeRouteFooter}>
                       <View style={styles.activeRoutePassengers}>
                         {(() => {
-                          const acceptedRequests = trip.requests?.filter(r => r.status === 'ACCEPTED') ?? [];
+                          const acceptedRequests = trip.requests?.filter((r: TripRequest) => r.status === 'ACCEPTED') ?? [];
                           if (acceptedRequests.length > 0) {
                             return (
                               <>
                                 <View style={styles.passengerAvatars}>
-                                  {acceptedRequests.slice(0, 3).map((request, idx) => (
+                                  {acceptedRequests.slice(0, 3).map((request: TripRequest, idx: number) => (
                                     <Image
                                       key={request.id}
                                       source={{ uri: request.passenger.avatarUrl || 'https://via.placeholder.com/32' }}
@@ -575,7 +575,7 @@ export const RidesScreen = () => {
                           }
                         })()}
                       </View>
-                      {(trip.requests?.filter(r => r.status === 'ACCEPTED').length ?? 0) > 0 ? (
+                      {(trip.requests?.filter((r: TripRequest) => r.status === 'ACCEPTED').length ?? 0) > 0 ? (
                         <TouchableOpacity
                           onPress={() => navigation.navigate('ManageTripRequests', { tripId: trip.id })}>
                           <Text style={styles.manageText}>Gestionar</Text>

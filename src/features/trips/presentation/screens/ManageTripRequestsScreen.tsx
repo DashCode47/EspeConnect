@@ -12,14 +12,14 @@ import {
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { tripService, Trip, TripRequest } from '../../services/trip.service';
-import { useTripStore } from '../../store/tripStore';
-import { colors } from '../../config/colors';
-import { RideStackParamList } from '../../navigation/types';
-import { useHideNavbar } from '../../hooks/useHideNavbar';
-import { ConfirmationModal } from '../../components/modals/ConfirmationModal';
-import { SuccessModal } from '../../components/modals/SuccessModal';
-import { ErrorModal } from '../../components/modals/ErrorModal';
+import { Trip, TripRequest } from '../../domain/entities/trip.entity';
+import { useTripStore } from '../store/trip.store';
+import { colors } from '../../../../config/colors';
+import { RideStackParamList } from '../../../../navigation/types';
+import { useHideNavbar } from '../../../../hooks/useHideNavbar';
+import { ConfirmationModal } from '../../../../components/modals/ConfirmationModal';
+import { SuccessModal } from '../../../../components/modals/SuccessModal';
+import { ErrorModal } from '../../../../components/modals/ErrorModal';
 
 type ManageTripRequestsScreenRouteProp = RouteProp<RideStackParamList, 'ManageTripRequests'>;
 type ManageTripRequestsScreenNavigationProp = NativeStackNavigationProp<
@@ -33,7 +33,7 @@ export const ManageTripRequestsScreen = () => {
   const { tripId } = route.params;
 
   const { trips, myTrips, fetchTripById, confirmPassenger, rejectRequest } = useTripStore();
-  const trip = [...trips, ...myTrips].find((t) => t.id === tripId) || null;
+  const trip = [...trips, ...myTrips].find((t: Trip) => t.id === tripId) || null;
   const [loading, setLoading] = useState(!trip);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -110,8 +110,8 @@ export const ManageTripRequestsScreen = () => {
     }
   };
 
-  const pendingRequests = trip?.requests?.filter((req) => req.status === 'PENDING') || [];
-  const confirmedPassengers = trip?.requests?.filter((req) => req.status === 'ACCEPTED') || [];
+  const pendingRequests = trip?.requests?.filter((req: TripRequest) => req.status === 'PENDING') || [];
+  const confirmedPassengers = trip?.requests?.filter((req: TripRequest) => req.status === 'ACCEPTED') || [];
   const availableSeats = trip ? trip.availableSeats - confirmedPassengers.length : 0;
 
   if (loading) {
@@ -158,7 +158,7 @@ export const ManageTripRequestsScreen = () => {
               Solicitudes Pendientes ({pendingRequests.length})
             </Text>
             <View style={styles.requestsContainer}>
-              {pendingRequests.map((request) => (
+              {pendingRequests.map((request: TripRequest) => (
                 <View key={request.id} style={styles.requestCard}>
                   <View style={styles.requestHeader}>
                     <Image

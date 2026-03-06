@@ -13,15 +13,15 @@ import {
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { tripService, Trip } from '../../services/trip.service';
-import { useTripStore } from '../../store/tripStore';
-import { useUserStore } from '../../store/userStore';
-import { colors } from '../../config/colors';
-import { RideStackParamList } from '../../navigation/types';
-import { useHideNavbar } from '../../hooks/useHideNavbar';
-import { ConfirmationModal } from '../../components/modals/ConfirmationModal';
-import { SuccessModal } from '../../components/modals/SuccessModal';
-import { ErrorModal } from '../../components/modals/ErrorModal';
+import { Trip, TripRequest } from '../../domain/entities/trip.entity';
+import { useTripStore } from '../store/trip.store';
+import { useUserStore } from '../../../../store/userStore';
+import { colors } from '../../../../config/colors';
+import { RideStackParamList } from '../../../../navigation/types';
+import { useHideNavbar } from '../../../../hooks/useHideNavbar';
+import { ConfirmationModal } from '../../../../components/modals/ConfirmationModal';
+import { SuccessModal } from '../../../../components/modals/SuccessModal';
+import { ErrorModal } from '../../../../components/modals/ErrorModal';
 
 type TripDetailScreenRouteProp = RouteProp<RideStackParamList, 'TripDetail'>;
 type TripDetailScreenNavigationProp = NativeStackNavigationProp<RideStackParamList, 'TripDetail'>;
@@ -33,7 +33,7 @@ export const TripDetailScreen = () => {
 
   const { profile } = useUserStore();
   const { trips, myTrips, joinTrip, fetchTripById } = useTripStore();
-  const trip = [...trips, ...myTrips].find((t) => t.id === tripId) || null;
+  const trip = [...trips, ...myTrips].find((t: Trip) => t.id === tripId) || null;
   const [loading, setLoading] = useState(!trip);
   const [actionLoading, setActionLoading] = useState(false);
   const [showReserveModal, setShowReserveModal] = useState(false);
@@ -153,10 +153,10 @@ export const TripDetailScreen = () => {
   }
 
   const isDriver = trip.driverId === profile?.id;
-  const occupiedSeats = trip.requests?.filter((req) => req.status === 'ACCEPTED').length || 0;
+  const occupiedSeats = trip.requests?.filter((req: TripRequest) => req.status === 'ACCEPTED').length || 0;
   const totalSeats = trip.availableSeats + occupiedSeats;
-  const pendingRequests = trip.requests?.filter((req) => req.status === 'PENDING').length || 0;
-  const acceptedPassengers = trip.requests?.filter((req) => req.status === 'ACCEPTED') || [];
+  const pendingRequests = trip.requests?.filter((req: TripRequest) => req.status === 'PENDING').length || 0;
+  const acceptedPassengers = trip.requests?.filter((req: TripRequest) => req.status === 'ACCEPTED') || [];
 
   const handleManageRequests = () => {
     navigation.navigate('ManageTripRequests', { tripId });
@@ -295,7 +295,7 @@ export const TripDetailScreen = () => {
           <View style={styles.passengersCard}>
             <View style={styles.passengersRow}>
               {/* Accepted passengers */}
-              {acceptedPassengers.map((req) => (
+              {acceptedPassengers.map((req: TripRequest) => (
                 <View key={req.id} style={styles.passengerItem}>
                   <View style={styles.passengerAvatar}>
                     {req.passenger.avatarUrl ? (
