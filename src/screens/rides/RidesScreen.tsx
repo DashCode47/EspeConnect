@@ -16,8 +16,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../config/colors';
 import { RideStackParamList } from '../../navigation/types';
-import { tripService, Trip, TripStatus } from '../../services/trip.service';
+import { TripStatus } from '../../services/trip.service';
 import { useUserStore } from '../../store/userStore';
+import { useTripStore } from '../../store/tripStore';
 import { globalStyles, FONT_FAMILY } from '../../config/globalStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,13 +31,10 @@ export const RidesScreen = () => {
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
   const { profile, fetchProfile } = useUserStore();
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { trips: allTrips, tripsLoading, myTrips: allMyTrips, myTripsLoading, fetchTrips, fetchMyTrips } = useTripStore();
   const [refreshing, setRefreshing] = useState(false);
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
-  const [myTrips, setMyTrips] = useState<Trip[]>([]);
-  const [loadingMyTrips, setLoadingMyTrips] = useState(false);
   const [travelMode, setTravelMode] = useState<TravelMode>(route.params?.initialTab ?? 'search');
 
   useEffect(() => {
@@ -45,84 +43,49 @@ export const RidesScreen = () => {
     }
   }, []);
 
-  // Initial fetch handled by the travelMode/profile useEffect below
-
-  const fetchTrips = async () => {
-    try {
-      setLoading(true);
-      const response = await tripService.getTrips({
-        page: 1,
-        limit: 20,
-      });
-      const now = new Date();
-      let filteredTrips = response.data.trips.filter(
-        (trip) => new Date(trip.departureTime) > now
-      );
-
-      // Filtrar viajes creados por el usuario actual
-      if (profile?.id) {
-        filteredTrips = filteredTrips.filter((trip) => trip.driverId !== profile.id);
-      }
-
-      setTrips(filteredTrips);
-    } catch (error) {
-      console.error('Error fetching trips:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    if (travelMode === 'offer') {
-      fetchMyTrips();
-    } else {
-      fetchTrips();
-    }
-  }, [profile?.id, travelMode]);
-
-  // Fetch trips created by the user (for Offer mode)
-  const fetchMyTrips = async () => {
-    if (!profile?.id) return;
-    try {
-      setLoadingMyTrips(true);
-      const response = await tripService.getTrips({
-        page: 1,
-        limit: 20,
-      });
-      // Filter only trips created by the current user and not expired
-      const now = new Date();
-      const userTrips = response.data.trips.filter(
-        (trip) => trip.driverId === profile.id && new Date(trip.departureTime) > now
-      );
-      setMyTrips(userTrips);
-    } catch (error) {
-      console.error('Error fetching my trips:', error);
-      setMyTrips([]);
-    } finally {
-      setLoadingMyTrips(false);
-      setRefreshing(false);
-    }
-  };
-
-  // When switching modes, fetch the appropriate trips
+  // When switching modes or profile loads, fetch the appropriate trips
   useEffect(() => {
     if (!profile?.id) return;
     if (travelMode === 'offer') {
-      fetchMyTrips();
+      fetchMyTrips(profile.id);
     } else {
       fetchTrips();
     }
   }, [travelMode, profile?.id]);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    const doRefresh = async () => {
+      if (travelMode === 'offer' && profile?.id) {
+        await fetchMyTrips(profile.id);
+      } else {
+        await fetchTrips();
+      }
+      setRefreshing(false);
+    };
+    doRefresh();
+  }, [profile?.id, travelMode]);
+
   const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const now = new Date();
+  // Public trips: future only, exclude own trips
+  const trips = allTrips
+    .filter(t => new Date(t.departureTime) > now)
+    .filter(t => !profile?.id || t.driverId !== profile.id);
+
+  // Offer-mode trips: own future trips
+  const myTrips = allMyTrips
+    .filter(t => t.driverId === profile?.id && new Date(t.departureTime) > now);
 
   const filteredTrips = trips.filter((trip) => {
     const originMatch = !origin || normalize(trip.origin).includes(normalize(origin));
     const destMatch = !destination || normalize(trip.destination).includes(normalize(destination));
     return originMatch && destMatch;
   });
+
+  const loading = tripsLoading;
+  const loadingMyTrips = myTripsLoading;
 
   const handleCreateTrip = () => {
     navigation.navigate('CreateTrip');

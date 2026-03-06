@@ -16,10 +16,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../config/colors';
 import { FONT_FAMILY } from '../../config/globalStyles';
 import { Plan, PlanCategory, PlanStatus } from '../../types/plan.types';
-import { planService } from '../../services/plan.service';
 import { EventStackParamList } from '../../navigation/types';
 import { ConfirmationModal } from '../../components/modals/ConfirmationModal';
 import { SuccessModal } from '../../components/modals/SuccessModal';
+import { usePlanStore } from '../../store/planStore';
 
 type NavigationProp = NativeStackNavigationProp<EventStackParamList>;
 type TabFilter = 'created' | 'joined';
@@ -61,7 +61,6 @@ const formatTime = (time: string) => time.slice(0, 5);
 
 export const MyPlansScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [allPlans, setAllPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabFilter>('created');
@@ -74,7 +73,7 @@ export const MyPlansScreen: React.FC = () => {
     message: string;
     type: 'default' | 'danger';
     onConfirm: () => void;
-  }>({ visible: false, title: '', message: '', type: 'default', onConfirm: () => {} });
+  }>({ visible: false, title: '', message: '', type: 'default', onConfirm: () => { } });
 
   const [successModal, setSuccessModal] = useState<{
     visible: boolean;
@@ -82,17 +81,13 @@ export const MyPlansScreen: React.FC = () => {
     message: string;
   }>({ visible: false, title: '', message: '' });
 
+  const { myPlans, fetchMyPlans, cancelPlan, deletePlan, leavePlan } = usePlanStore();
+
   const fetchPlans = useCallback(async () => {
-    try {
-      const data = await planService.getMyPlans();
-      setAllPlans(data);
-    } catch (error) {
-      console.error('Error fetching my plans:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+    await fetchMyPlans();
+    setLoading(false);
+    setRefreshing(false);
+  }, [fetchMyPlans]);
 
   useEffect(() => {
     fetchPlans();
@@ -103,7 +98,7 @@ export const MyPlansScreen: React.FC = () => {
     fetchPlans();
   };
 
-  const filteredPlans = allPlans.filter(plan =>
+  const filteredPlans = myPlans.filter(plan =>
     activeTab === 'created' ? plan.isCreator : !plan.isCreator
   );
 
@@ -117,9 +112,8 @@ export const MyPlansScreen: React.FC = () => {
         setConfirmModal(prev => ({ ...prev, visible: false }));
         setActionLoading(plan.id);
         try {
-          await planService.updatePlan(plan.id, { status: PlanStatus.CANCELLED });
+          await cancelPlan(plan.id);
           setSuccessModal({ visible: true, title: 'Plan Cancelado', message: 'El plan ha sido cancelado exitosamente.' });
-          fetchPlans();
         } catch (error) {
           console.error('Error cancelling plan:', error);
         } finally {
@@ -139,9 +133,8 @@ export const MyPlansScreen: React.FC = () => {
         setConfirmModal(prev => ({ ...prev, visible: false }));
         setActionLoading(plan.id);
         try {
-          await planService.deletePlan(plan.id);
+          await deletePlan(plan.id);
           setSuccessModal({ visible: true, title: 'Plan Eliminado', message: 'El plan ha sido eliminado exitosamente.' });
-          fetchPlans();
         } catch (error) {
           console.error('Error deleting plan:', error);
         } finally {
@@ -161,9 +154,8 @@ export const MyPlansScreen: React.FC = () => {
         setConfirmModal(prev => ({ ...prev, visible: false }));
         setActionLoading(plan.id);
         try {
-          await planService.leavePlan(plan.id);
+          await leavePlan(plan.id);
           setSuccessModal({ visible: true, title: 'Has salido', message: 'Has salido del plan exitosamente.' });
-          fetchPlans();
         } catch (error) {
           console.error('Error leaving plan:', error);
         } finally {
@@ -256,7 +248,7 @@ export const MyPlansScreen: React.FC = () => {
                   onPress={() => navigation.navigate('ManagePlanParticipants', { planId: plan.id })}
                   activeOpacity={0.7}>
                   <MaterialCommunityIcons name="account-group" size={16} color={colors.white} />
-                  <Text style={styles.actionButtonPrimaryText}>Participantes</Text>
+                  <Text style={styles.actionButtonPrimaryText}>Participanstes</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionButtonEdit}

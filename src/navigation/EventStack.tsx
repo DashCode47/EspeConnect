@@ -8,6 +8,7 @@ import { CreatePlanScreen } from '../screens/events/CreatePlanScreen';
 import { EditPlanScreen } from '../screens/events/EditPlanScreen';
 import { MyPlansScreen } from '../screens/events/MyPlansScreen';
 import { ManagePlanParticipantsScreen } from '../screens/events/ManagePlanParticipantsScreen';
+import { PlanCommentsScreen } from '../screens/events/PlanCommentsScreen';
 
 const Stack = createNativeStackNavigator<EventStackParamList>();
 
@@ -21,6 +22,7 @@ export const EventStack = () => {
       <Stack.Screen name="EditPlan" component={EditPlanScreen} />
       <Stack.Screen name="MyPlans" component={MyPlansScreen} />
       <Stack.Screen name="ManagePlanParticipants" component={ManagePlanParticipantsScreen} />
+      <Stack.Screen name="PlanComments" component={PlanCommentsScreen} />
     </Stack.Navigator>
   );
 };

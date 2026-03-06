@@ -28,6 +28,11 @@ export enum PlanParticipantRole {
   PARTICIPANT = 'PARTICIPANT',
 }
 
+export enum PlanParticipantStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+}
+
 export enum PlanMessageType {
   TEXT = 'TEXT',
   SYSTEM = 'SYSTEM',
@@ -46,6 +51,7 @@ export interface PlanParticipant {
   plan_id: string;
   user_id: string;
   role: PlanParticipantRole;
+  status: PlanParticipantStatus;
   joined_at: string;
   left_at: string | null;
   user?: PlanParticipantUser; // Joined data
@@ -78,13 +84,16 @@ export interface Plan {
   created_at: string;
   updated_at: string;
 
+  requires_approval: boolean;
+
   // Joined data from relations
   creator?: PlanCreator;
   participants?: PlanParticipant[];
 
   // Computed fields
   participantsCount?: number;
-  isParticipating?: boolean;
+  isParticipating?: boolean;  // APPROVED member
+  isRequested?: boolean;      // PENDING member (waiting approval)
   isCreator?: boolean;
   isFull?: boolean;
 }
@@ -115,6 +124,7 @@ export interface CreatePlanRequest {
   longitude?: number;
   visibility?: PlanVisibility;
   max_participants?: number;
+  requires_approval?: boolean;
 }
 
 export interface UpdatePlanRequest {

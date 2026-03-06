@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions } from 'react-native';
 import { Plan } from '../types/plan.types';
 import { planService } from '../services/plan.service';
+import { usePlanStore } from '../store/planStore';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -15,6 +16,7 @@ export const usePlanDetailSheet = (
   const [loading, setLoading] = useState(false);
   const [joiningLoading, setJoiningLoading] = useState(false);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const updatePlanInStore = usePlanStore(s => s.updatePlanInStore);
 
   useEffect(() => {
     if (visible && planId) {
@@ -41,6 +43,8 @@ export const usePlanDetailSheet = (
       setLoading(true);
       const data = await planService.getPlanById(planId);
       setPlan(data);
+      // Keep the store's list in sync with the freshest detail data
+      updatePlanInStore(data);
     } catch (error) {
       console.error('Error fetching plan details:', error);
     } finally {
@@ -61,7 +65,9 @@ export const usePlanDetailSheet = (
   const handleJoinPress = async () => {
     try {
       setJoiningLoading(true);
+      // onJoin now calls store.joinPlan / store.leavePlan which refreshes the list
       await onJoin();
+      // Refetch this plan's detail so the sheet UI updates too
       await fetchPlanDetails();
     } catch (error) {
       console.error('Error in handleJoinPress:', error);

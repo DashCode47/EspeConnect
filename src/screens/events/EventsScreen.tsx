@@ -13,6 +13,7 @@ import {
   Dimensions,
   FlatList,
 } from 'react-native';
+
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,7 +25,7 @@ import { eventService, Event, EventCategory } from '../../services/event.service
 import { EventStackParamList } from '../../navigation/types';
 import { PlansTab } from './components/PlansTab';
 import { PlanDetailSheet } from '../../components/plans/PlanDetailSheet';
-import { planService } from '../../services/plan.service';
+import { usePlanStore } from '../../store/planStore';
 
 type EventsScreenNavigationProp = NativeStackNavigationProp<EventStackParamList, 'EventsList'>;
 
@@ -60,6 +61,7 @@ export const EventsScreen = () => {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [planSheetVisible, setPlanSheetVisible] = useState(false);
   const featuredScrollRef = useRef<FlatList>(null);
+  const { joinPlan, leavePlan } = usePlanStore();
 
   useEffect(() => {
     fetchEvents();
@@ -257,17 +259,14 @@ export const EventsScreen = () => {
 
   const handleJoinPlan = async () => {
     if (!selectedPlanId) return;
-
-    try {
-      const plan = await planService.getPlanById(selectedPlanId);
-
-      if (plan.isParticipating) {
-        await planService.leavePlan(selectedPlanId);
-      } else {
-        await planService.joinPlan(selectedPlanId);
-      }
-    } catch (error) {
-      console.error('Error joining/leaving plan:', error);
+    // usePlanDetailSheet reads plan.isParticipating before calling this,
+    // so we look up the current state from the store to decide join vs leave.
+    const { plans } = usePlanStore.getState();
+    const plan = plans.find(p => p.id === selectedPlanId);
+    if (plan?.isParticipating) {
+      await leavePlan(selectedPlanId);
+    } else {
+      await joinPlan(selectedPlanId);
     }
   };
 
@@ -577,6 +576,9 @@ export const EventsScreen = () => {
         visible={planSheetVisible}
         onClose={handleClosePlanSheet}
         onJoin={handleJoinPlan}
+        onViewComments={(id, title) => {
+          navigation.navigate('PlanComments', { planId: id, planTitle: title });
+        }}
       />
     </SafeAreaView>
   );

@@ -13,6 +13,7 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { tripService, Trip, TripRequest } from '../../services/trip.service';
+import { useTripStore } from '../../store/tripStore';
 import { colors } from '../../config/colors';
 import { RideStackParamList } from '../../navigation/types';
 import { useHideNavbar } from '../../hooks/useHideNavbar';
@@ -31,8 +32,9 @@ export const ManageTripRequestsScreen = () => {
   const navigation = useNavigation<ManageTripRequestsScreenNavigationProp>();
   const { tripId } = route.params;
 
-  const [trip, setTrip] = useState<Trip | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { trips, myTrips, fetchTripById, confirmPassenger, rejectRequest } = useTripStore();
+  const trip = [...trips, ...myTrips].find((t) => t.id === tripId) || null;
+  const [loading, setLoading] = useState(!trip);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
@@ -44,14 +46,13 @@ export const ManageTripRequestsScreen = () => {
   useHideNavbar(true);
 
   useEffect(() => {
-    fetchTrip();
+    fetchTripData();
   }, [tripId]);
 
-  const fetchTrip = async () => {
+  const fetchTripData = async () => {
     try {
-      setLoading(true);
-      const response = await tripService.getTripById(tripId);
-      setTrip(response.data.trip);
+      if (!trip) setLoading(true);
+      await fetchTripById(tripId);
     } catch (error: any) {
       console.error('Error fetching trip:', error);
       setErrorMessage('No se pudo cargar el viaje');
@@ -69,10 +70,10 @@ export const ManageTripRequestsScreen = () => {
 
     try {
       setActionLoading(requestId);
-      await tripService.confirmPassenger(tripId, { requestId });
+      await confirmPassenger(tripId, requestId);
       setSuccessMessage('Pasajero aceptado exitosamente');
       setShowSuccessModal(true);
-      fetchTrip(); // Refrescar datos
+      fetchTripData(); // Refrescar datos
     } catch (error: any) {
       setErrorMessage(
         error.response?.data?.message || 'No se pudo aceptar la solicitud. Intenta nuevamente.'
@@ -94,10 +95,10 @@ export const ManageTripRequestsScreen = () => {
     try {
       setActionLoading(selectedRequestId);
       setShowRejectModal(false);
-      await tripService.rejectRequest(tripId, selectedRequestId);
+      await rejectRequest(tripId, selectedRequestId);
       setSuccessMessage('Solicitud rechazada');
       setShowSuccessModal(true);
-      fetchTrip(); // Refrescar datos
+      fetchTripData(); // Refrescar datos
     } catch (error: any) {
       setErrorMessage(
         error.response?.data?.message || 'No se pudo rechazar la solicitud. Intenta nuevamente.'

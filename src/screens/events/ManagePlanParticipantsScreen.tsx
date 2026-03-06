@@ -15,8 +15,9 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../../config/colors';
 import { FONT_FAMILY } from '../../config/globalStyles';
-import { Plan, PlanParticipant, PlanParticipantRole } from '../../types/plan.types';
+import { Plan, PlanParticipant, PlanParticipantRole, PlanParticipantStatus } from '../../types/plan.types';
 import { planService } from '../../services/plan.service';
+import { usePlanStore } from '../../store/planStore';
 import { EventStackParamList } from '../../navigation/types';
 import { ConfirmationModal } from '../../components/modals/ConfirmationModal';
 import { SuccessModal } from '../../components/modals/SuccessModal';
@@ -40,7 +41,7 @@ export const ManagePlanParticipantsScreen: React.FC = () => {
     title: string;
     message: string;
     onConfirm: () => void;
-  }>({ visible: false, title: '', message: '', onConfirm: () => {} });
+  }>({ visible: false, title: '', message: '', onConfirm: () => { } });
 
   const [successModal, setSuccessModal] = useState<{
     visible: boolean;
@@ -73,6 +74,8 @@ export const ManagePlanParticipantsScreen: React.FC = () => {
     fetchData();
   };
 
+  const { approveParticipant, removeParticipant } = usePlanStore();
+
   const handleRemoveParticipant = (participant: PlanParticipant) => {
     const name = participant.user?.name || 'este participante';
     setConfirmModal({
@@ -83,7 +86,7 @@ export const ManagePlanParticipantsScreen: React.FC = () => {
         setConfirmModal(prev => ({ ...prev, visible: false }));
         setActionLoading(participant.id);
         try {
-          await planService.removeParticipant(planId, participant.user_id);
+          await removeParticipant(planId, participant.user_id);
           setSuccessModal({
             visible: true,
             title: 'Participante Removido',
@@ -99,7 +102,48 @@ export const ManagePlanParticipantsScreen: React.FC = () => {
     });
   };
 
-  const activeParticipants = participants.filter(p => p.left_at === null);
+  const handleApproveParticipant = async (participant: PlanParticipant) => {
+    const name = participant.user?.name || 'este participante';
+    setActionLoading(participant.id);
+    try {
+      await approveParticipant(planId, participant.user_id);
+      setSuccessModal({
+        visible: true,
+        title: 'Solicitud Aprobada',
+        message: `${name} ahora forma parte del plan.`,
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Error approving participant:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectParticipant = (participant: PlanParticipant) => {
+    const name = participant.user?.name || 'este participante';
+    setConfirmModal({
+      visible: true,
+      title: 'Rechazar Solicitud',
+      message: `¿Rechazar la solicitud de ${name}?`,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, visible: false }));
+        setActionLoading(participant.id);
+        try {
+          await removeParticipant(planId, participant.user_id);
+          fetchData();
+        } catch (error) {
+          console.error('Error rejecting participant:', error);
+        } finally {
+          setActionLoading(null);
+        }
+      },
+    });
+  };
+
+  const allActive = participants.filter(p => p.left_at === null);
+  const pendingParticipants = allActive.filter(p => p.status === PlanParticipantStatus.PENDING);
+  const activeParticipants = allActive.filter(p => p.status === PlanParticipantStatus.APPROVED);
   const participantCount = activeParticipants.length;
   const availableSpots = plan?.max_participants
     ? Math.max(plan.max_participants - participantCount, 0)
@@ -160,6 +204,55 @@ export const ManagePlanParticipantsScreen: React.FC = () => {
             </View>
           )}
         </View>
+
+        {/* Pending requests */}
+        {pendingParticipants.length > 0 && (
+          <View style={[styles.participantsList, styles.sectionSpacing]}>
+            <Text style={styles.sectionTitle}>
+              Solicitudes pendientes ({pendingParticipants.length})
+            </Text>
+            {pendingParticipants.map((participant) => {
+              const isActing = actionLoading === participant.id;
+              return (
+                <View key={participant.id} style={[styles.participantCard, styles.pendingCard]}>
+                  <View style={styles.participantInfo}>
+                    {participant.user?.avatarUrl ? (
+                      <Image
+                        source={{ uri: participant.user.avatarUrl }}
+                        style={styles.participantAvatar}
+                      />
+                    ) : (
+                      <View style={styles.participantAvatarPlaceholder}>
+                        <MaterialCommunityIcons name="account" size={20} color="#9CA3AF" />
+                      </View>
+                    )}
+                    <Text style={styles.participantName}>
+                      {participant.user?.name || 'Usuario'}
+                    </Text>
+                  </View>
+                  {isActing ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <View style={styles.pendingActions}>
+                      <TouchableOpacity
+                        style={styles.rejectButton}
+                        onPress={() => handleRejectParticipant(participant)}
+                        activeOpacity={0.7}>
+                        <MaterialCommunityIcons name="close" size={18} color="#F44336" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.approveButton}
+                        onPress={() => handleApproveParticipant(participant)}
+                        activeOpacity={0.7}>
+                        <MaterialCommunityIcons name="check" size={18} color={colors.primary} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         {/* Participants list */}
         {activeParticipants.length === 0 ? (
@@ -411,6 +504,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sectionSpacing: {
+    marginBottom: 24,
+  },
+  pendingCard: {
+    borderColor: 'rgba(247, 182, 52, 0.3)',
+    borderWidth: 1.5,
+    backgroundColor: 'rgba(247, 182, 52, 0.04)',
+  },
+  pendingActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  rejectButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  approveButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(16, 90, 57, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 90, 57, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },

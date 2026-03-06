@@ -14,6 +14,7 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { tripService, Trip } from '../../services/trip.service';
+import { useTripStore } from '../../store/tripStore';
 import { useUserStore } from '../../store/userStore';
 import { colors } from '../../config/colors';
 import { RideStackParamList } from '../../navigation/types';
@@ -31,8 +32,9 @@ export const TripDetailScreen = () => {
   const { tripId } = route.params;
 
   const { profile } = useUserStore();
-  const [trip, setTrip] = useState<Trip | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { trips, myTrips, joinTrip, fetchTripById } = useTripStore();
+  const trip = [...trips, ...myTrips].find((t) => t.id === tripId) || null;
+  const [loading, setLoading] = useState(!trip);
   const [actionLoading, setActionLoading] = useState(false);
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -43,14 +45,13 @@ export const TripDetailScreen = () => {
   useHideNavbar(true);
 
   useEffect(() => {
-    fetchTrip();
+    fetchTripData();
   }, [tripId]);
 
-  const fetchTrip = async () => {
+  const fetchTripData = async () => {
     try {
-      setLoading(true);
-      const response = await tripService.getTripById(tripId);
-      setTrip(response.data.trip);
+      if (!trip) setLoading(true);
+      await fetchTripById(tripId);
     } catch (error: any) {
       console.error('Error fetching trip:', error);
       setErrorMessage('No se pudo cargar el viaje');
@@ -96,9 +97,9 @@ export const TripDetailScreen = () => {
     try {
       setActionLoading(true);
       setShowReserveModal(false);
-      await tripService.joinTrip(tripId);
+      await joinTrip(tripId);
       setShowSuccessModal(true);
-      fetchTrip();
+      fetchTripData();
     } catch (error: any) {
       setErrorMessage(
         error.response?.data?.message || 'No se pudo reservar el viaje. Intenta nuevamente.'

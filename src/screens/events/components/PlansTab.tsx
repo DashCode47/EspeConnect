@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,15 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import { ErrorModal } from '../../../components/modals/ErrorModal';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../../../config/colors';
 import { FONT_FAMILY } from '../../../config/globalStyles';
-import { Plan, PlanCategory, PlanStatus } from '../../../types/plan.types';
-import { planService } from '../../../services/plan.service';
+import { PlanCategory } from '../../../types/plan.types';
+import { usePlanStore } from '../../../store/planStore';
 import { PlanCard } from '../../../components/plans/PlanCard';
+import { useState } from 'react';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 60) / 2; // 2 columns with padding
@@ -26,58 +28,32 @@ interface PlansTabProps {
 }
 
 export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, onMyPlansPress }) => {
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<PlanCategory | 'ALL'>('ALL');
+  const { plans, plansLoading, plansCategory, setPlansCategory, joinPlan, leavePlan, fetchPlans, subscribeToPlans } = usePlanStore();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPlans();
-
-    // Subscribe to real-time updates
-    const unsubscribe = planService.subscribeToPlans(() => {
-      fetchPlans();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [selectedCategory]);
-
-  const fetchPlans = async () => {
-    try {
-      setLoading(true);
-      const today = new Date().toISOString().split('T')[0];
-
-      const params = {
-        status: PlanStatus.ACTIVE,
-        dateFrom: today,
-        ...(selectedCategory !== 'ALL' && { category: selectedCategory as PlanCategory }),
-      };
-
-      const data = await planService.getPlans(params);
-      setPlans(data);
-    } catch (error) {
-      console.error('Error fetching plans:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const unsubscribe = subscribeToPlans();
+    return unsubscribe;
+  }, []);
 
   const handleJoinPlan = async (planId: string) => {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+
+    if (plan.isRequested) {
+      setErrorMessage('Ya tienes una solicitud pendiente para este plan. Espera a que el organizador la revise.');
+      return;
+    }
+
     try {
-      const plan = plans.find(p => p.id === planId);
-      if (!plan) return;
-
       if (plan.isParticipating) {
-        await planService.leavePlan(planId);
+        await leavePlan(planId);
       } else {
-        await planService.joinPlan(planId);
+        await joinPlan(planId);
       }
-
-      // Refresh plans
-      fetchPlans();
-    } catch (error) {
-      console.error('Error joining/leaving plan:', error);
+    } catch (error: any) {
+      setErrorMessage(error.message || 'No se pudo completar la acción. Intenta nuevamente.');
     }
   };
 
@@ -103,18 +79,18 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
             key={cat.key}
             style={[
               styles.categoryChip,
-              selectedCategory === cat.key && styles.categoryChipActive,
+              plansCategory === cat.key && styles.categoryChipActive,
             ]}
-            onPress={() => setSelectedCategory(cat.key as PlanCategory | 'ALL')}
+            onPress={() => setPlansCategory(cat.key as PlanCategory | 'ALL')}
             activeOpacity={0.7}>
             <MaterialCommunityIcons
               name={cat.icon as any}
               size={18}
-              color={selectedCategory === cat.key ? colors.white : colors.primary}
+              color={plansCategory === cat.key ? colors.white : colors.primary}
             />
             <Text style={[
               styles.categoryChipText,
-              selectedCategory === cat.key && styles.categoryChipTextActive,
+              plansCategory === cat.key && styles.categoryChipTextActive,
             ]}>
               {cat.label}
             </Text>
@@ -125,7 +101,7 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
   );
 
   const renderPlansGrid = () => {
-    if (loading) {
+    if (plansLoading) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -170,6 +146,11 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
 
   return (
     <View style={styles.container}>
+      <ErrorModal
+        visible={!!errorMessage}
+        message={errorMessage || ''}
+        onClose={() => setErrorMessage(null)}
+      />
       {/* Header Section */}
       <View style={styles.headerSection}>
         <View style={styles.headerRow}>

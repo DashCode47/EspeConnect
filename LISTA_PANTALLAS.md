@@ -81,6 +81,28 @@ Esta aplicación React Native contiene las siguientes pantallas organizadas por 
 ### WisdomCapsules
 - **Ubicación**: `src/screens/comunity/WisdomCapsules.tsx`
 - **Descripción**: Pantalla de cápsulas de sabiduría o consejos académicos para estudiantes.
+ 
+## 🚗 Viajes (Rides)
+ 
+### RidesScreen
+- **Ubicación**: `src/screens/rides/RidesScreen.tsx`
+- **Descripción**: Centro de carpooling donde los usuarios pueden buscar viajes o ofrecer rutas. Incluye filtros por origen/destino y gestión de viajes propios.
+ 
+### TripDetailScreen
+- **Ubicación**: `src/screens/rides/TripDetailScreen.tsx`
+- **Descripción**: Detalle completo de un viaje con información del conductor, ruta, horario y solicitudes. Permite a los pasajeros unirse al viaje.
+ 
+### ManageTripRequestsScreen
+- **Ubicación**: `src/screens/rides/ManageTripRequestsScreen.tsx`
+- **Descripción**: Panel para que el conductor gestione las solicitudes de pasajeros (aceptar/rechazar).
+ 
+### CreateTripScreen
+- **Ubicación**: `src/screens/rides/CreateTripScreen.tsx`
+- **Descripción**: Formulario para crear una nueva oferta de viaje con detalles de ruta, precio y asientos.
+ 
+### MyTripsScreen
+- **Ubicación**: `src/screens/rides/MyTripsScreen.tsx`
+- **Descripción**: Historial y lista de viajes donde el usuario participa como conductor o pasajero.
 
 ## 📱 Características Técnicas
 
@@ -90,7 +112,7 @@ Esta aplicación React Native contiene las siguientes pantallas organizadas por 
 - **Animaciones**: React Native Reanimated
 - **Gradientes**: React Native Linear Gradient
 - **Imágenes**: React Native Image Picker
-- **Estado**: Context API + Hooks
+- **Estado**: Context API + Zustand (useTripStore, useUserStore, usePlanStore)
 - **Almacenamiento**: AsyncStorage
 
 ## 🎨 Diseño

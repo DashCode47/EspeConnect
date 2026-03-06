@@ -5,10 +5,9 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
-  Pressable,
+  TouchableWithoutFeedback,
   ScrollView,
   Image,
-  Dimensions,
   ActivityIndicator,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -17,14 +16,15 @@ import { colors } from '../../config/colors';
 import { FONT_FAMILY } from '../../config/globalStyles';
 import { usePlanDetailSheet } from '../../hooks/usePlanDetailSheet';
 import { PlanCategory } from '../../types/plan.types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { PlanCommentPreview } from './PlanCommentPreview';
+import { usePlanComments } from '../../hooks/usePlanComments';
 
 interface PlanDetailSheetProps {
   planId: string | null;
   visible: boolean;
   onClose: () => void;
   onJoin: () => void;
+  onViewComments?: (planId: string, planTitle: string) => void;
 }
 
 const getCategoryLabel = (category: PlanCategory): string => {
@@ -47,6 +47,7 @@ export const PlanDetailSheet: React.FC<PlanDetailSheetProps> = ({
   visible,
   onClose,
   onJoin,
+  onViewComments,
 }) => {
   const insets = useSafeAreaInsets();
   const {
@@ -61,6 +62,21 @@ export const PlanDetailSheet: React.FC<PlanDetailSheetProps> = ({
     additionalCount,
   } = usePlanDetailSheet(planId, visible, onClose, onJoin);
 
+  const canComment = !!(plan?.isParticipating || plan?.isCreator);
+
+  const { comments, loading: commentsLoading } = usePlanComments({
+    planId,
+    enabled: visible && canComment,
+    previewLimit: 3,
+  });
+
+  const handleViewComments = () => {
+    if (planId && plan && onViewComments) {
+      onViewComments(planId, plan.title);
+      setTimeout(() => handleClose(), 100);
+    }
+  };
+
   if (!plan) return null;
 
   return (
@@ -70,185 +86,211 @@ export const PlanDetailSheet: React.FC<PlanDetailSheetProps> = ({
       animationType="slide"
       onRequestClose={handleClose}
     >
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable
-          style={[
-            styles.modalContainer,
-            { paddingBottom: insets.bottom + 16 }
-          ]}
-          onPress={(e) => e.stopPropagation()}
+      {/* Backdrop — tapping it closes the sheet */}
+      <TouchableWithoutFeedback onPress={handleClose}>
+        <View style={styles.backdrop} />
+      </TouchableWithoutFeedback>
+
+      {/* Sheet — sits at the bottom, no gesture wrappers that compete with scroll */}
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+
+        {/* Drag Handle */}
+        <View style={styles.dragHandleContainer}>
+          <View style={styles.dragHandle} />
+        </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Drag Handle */}
-          <View style={styles.dragHandleContainer}>
-            <View style={styles.dragHandle} />
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {/* Header Structure identical to EstablishmentModal */}
-            <View style={styles.header}>
-              <View style={styles.avatarContainer}>
-                <View style={styles.avatar}>
-                  <Text style={styles.emojiText}>{getCategoryEmoji(plan.category)}</Text>
-                </View>
-              </View>
-
-              <View style={styles.storeInfo}>
-                <View style={styles.categoryContainer}>
-                  <View style={styles.categoryChip}>
-                    <Text style={styles.categoryText}>
-                      {getCategoryLabel(plan.category as PlanCategory)}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={styles.storeName}>{plan.title}</Text>
-
-                <View style={styles.organizerRow}>
-                  {plan.creator?.avatarUrl ? (
-                    <Image source={{ uri: plan.creator.avatarUrl }} style={styles.miniAvatar} />
-                  ) : (
-                    <View style={styles.miniAvatarPlaceholder}>
-                      <MaterialCommunityIcons name="account" size={12} color={colors.primary} />
-                    </View>
-                  )}
-                  <Text style={styles.storeSubtitle}>
-                    Organizado por {plan.creator?.name || 'Usuario'}
-                  </Text>
-                </View>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.avatarContainer}>
+              <View style={styles.avatar}>
+                <Text style={styles.emojiText}>{getCategoryEmoji(plan.category)}</Text>
               </View>
             </View>
 
-            {/* Description follows EstablishmentModal's descriptionContainer style */}
-            {plan.description && (
-              <View style={styles.descriptionContainer}>
-                <Text style={styles.description}>{plan.description}</Text>
-              </View>
-            )}
-
-            {/* Info Section - Clean icons and labels */}
-            <View style={styles.infoSection}>
-              <View style={styles.infoRow}>
-                <View style={styles.socialIconContainer}>
-                  <MaterialCommunityIcons name="calendar-multiselect" size={24} color={colors.primary} />
-                </View>
-                <View>
-                  <Text style={styles.socialLabel}>FECHA</Text>
-                  <Text style={styles.infoValue}>{formatDate(plan.date)}</Text>
-                </View>
-              </View>
-
-              <View style={styles.infoRow}>
-                <View style={styles.socialIconContainer}>
-                  <MaterialCommunityIcons name="clock-outline" size={24} color={colors.primary} />
-                </View>
-                <View>
-                  <Text style={styles.socialLabel}>HORARIO</Text>
-                  <Text style={styles.infoValue}>
-                    {formatTime(plan.start_time)}{plan.end_time ? ` - ${formatTime(plan.end_time)}` : ''}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.infoRow}>
-                <View style={[styles.socialIconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-                  <MaterialCommunityIcons name="map-marker" size={24} color="#EF4444" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.socialLabel, { color: '#EF4444' }]}>UBICACIÓN</Text>
-                  <Text style={styles.infoValue} numberOfLines={1}>
-                    {plan.location_name || 'Sin dirección definida'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Participants Grid */}
-            <View style={styles.participantsSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Participantes</Text>
-                <Text style={styles.participantsCount}>
-                  {plan.participantsCount || 0}/{plan.max_participants || '∞'}
+            <View style={styles.storeInfo}>
+              <View style={styles.categoryChip}>
+                <Text style={styles.categoryText}>
+                  {getCategoryLabel(plan.category as PlanCategory)}
                 </Text>
               </View>
 
-              <View style={styles.avatarsContainer}>
-                {displayParticipants.map((participant, index) => (
-                  <View
-                    key={participant.id}
-                    style={[styles.attendeeAvatar, { marginLeft: index > 0 ? -12 : 0 }]}>
-                    {participant.user?.avatarUrl ? (
-                      <Image
-                        source={{ uri: participant.user.avatarUrl }}
-                        style={styles.attendeeAvatarImage}
-                      />
-                    ) : (
-                      <View style={styles.attendeeAvatarPlaceholder}>
-                        <MaterialCommunityIcons name="account" size={20} color={colors.primary} />
-                      </View>
-                    )}
-                  </View>
-                ))}
-                {additionalCount > 0 && (
-                  <View style={[styles.attendeeAvatar, styles.avatarCounter]}>
-                    <Text style={styles.counterText}>+{additionalCount}</Text>
+              <Text style={styles.storeName}>{plan.title}</Text>
+
+              <View style={styles.organizerRow}>
+                {plan.creator?.avatarUrl ? (
+                  <Image source={{ uri: plan.creator.avatarUrl }} style={styles.miniAvatar} />
+                ) : (
+                  <View style={styles.miniAvatarPlaceholder}>
+                    <MaterialCommunityIcons name="account" size={12} color={colors.primary} />
                   </View>
                 )}
-                {(plan.participantsCount || 0) === 0 && (
-                  <Text style={styles.emptyText}>Sé el primero en unirte</Text>
-                )}
+                <Text style={styles.storeSubtitle}>
+                  Organizado por {plan.creator?.name || 'Usuario'}
+                </Text>
               </View>
             </View>
-          </ScrollView>
-
-          {/* Primary Action Button identical to EstablishmentModal's ctaButton */}
-          <View style={styles.ctaContainer}>
-            {plan.isCreator ? (
-              <View style={styles.creatorBtn}>
-                <MaterialCommunityIcons name="crown" size={24} color={colors.primary} />
-                <Text style={styles.ctaButtonText}>Es tu Plan</Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={[
-                  styles.ctaButton,
-                  plan.isParticipating && styles.ctaButtonDisabled,
-                  plan.isFull && !plan.isParticipating && styles.ctaButtonDisabled,
-                ]}
-                onPress={handleJoinPress}
-                disabled={joiningLoading || (plan.isFull && !plan.isParticipating)}
-                activeOpacity={0.9}
-              >
-                {joiningLoading ? (
-                  <ActivityIndicator size="small" color="#111814" />
-                ) : (
-                  <>
-                    <Text style={styles.ctaButtonText}>
-                      {plan.isParticipating ? '✓ Ya estoy unido' : plan.isFull ? 'Plan lleno' : '¡Me uno ahora!'}
-                    </Text>
-                    {!plan.isParticipating && !plan.isFull && (
-                      <MaterialCommunityIcons name="hand-wave" size={24} color="#111814" />
-                    )}
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
           </View>
-        </Pressable>
-      </Pressable>
+
+          {/* Description */}
+          {plan.description && (
+            <View style={styles.descriptionContainer}>
+              <Text style={styles.description}>{plan.description}</Text>
+            </View>
+          )}
+
+          {/* Info rows */}
+          <View style={styles.infoSection}>
+            <View style={styles.infoRow}>
+              <View style={styles.socialIconContainer}>
+                <MaterialCommunityIcons name="calendar-multiselect" size={24} color={colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.socialLabel}>FECHA</Text>
+                <Text style={styles.infoValue}>{formatDate(plan.date)}</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <View style={styles.socialIconContainer}>
+                <MaterialCommunityIcons name="clock-outline" size={24} color={colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.socialLabel}>HORARIO</Text>
+                <Text style={styles.infoValue}>
+                  {formatTime(plan.start_time)}{plan.end_time ? ` - ${formatTime(plan.end_time)}` : ''}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <View style={[styles.socialIconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                <MaterialCommunityIcons name="map-marker" size={24} color="#EF4444" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.socialLabel, { color: '#EF4444' }]}>UBICACIÓN</Text>
+                <Text style={styles.infoValue} numberOfLines={1}>
+                  {plan.location_name || 'Sin dirección definida'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Participants */}
+          <View style={styles.participantsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Participantes</Text>
+              <Text style={styles.participantsCount}>
+                {plan.participantsCount || 0}/{plan.max_participants || '∞'}
+              </Text>
+            </View>
+
+            <View style={styles.avatarsContainer}>
+              {displayParticipants.map((participant, index) => (
+                <View
+                  key={participant.id}
+                  style={[styles.attendeeAvatar, { marginLeft: index > 0 ? -12 : 0 }]}>
+                  {participant.user?.avatarUrl ? (
+                    <Image source={{ uri: participant.user.avatarUrl }} style={styles.attendeeAvatarImage} />
+                  ) : (
+                    <View style={styles.attendeeAvatarPlaceholder}>
+                      <MaterialCommunityIcons name="account" size={20} color={colors.primary} />
+                    </View>
+                  )}
+                </View>
+              ))}
+              {additionalCount > 0 && (
+                <View style={[styles.attendeeAvatar, styles.avatarCounter]}>
+                  <Text style={styles.counterText}>+{additionalCount}</Text>
+                </View>
+              )}
+              {(plan.participantsCount || 0) === 0 && (
+                <Text style={styles.emptyText}>Sé el primero en unirte</Text>
+              )}
+            </View>
+          </View>
+
+          {/* Comments Preview */}
+          <PlanCommentPreview
+            comments={comments}
+            loading={commentsLoading}
+            canComment={canComment}
+            onViewAll={handleViewComments}
+            onJoinToComment={handleJoinPress}
+          />
+        </ScrollView>
+
+        {/* CTA Button */}
+        <View style={styles.ctaContainer}>
+          {plan.isCreator ? (
+            <View style={styles.creatorBtn}>
+              <MaterialCommunityIcons name="crown" size={24} color={colors.primary} />
+              <Text style={styles.ctaButtonText}>Es tu Plan</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.ctaButton,
+                plan.isParticipating && styles.ctaButtonLeave,
+                plan.isRequested && styles.ctaButtonRequested,
+                plan.isFull && !plan.isParticipating && !plan.isRequested && styles.ctaButtonDisabled,
+              ]}
+              onPress={handleJoinPress}
+              disabled={joiningLoading || plan.isRequested || (plan.isFull && !plan.isParticipating)}
+              activeOpacity={0.9}
+            >
+              {joiningLoading ? (
+                <ActivityIndicator size="small" color="#111814" />
+              ) : plan.isRequested ? (
+                <>
+                  <MaterialCommunityIcons name="clock-outline" size={22} color="#B45309" />
+                  <Text style={[styles.ctaButtonText, styles.ctaButtonTextRequested]}>
+                    Solicitud enviada
+                  </Text>
+                </>
+              ) : plan.isParticipating ? (
+                <>
+                  <MaterialCommunityIcons name="exit-to-app" size={22} color="#EF4444" />
+                  <Text style={[styles.ctaButtonText, styles.ctaButtonTextLeave]}>
+                    Salir del plan
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.ctaButtonText}>
+                    {plan.isFull ? 'Plan lleno' : plan.requires_approval ? 'Solicitar unirme' : '¡Me uno ahora!'}
+                  </Text>
+                  {!plan.isFull && (
+                    <MaterialCommunityIcons
+                      name={plan.requires_approval ? 'send' : 'hand-wave'}
+                      size={22}
+                      color="#111814"
+                    />
+                  )}
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(20, 20, 20, 0.6)',
-    justifyContent: 'flex-end',
   },
-  modalContainer: {
+  sheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 48,
     borderTopRightRadius: 48,
@@ -274,7 +316,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 8,
-    paddingBottom: 24,
+    paddingBottom: 100,
     gap: 24,
   },
   header: {
@@ -454,7 +496,9 @@ const styles = StyleSheet.create({
   },
   ctaContainer: {
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   ctaButton: {
     width: '100%',
@@ -477,10 +521,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     elevation: 0,
   },
+  ctaButtonLeave: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  ctaButtonTextLeave: {
+    color: '#EF4444',
+    fontSize: 16,
+  },
+  ctaButtonRequested: {
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   ctaButtonText: {
     fontSize: 18,
     fontFamily: FONT_FAMILY.BOLD,
     color: '#111814',
+  },
+  ctaButtonTextRequested: {
+    color: '#B45309',
+    fontSize: 16,
   },
   creatorBtn: {
     backgroundColor: 'rgba(46, 238, 130, 0.1)',

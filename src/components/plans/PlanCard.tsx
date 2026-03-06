@@ -145,16 +145,18 @@ export const PlanCard: React.FC<PlanCardProps> = ({ plan, onPress, onJoin }) => 
             style={[
               styles.joinButton,
               plan.isParticipating && styles.joinButtonActive,
-              plan.isFull && !plan.isParticipating && styles.joinButtonDisabled,
+              plan.isRequested && styles.joinButtonRequested,
+              plan.isFull && !plan.isParticipating && !plan.isRequested && styles.joinButtonDisabled,
             ]}
             onPress={onJoin}
-            disabled={plan.isFull && !plan.isParticipating}
+            disabled={plan.isFull && !plan.isParticipating && !plan.isRequested}
             activeOpacity={0.8}>
             <Text style={[
               styles.joinButtonText,
               plan.isParticipating && styles.joinButtonTextActive,
+              plan.isRequested && styles.joinButtonTextRequested,
             ]}>
-              {plan.isParticipating ? '✓ Unido' : plan.isFull ? 'Lleno' : '¡Me uno!'}
+              {plan.isParticipating ? '✓ Unido' : plan.isRequested ? '⏳ Solicitado' : plan.isFull ? 'Lleno' : '¡Me uno!'}
             </Text>
           </TouchableOpacity>
         )}
@@ -317,6 +319,11 @@ const styles = StyleSheet.create({
   joinButtonActive: {
     backgroundColor: `${colors.primary}20`,
   },
+  joinButtonRequested: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   joinButtonDisabled: {
     backgroundColor: '#E5E7EB',
   },
@@ -330,5 +337,8 @@ const styles = StyleSheet.create({
   },
   joinButtonTextActive: {
     color: colors.primary,
+  },
+  joinButtonTextRequested: {
+    color: '#B45309',
   },
 });

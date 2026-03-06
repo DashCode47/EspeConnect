@@ -9,6 +9,7 @@ import {
   SendMessageRequest,
   PlanStatus,
   PlanParticipantRole,
+  PlanParticipantStatus,
   PlanMessageType,
 } from '../types/plan.types';
 
@@ -69,6 +70,7 @@ class PlanService {
             id,
             user_id,
             role,
+            status,
             joined_at,
             left_at,
             user:profiles!user_id(id, full_name, avatar_url)
@@ -104,9 +106,11 @@ class PlanService {
       // Map and enhance plans with computed fields
       return (data || []).map(plan => {
         const mappedPlan = this.mapPlanData(plan);
-        const activeParticipants = mappedPlan.participants?.filter(p => p.left_at === null) || [];
-        const participantsCount = activeParticipants.length;
-        const isParticipating = activeParticipants.some(p => p.user_id === currentUserId);
+        const activeParticipants = mappedPlan.participants?.filter((p: any) => p.left_at === null) || [];
+        const approvedParticipants = activeParticipants.filter((p: any) => p.status === PlanParticipantStatus.APPROVED);
+        const participantsCount = approvedParticipants.length;
+        const isParticipating = approvedParticipants.some((p: any) => p.user_id === currentUserId);
+        const isRequested = !isParticipating && activeParticipants.some((p: any) => p.user_id === currentUserId && p.status === PlanParticipantStatus.PENDING);
         const isCreator = mappedPlan.creator_id === currentUserId;
         const isFull = mappedPlan.max_participants ? participantsCount >= mappedPlan.max_participants : false;
 
@@ -114,6 +118,7 @@ class PlanService {
           ...mappedPlan,
           participantsCount,
           isParticipating,
+          isRequested,
           isCreator,
           isFull,
         };
@@ -141,6 +146,7 @@ class PlanService {
             id,
             user_id,
             role,
+            status,
             joined_at,
             left_at,
             user:profiles!user_id(id, full_name, avatar_url)
@@ -156,9 +162,11 @@ class PlanService {
       const mappedPlan = this.mapPlanData(data);
 
       // Enhance with computed fields
-      const activeParticipants = mappedPlan.participants?.filter(p => p.left_at === null) || [];
-      const participantsCount = activeParticipants.length;
-      const isParticipating = activeParticipants.some(p => p.user_id === currentUserId);
+      const activeParticipants = mappedPlan.participants?.filter((p: any) => p.left_at === null) || [];
+      const approvedParticipants = activeParticipants.filter((p: any) => p.status === PlanParticipantStatus.APPROVED);
+      const participantsCount = approvedParticipants.length;
+      const isParticipating = approvedParticipants.some((p: any) => p.user_id === currentUserId);
+      const isRequested = !isParticipating && activeParticipants.some((p: any) => p.user_id === currentUserId && p.status === PlanParticipantStatus.PENDING);
       const isCreator = mappedPlan.creator_id === currentUserId;
       const isFull = mappedPlan.max_participants ? participantsCount >= mappedPlan.max_participants : false;
 
@@ -166,6 +174,7 @@ class PlanService {
         ...mappedPlan,
         participantsCount,
         isParticipating,
+        isRequested,
         isCreator,
         isFull,
       };
@@ -195,13 +204,14 @@ class PlanService {
 
       if (planError) throw planError;
 
-      // Add creator as participant
+      // Add creator as participant (always APPROVED)
       const { error: participantError } = await supabase
         .from('plan_participants')
         .insert({
           plan_id: plan.id,
           user_id: user.id,
           role: PlanParticipantRole.CREATOR,
+          status: PlanParticipantStatus.APPROVED,
         });
 
       if (participantError) throw participantError;
@@ -276,18 +286,33 @@ class PlanService {
         throw new Error('User profile not found. Please complete your profile first.');
       }
 
-      // Check if already participating
+      // Check if already participating or requested
       const { data: existing } = await supabase
         .from('plan_participants')
-        .select('id, left_at')
+        .select('id, left_at, status')
         .eq('plan_id', planId)
         .eq('user_id', user.id)
         .is('left_at', null)
         .single();
 
       if (existing) {
-        throw new Error('Already participating in this plan');
+        throw new Error(existing.status === PlanParticipantStatus.PENDING
+          ? 'Ya tienes una solicitud pendiente para este plan'
+          : 'Ya estás participando en este plan');
       }
+
+      // Fetch plan to check requires_approval
+      const { data: planData, error: planError } = await supabase
+        .from('plans')
+        .select('requires_approval')
+        .eq('id', planId)
+        .single();
+
+      if (planError) throw planError;
+
+      const status = planData.requires_approval
+        ? PlanParticipantStatus.PENDING
+        : PlanParticipantStatus.APPROVED;
 
       // Join the plan
       const { error } = await supabase
@@ -296,15 +321,18 @@ class PlanService {
           plan_id: planId,
           user_id: user.id,
           role: PlanParticipantRole.PARTICIPANT,
+          status,
         });
 
       if (error) throw error;
 
-      // Send system message
-      await this.sendMessage(planId, {
-        message: `${user.user_metadata?.name || 'Alguien'} se unió al plan`,
-        message_type: PlanMessageType.SYSTEM,
-      });
+      // Only send system message if immediately approved
+      if (status === PlanParticipantStatus.APPROVED) {
+        await this.sendMessage(planId, {
+          message: `${user.user_metadata?.name || 'Alguien'} se unió al plan`,
+          message_type: PlanMessageType.SYSTEM,
+        });
+      }
     } catch (error) {
       console.error('Error joining plan:', error);
       throw error;
@@ -548,6 +576,7 @@ class PlanService {
             id,
             user_id,
             role,
+            status,
             joined_at,
             left_at,
             user:profiles!user_id(id, full_name, avatar_url)
@@ -561,8 +590,10 @@ class PlanService {
       return (data || []).map(plan => {
         const mappedPlan = this.mapPlanData(plan);
         const activeParticipants = mappedPlan.participants?.filter((p: any) => p.left_at === null) || [];
-        const participantsCount = activeParticipants.length;
-        const isParticipating = activeParticipants.some((p: any) => p.user_id === user.id);
+        const approvedParticipants = activeParticipants.filter((p: any) => p.status === PlanParticipantStatus.APPROVED);
+        const participantsCount = approvedParticipants.length;
+        const isParticipating = approvedParticipants.some((p: any) => p.user_id === user.id);
+        const isRequested = !isParticipating && activeParticipants.some((p: any) => p.user_id === user.id && p.status === PlanParticipantStatus.PENDING);
         const isCreator = mappedPlan.creator_id === user.id;
         const isFull = mappedPlan.max_participants ? participantsCount >= mappedPlan.max_participants : false;
 
@@ -570,12 +601,38 @@ class PlanService {
           ...mappedPlan,
           participantsCount,
           isParticipating,
+          isRequested,
           isCreator,
           isFull,
         };
       });
     } catch (error) {
       console.error('Error fetching my plans:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Approve a pending participant (creator action)
+   */
+  async approveParticipant(planId: string, userId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('plan_participants')
+        .update({ status: PlanParticipantStatus.APPROVED })
+        .eq('plan_id', planId)
+        .eq('user_id', userId)
+        .eq('status', PlanParticipantStatus.PENDING)
+        .is('left_at', null);
+
+      if (error) throw error;
+
+      await this.sendMessage(planId, {
+        message: 'Un nuevo participante fue aprobado al plan',
+        message_type: PlanMessageType.SYSTEM,
+      });
+    } catch (error) {
+      console.error('Error approving participant:', error);
       throw error;
     }
   }

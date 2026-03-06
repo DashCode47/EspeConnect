@@ -6,7 +6,6 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
-  Alert,
   Modal,
   Animated,
   Platform,
@@ -29,6 +28,8 @@ import {
   getCategoryEmoji,
 } from '../../components/forms/CategoryPickerModal';
 import { ParticipantCounter } from '../../components/forms/ParticipantCounter';
+import { SuccessModal } from '../../components/modals/SuccessModal';
+import { ErrorModal } from '../../components/modals/ErrorModal';
 
 type CreatePlanNavigationProp = NativeStackNavigationProp<EventStackParamList, 'CreatePlan'>;
 
@@ -52,6 +53,10 @@ export const CreatePlanScreen = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errorModal, setErrorModal] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+
+  const showError = (message: string) => setErrorModal({ visible: true, message });
 
   // Temp picker state
   const [tempDate, setTempDate] = useState(new Date());
@@ -160,19 +165,19 @@ export const CreatePlanScreen = () => {
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'El título del plan es requerido');
+      showError('El título del plan es requerido');
       return;
     }
     if (!category) {
-      Alert.alert('Error', 'Selecciona una categoría');
+      showError('Selecciona una categoría');
       return;
     }
     if (!date) {
-      Alert.alert('Error', 'La fecha es requerida');
+      showError('La fecha es requerida');
       return;
     }
     if (!startTime) {
-      Alert.alert('Error', 'La hora es requerida');
+      showError('La hora es requerida');
       return;
     }
 
@@ -189,16 +194,12 @@ export const CreatePlanScreen = () => {
         start_time: timeStr,
         location_name: locationName.trim() || undefined,
         max_participants: maxParticipants,
+        requires_approval: manualApproval,
       });
 
-      Alert.alert('Plan creado', 'Tu plan ha sido publicado exitosamente', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      setShowSuccessModal(true);
     } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.message || 'No se pudo crear el plan. Intenta nuevamente.',
-      );
+      showError(error.message || 'No se pudo crear el plan. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -524,6 +525,26 @@ export const CreatePlanScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModal.visible}
+        message={errorModal.message}
+        onClose={() => setErrorModal({ visible: false, message: '' })}
+      />
+
+      {/* Success Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title="¡Plan publicado!"
+        message="Tu plan ha sido publicado exitosamente. ¡Otros estudiantes ya pueden unirse!"
+        buttonText="Ver mis planes"
+        icon="calendar-check"
+        onClose={() => {
+          setShowSuccessModal(false);
+          navigation.goBack();
+        }}
+      />
     </SafeAreaView>
   );
 };

@@ -74,4 +74,5 @@ export type EventStackParamList = {
   EditPlan: { planId: string };
   MyPlans: undefined;
   ManagePlanParticipants: { planId: string };
+  PlanComments: { planId: string; planTitle?: string };
 };
