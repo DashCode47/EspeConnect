@@ -10,9 +10,14 @@ export interface Establishment {
   email: string;
   imageUrl?: string;
   website?: string;
+  instagram?: string;
+  tiktok?: string;
   isActive: boolean;
+  is_active?: boolean;
   createdAt: string;
   updatedAt: string;
+  created_at: string;
+  updated_at: string;
   promotions: Promotion[];
 }
 
@@ -31,13 +36,13 @@ export const establishmentService = {
     const to = from + limit - 1;
 
     let query = supabase
-      .from('Establishment')
+      .from('establishments')
       .select(`
         *,
-        promotions:Promotion(*)
+        promotions:promotions(*)
       `, { count: 'exact' })
       .eq('isActive', true)
-      .order('createdAt', { ascending: false })
+      .order('created_at', { ascending: false })
       .range(from, to);
 
     const { data, error, count } = await query;
@@ -48,11 +53,10 @@ export const establishmentService = {
 
     let establishments = data as Establishment[];
 
-    // Filter to only establishments with active promotions if requested
     if (params?.hasActivePromotions) {
       establishments = establishments.filter(
         est => est.promotions && est.promotions.length > 0 &&
-        est.promotions.some(p => p.isActive)
+        est.promotions.some(p => p && p.isActive)
       );
     }
 
@@ -67,13 +71,12 @@ export const establishmentService = {
     };
   },
 
-  // Get a single establishment by ID
   async getEstablishmentById(establishmentId: string) {
     const { data, error } = await supabase
-      .from('Establishment')
+      .from('establishments')
       .select(`
         *,
-        promotions:Promotion(*)
+        promotions:promotions(*)
       `)
       .eq('id', establishmentId)
       .single();
@@ -88,21 +91,20 @@ export const establishmentService = {
   // Get establishments with their active promotions
   async getEstablishmentsWithPromotions() {
     const { data, error } = await supabase
-      .from('Establishment')
+      .from('establishments')
       .select(`
         *,
-        promotions:Promotion(*)
+        promotions:promotions(*)
       `)
       .eq('isActive', true)
-      .order('createdAt', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) {
       throw error;
     }
 
-    // Filter to only include establishments that have at least one active promotion
     const establishmentsWithPromotions = (data as Establishment[]).filter(
-      est => est.promotions && est.promotions.some(p => p.isActive)
+      est => est.promotions && est.promotions.some(p => p && p.isActive)
     );
 
     return establishmentsWithPromotions;

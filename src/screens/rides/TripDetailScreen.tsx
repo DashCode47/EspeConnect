@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Text,
   Image,
+  Linking,
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -35,6 +36,7 @@ export const TripDetailScreen = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -62,8 +64,16 @@ export const TripDetailScreen = () => {
   };
 
   const handleContact = () => {
-    setErrorMessage('Funcionalidad de contacto próximamente');
-    setShowErrorModal(true);
+    const raw = trip?.contactPhone;
+    if (!raw) {
+      setErrorMessage('El conductor no tiene número de contacto');
+      setShowErrorModal(true);
+      return;
+    }
+    // Convert 09XXXXXXXX → 593XXXXXXXX
+    const digits = raw.replace(/\D/g, '');
+    const international = digits.startsWith('0') ? '593' + digits.slice(1) : digits;
+    Linking.openURL(`https://wa.me/${international}`);
   };
 
   const handleReserve = () => {
@@ -194,16 +204,16 @@ export const TripDetailScreen = () => {
           <Text style={styles.driverCareer}>{trip.driver.career}</Text>
 
           {/* Action Buttons */}
-          <View style={styles.quickActions}>
+          {!isDriver && <View style={styles.quickActions}>
             <TouchableOpacity style={styles.quickActionBtn} onPress={handleContact}>
               <MaterialCommunityIcons name="chat-outline" size={18} color={colors.primary} />
               <Text style={styles.quickActionText}>Mensaje</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionBtn}>
-              <MaterialCommunityIcons name="information-outline" size={18} color={colors.primary} />
-              <Text style={styles.quickActionText}>Perfil</Text>
+            <TouchableOpacity style={styles.quickActionBtn} onPress={() => setShowSecurityModal(true)}>
+              <MaterialCommunityIcons name="shield-check-outline" size={18} color={colors.success} />
+              <Text style={styles.quickActionText}>Verificado</Text>
             </TouchableOpacity>
-          </View>
+          </View>}
         </View>
 
         {/* Route Card */}
@@ -348,52 +358,37 @@ export const TripDetailScreen = () => {
           </TouchableOpacity>
         )}
 
-        {/* Bottom spacing for fixed bar */}
-        <View style={{ height: 120 }} />
+        {/* Bottom spacing for fixed bar (only needed for passengers) */}
+        {!isDriver && <View style={{ height: 120 }} />}
       </ScrollView>
 
-      {/* Bottom Action Bar */}
-      <View style={styles.bottomBar}>
-        <View style={styles.bottomBarInner}>
-          {isDriver ? (
+      {/* Bottom Action Bar — only for passengers */}
+      {!isDriver && (
+        <View style={styles.bottomBar}>
+          <View style={styles.bottomBarInner}>
+            <View style={styles.priceContainer}>
+              <Text style={styles.priceLabel}>Precio total</Text>
+              <View style={styles.priceRow}>
+                <Text style={styles.priceValue}>
+                  ${trip.price?.toFixed(2) || '0.00'}
+                </Text>
+              </View>
+            </View>
             <TouchableOpacity
-              style={styles.confirmButton}
-              onPress={handleManageRequests}
+              style={[
+                styles.confirmButton,
+                (actionLoading || trip.availableSeats === 0) && styles.confirmButtonDisabled,
+              ]}
+              onPress={handleReserve}
+              disabled={actionLoading || trip.availableSeats === 0}
               activeOpacity={0.8}
             >
-              <Text style={styles.confirmButtonText}>
-                {pendingRequests > 0
-                  ? `Gestionar Solicitudes (${pendingRequests})`
-                  : 'Gestionar Solicitudes'}
-              </Text>
+              <Text style={styles.confirmButtonText}>Confirmar Reserva</Text>
               <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
             </TouchableOpacity>
-          ) : (
-            <>
-              <View style={styles.priceContainer}>
-                <Text style={styles.priceLabel}>Precio total</Text>
-                <View style={styles.priceRow}>
-                  <Text style={styles.priceValue}>
-                    ${trip.price?.toFixed(2) || '0.00'}
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.confirmButton,
-                  (actionLoading || trip.availableSeats === 0) && styles.confirmButtonDisabled,
-                ]}
-                onPress={handleReserve}
-                disabled={actionLoading || trip.availableSeats === 0}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.confirmButtonText}>Confirmar Reserva</Text>
-                <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
-              </TouchableOpacity>
-            </>
-          )}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Modals */}
       <ConfirmationModal
@@ -413,6 +408,14 @@ export const TripDetailScreen = () => {
         message="Tu solicitud ha sido enviada exitosamente. El conductor te notificará cuando la acepte."
         onClose={() => setShowSuccessModal(false)}
         icon="check-circle"
+      />
+
+      <SuccessModal
+        visible={showSecurityModal}
+        title="Usuario Verificado"
+        message="Este usuario es un estudiante. Por tu seguridad, solo los estudiantes están autorizados para crear viajes."
+        onClose={() => setShowSecurityModal(false)}
+        icon="shield-check"
       />
 
       <ErrorModal

@@ -5,6 +5,7 @@ import { EventsScreen } from '../screens/events/EventsScreen';
 import { EventDetailScreen } from '../screens/events/EventDetailScreen';
 import { CreateEventScreen } from '../screens/events/CreateEventScreen';
 import { CreatePlanScreen } from '../screens/events/CreatePlanScreen';
+import { EditPlanScreen } from '../screens/events/EditPlanScreen';
 import { MyPlansScreen } from '../screens/events/MyPlansScreen';
 import { ManagePlanParticipantsScreen } from '../screens/events/ManagePlanParticipantsScreen';
 
@@ -17,6 +18,7 @@ export const EventStack = () => {
       <Stack.Screen name="EventDetail" component={EventDetailScreen} />
       <Stack.Screen name="CreateEvent" component={CreateEventScreen} />
       <Stack.Screen name="CreatePlan" component={CreatePlanScreen} />
+      <Stack.Screen name="EditPlan" component={EditPlanScreen} />
       <Stack.Screen name="MyPlans" component={MyPlansScreen} />
       <Stack.Screen name="ManagePlanParticipants" component={ManagePlanParticipantsScreen} />
     </Stack.Navigator>

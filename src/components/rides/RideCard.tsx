@@ -124,13 +124,15 @@ export const RideCard = ({ ride, onJoinPress }: RideCardProps) => {
             )}
           </View>
 
-          <TouchableOpacity
-            style={styles.joinButton}
-            onPress={() => onJoinPress?.(ride.id)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.joinButtonText}>Unirme</Text>
-          </TouchableOpacity>
+          {onJoinPress && (
+            <TouchableOpacity
+              style={styles.joinButton}
+              onPress={() => onJoinPress(ride.id)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.joinButtonText}>Unirme</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>

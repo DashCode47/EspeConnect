@@ -50,10 +50,10 @@ export const CreateTripScreen = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [createdTripId, setCreatedTripId] = useState<string | null>(null);
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleColor, setVehicleColor] = useState<{ name: string; color: string }>({ name: 'Blanco', color: '#FFFFFF' });
   const [vehiclePlate, setVehiclePlate] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
 
   const vehicleColors = [
@@ -189,12 +189,12 @@ export const CreateTripScreen = () => {
 
     try {
       setLoading(true);
-      const response = await tripService.createTrip({
+      await tripService.createTrip({
         ...formData,
         notes: formData.notes || undefined,
         price: priceValue && parseFloat(priceValue) > 0 ? parseFloat(priceValue) : undefined,
+        contactPhone: contactPhone.trim() || undefined,
       });
-      setCreatedTripId(response.data.trip.id);
       setShowSuccessModal(true);
     } catch (error: any) {
       console.error('Error creating trip:', error);
@@ -307,6 +307,16 @@ export const CreateTripScreen = () => {
               placeholderTextColor="#999"
               value={vehicleModel}
               onChangeText={setVehicleModel}
+            />
+
+            <Text style={styles.vehicleLabel}>Teléfono de contacto</Text>
+            <TextInput
+              style={styles.vehicleInput}
+              placeholder="Ej. +593 99 999 9999"
+              placeholderTextColor="#999"
+              value={contactPhone}
+              onChangeText={setContactPhone}
+              keyboardType="phone-pad"
             />
 
             <View style={styles.vehicleRow}>
@@ -769,11 +779,7 @@ export const CreateTripScreen = () => {
         message="Tu viaje ha sido creado exitosamente y ya está disponible para otros usuarios."
         onClose={() => {
           setShowSuccessModal(false);
-          if (createdTripId) {
-            navigation.navigate('TripDetail', { tripId: createdTripId });
-          } else {
-            navigation.goBack();
-          }
+          navigation.navigate('RidesList', { initialTab: 'offer' });
         }}
         icon="check-circle"
       />

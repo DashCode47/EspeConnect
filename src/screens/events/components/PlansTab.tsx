@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../../../config/colors';
 import { FONT_FAMILY } from '../../../config/globalStyles';
 import { Plan, PlanCategory, PlanStatus } from '../../../types/plan.types';
@@ -180,11 +181,16 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
           </View>
           {onMyPlansPress && (
             <TouchableOpacity
-              style={styles.myPlansButton}
               onPress={onMyPlansPress}
-              activeOpacity={0.7}>
-              <MaterialCommunityIcons name="account-circle-outline" size={20} color={colors.primary} />
-              <Text style={styles.myPlansButtonText}>Mis Planes</Text>
+              activeOpacity={0.8}>
+              <LinearGradient
+                colors={[colors.accent, '#f59e0b']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.myPlansButton}>
+                <MaterialCommunityIcons name="star-face" size={20} color={colors.primaryDark} />
+                <Text style={styles.myPlansButtonText}>Mis Planes</Text>
+              </LinearGradient>
             </TouchableOpacity>
           )}
         </View>
@@ -219,17 +225,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: `${colors.primary}10`,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: `${colors.primary}30`,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
   },
   myPlansButtonText: {
     fontSize: 13,
     fontFamily: FONT_FAMILY.BOLD,
-    color: colors.primary,
+    color: colors.primaryDark,
   },
   sectionTitle: {
     fontSize: 24,

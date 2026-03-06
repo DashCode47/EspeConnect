@@ -19,26 +19,15 @@ import { authService } from '../../services/auth.service';
 import { AuthStackParamList } from '../../navigation/types';
 import { colors } from '../../config/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CAREER_LIST } from '../../types/career.types';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
 const AVAILABLE_INTERESTS = [
-  'Fútbol',
-
-  'Vóley',
-  'Gym',
-  'Fiestas',
-  'Karaoke',
-  'Café',
-  'Robótica',
-  'Software',
-  'Investigación',
-  'Aventura',
-  'Ciclismo',
-  'Crossfit',
-  'Carpool',
-  'Novatadas',
-  'Eventos',
+  'Música', 'Videojuegos', 'Deportes', 'Cine',
+  'Tecnología', 'Conocer gente', 'Fiestas', 'Gimnasio',
+  'Comida', 'Robótica', 'Arte', 'Lectura',
+  'Fotografía', 'Viajes', 'Emprendimiento', 'Voluntariado'
 ];
 
 const GENDER_OPTIONS = [
@@ -59,6 +48,8 @@ export const RegisterScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showGenderModal, setShowGenderModal] = useState(false);
+  const [showCareerModal, setShowCareerModal] = useState(false);
+  const [careerSearch, setCareerSearch] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -133,7 +124,7 @@ export const RegisterScreen = () => {
           showsVerticalScrollIndicator={true}
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled={true}>
-          
+
           {/* Title */}
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Registrarte</Text>
@@ -158,22 +149,24 @@ export const RegisterScreen = () => {
             />
           </View>
 
-          {/* Faculty Input */}
-          <View style={styles.inputContainer}>
-            <MaterialCommunityIcons
-              name="school-outline"
-              size={20}
-              color="#999"
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Facultad"
-              placeholderTextColor="#999"
-              value={faculty}
-              onChangeText={setFaculty}
-              autoCapitalize="words"
-            />
+          {/* Career Selector */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Carrera</Text>
+            <TouchableOpacity
+              style={styles.inputContainer}
+              onPress={() => setShowCareerModal(true)}
+              activeOpacity={0.7}>
+              <MaterialCommunityIcons
+                name="school-outline"
+                size={20}
+                color="#999"
+                style={styles.inputIcon}
+              />
+              <Text style={[styles.input, !faculty && styles.placeholder]}>
+                {faculty || 'Seleccionar carrera'}
+              </Text>
+              <MaterialCommunityIcons name="chevron-down" size={24} color="#999" />
+            </TouchableOpacity>
           </View>
 
           {/* Email Input */}
@@ -342,6 +335,76 @@ export const RegisterScreen = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Career Modal */}
+      <Modal
+        visible={showCareerModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setShowCareerModal(false);
+          setCareerSearch('');
+        }}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { height: '80%', paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleccionar Carrera</Text>
+              <TouchableOpacity onPress={() => {
+                setShowCareerModal(false);
+                setCareerSearch('');
+              }}>
+                <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input */}
+            <View style={[styles.inputContainer, { marginBottom: 15, backgroundColor: '#F8FAFC' }]}>
+              <MaterialCommunityIcons name="magnify" size={20} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Buscar carrera..."
+                placeholderTextColor="#999"
+                value={careerSearch}
+                onChangeText={setCareerSearch}
+                autoCorrect={false}
+              />
+              {careerSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setCareerSearch('')}>
+                  <MaterialCommunityIcons name="close-circle" size={18} color="#999" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {CAREER_LIST
+                .filter(c => c.toLowerCase().includes(careerSearch.toLowerCase()))
+                .map((career) => (
+                  <TouchableOpacity
+                    key={career}
+                    style={styles.modalOption}
+                    onPress={() => {
+                      setFaculty(career);
+                      setShowCareerModal(false);
+                      setCareerSearch('');
+                    }}>
+                    <Text style={[
+                      styles.modalOptionText,
+                      faculty === career && { color: colors.primary, fontWeight: '700' }
+                    ]}>{career}</Text>
+                    {faculty === career && (
+                      <MaterialCommunityIcons name="check" size={24} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              {CAREER_LIST.filter(c => c.toLowerCase().includes(careerSearch.toLowerCase())).length === 0 && (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text style={{ color: '#999' }}>No se encontraron carreras</Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Gender Modal */}
       <Modal

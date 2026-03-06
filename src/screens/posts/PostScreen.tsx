@@ -169,27 +169,27 @@ export const PostScreen = () => {
             tintColor={colors.primary}
           />
         }
-        ListHeaderComponent={
-          <>
-            {/* Promotional Banner */}
-            <LinearGradient
-              colors={['rgba(16, 90, 57, 0.2)', 'rgba(16, 90, 57, 0.4)', '#105A39', '#16965D', 'rgba(22, 150, 93, 0.4)', 'rgba(22, 150, 93, 0.2)']}
-              locations={[0, 0.15, 0.3, 0.7, 0.85, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.promoBanner}>
-              <Text style={styles.promoBannerText}>
-                Ofertas Especiales para Estudiantes - ¡Ahorra en tu semestre!
-              </Text>
-            </LinearGradient>
+        // ListHeaderComponent={
+        //   <>
+        //     {/* Promotional Banner */}
+        //     <LinearGradient
+        //       colors={['rgba(16, 90, 57, 0.2)', 'rgba(16, 90, 57, 0.4)', '#105A39', '#16965D', 'rgba(22, 150, 93, 0.4)', 'rgba(22, 150, 93, 0.2)']}
+        //       locations={[0, 0.15, 0.3, 0.7, 0.85, 1]}
+        //       start={{ x: 0, y: 0 }}
+        //       end={{ x: 1, y: 0 }}
+        //       style={styles.promoBanner}>
+        //       <Text style={styles.promoBannerText}>
+        //         Ofertas Especiales para Estudiantes - ¡Ahorra en tu semestre!
+        //       </Text>
+        //     </LinearGradient>
 
-            {/* Products Near You Section */}
-            <View style={styles.sectionHeader}>
-              <MaterialCommunityIcons name="map-marker" size={18} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Productos Cerca de Ti</Text>
-            </View>
-          </>
-        }
+        //     {/* Products Near You Section */}
+        //     <View style={styles.sectionHeader}>
+        //       <MaterialCommunityIcons name="map-marker" size={18} color={colors.primary} />
+        //       <Text style={styles.sectionTitle}>Productos Cerca de Ti</Text>
+        //     </View>
+        //   </>
+        // }
         ListFooterComponent={<View style={{ height: 100 }} />}
       />
     );
@@ -250,7 +250,7 @@ export const PostScreen = () => {
               onPress={() => navigation.goBack()}>
               <MaterialCommunityIcons name="chevron-left" size={24} color={colors.white} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Market</Text>
+            <Text style={styles.headerTitle}>Marketplace</Text>
             <View style={styles.headerRight}>
               <TouchableOpacity style={styles.notificationButton}>
                 <MaterialCommunityIcons name="bell" size={20} color={colors.white} />
@@ -276,9 +276,9 @@ export const PostScreen = () => {
                 onChangeText={setSearchQuery}
               />
             </View>
-            <TouchableOpacity style={styles.filterButton}>
+            {/* <TouchableOpacity style={styles.filterButton}>
               <MaterialCommunityIcons name="tune" size={20} color={colors.white} />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </View>
 
@@ -332,7 +332,7 @@ export const PostScreen = () => {
   return (
     <View style={styles.container}>
       <Appbar.Header style={styles.header}>
-        <Appbar.Content title="Posts" titleStyle={{color: '#000000'}} />
+        <Appbar.Content title="Posts" titleStyle={{ color: '#000000' }} />
         <Appbar.Action icon="plus" onPress={handleCreatePost} iconColor="#FFFFFF" />
       </Appbar.Header>
 

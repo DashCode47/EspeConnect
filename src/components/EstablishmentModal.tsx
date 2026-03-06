@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Svg, Path } from 'react-native-svg';
 import { colors } from '../config/colors';
 import { Establishment } from '../services/establishment.service';
 
@@ -20,12 +21,23 @@ interface EstablishmentModalProps {
   establishment: Establishment;
 }
 
+const TikTokIcon = ({ size = 24, color = "#000" }: { size?: number, color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M19.589 6.686a4.793 4.793 0 0 1-3.288-1.442 4.832 4.832 0 0 1-1.301-3.244h-3.049v13.791a2.894 2.894 0 1 1-3.111-2.873c.129-.001.258.006.386.021v-3.16a5.952 5.952 0 1 0 4.167 4.195l.001-8.156A7.835 7.835 0 0 0 19.589 9.3V6.686z"
+      fill={color}
+    />
+  </Svg>
+);
+
 const EstablishmentModal: React.FC<EstablishmentModalProps> = ({
   visible,
   onClose,
   establishment,
 }) => {
   const insets = useSafeAreaInsets();
+
+  if (!establishment) return null;
 
   // Get category from first promotion if available
   const getCategory = () => {
@@ -45,8 +57,10 @@ const EstablishmentModal: React.FC<EstablishmentModalProps> = ({
 
   const handleWhatsAppPress = () => {
     if (establishment.phone) {
-      const phoneNumber = establishment.phone.replace(/\D/g, '');
-      Linking.openURL(`whatsapp://send?phone=${phoneNumber}`);
+      // Convert 09XXXXXXXX → 593XXXXXXXX
+      const digits = establishment.phone.replace(/\D/g, '');
+      const international = digits.startsWith('0') ? '593' + digits.slice(1) : digits;
+      Linking.openURL(`https://wa.me/${international}`);
     }
   };
 
@@ -56,12 +70,20 @@ const EstablishmentModal: React.FC<EstablishmentModalProps> = ({
     }
   };
 
-  const handleLocationPress = () => {
-    if (establishment.address) {
-      const encodedAddress = encodeURIComponent(establishment.address);
-      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`);
+  const handleInstagramPress = () => {
+    if (establishment.instagram) {
+      const username = establishment.instagram.replace('@', '');
+      Linking.openURL(`https://instagram.com/${username}`);
     }
   };
+
+  const handleTikTokPress = () => {
+    if (establishment.tiktok) {
+      const username = establishment.tiktok.replace('@', '');
+      Linking.openURL(`https://www.tiktok.com/@${username}`);
+    }
+  };
+
 
   const category = getCategory();
 
@@ -136,67 +158,58 @@ const EstablishmentModal: React.FC<EstablishmentModalProps> = ({
             )}
 
             {/* Social Media Row */}
-            <View style={styles.socialRow}>
-              {/* Instagram - Placeholder for future implementation */}
-              <TouchableOpacity
-                style={styles.socialButton}
-                activeOpacity={0.7}
-                disabled={true}>
-                <View style={[styles.socialIconContainer, styles.instagramBg]}>
-                  <MaterialCommunityIcons name="instagram" size={28} color="#E1306C" />
-                </View>
-                <Text style={styles.socialLabel}>Instagram</Text>
-              </TouchableOpacity>
+            {(establishment.instagram || establishment.phone || establishment.website || establishment.tiktok) && (
+              <View style={styles.socialRow}>
+                {establishment.instagram && (
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={handleInstagramPress}
+                    activeOpacity={0.7}>
+                    <View style={[styles.socialIconContainer, styles.instagramBg]}>
+                      <MaterialCommunityIcons name="instagram" size={28} color="#E1306C" />
+                    </View>
+                    <Text style={styles.socialLabel}>Instagram</Text>
+                  </TouchableOpacity>
+                )}
 
-              {/* WhatsApp */}
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={handleWhatsAppPress}
-                activeOpacity={0.7}
-                disabled={!establishment.phone}>
-                <View
-                  style={[
-                    styles.socialIconContainer,
-                    styles.whatsappBg,
-                    !establishment.phone && styles.disabledButton,
-                  ]}>
-                  <MaterialCommunityIcons name="whatsapp" size={28} color="#25D366" />
-                </View>
-                <Text style={styles.socialLabel}>WhatsApp</Text>
-              </TouchableOpacity>
+                {establishment.phone && (
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={handleWhatsAppPress}
+                    activeOpacity={0.7}>
+                    <View style={[styles.socialIconContainer, styles.whatsappBg]}>
+                      <MaterialCommunityIcons name="whatsapp" size={28} color="#25D366" />
+                    </View>
+                    <Text style={styles.socialLabel}>WhatsApp</Text>
+                  </TouchableOpacity>
+                )}
 
-              {/* Website */}
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={handleWebsitePress}
-                activeOpacity={0.7}
-                disabled={!establishment.website}>
-                <View
-                  style={[
-                    styles.socialIconContainer,
-                    styles.websiteBg,
-                    !establishment.website && styles.disabledButton,
-                  ]}>
-                  <MaterialCommunityIcons name="web" size={28} color="#3B82F6" />
-                </View>
-                <Text style={styles.socialLabel}>Web</Text>
-              </TouchableOpacity>
-            </View>
+                {establishment.website && (
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={handleWebsitePress}
+                    activeOpacity={0.7}>
+                    <View style={[styles.socialIconContainer, styles.websiteBg]}>
+                      <MaterialCommunityIcons name="web" size={28} color="#3B82F6" />
+                    </View>
+                    <Text style={styles.socialLabel}>Web</Text>
+                  </TouchableOpacity>
+                )}
 
-            {/* Primary Action Button */}
-            <View style={styles.ctaContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.ctaButton,
-                  !establishment.address && styles.ctaButtonDisabled,
-                ]}
-                onPress={handleLocationPress}
-                activeOpacity={0.9}
-                disabled={!establishment.address}>
-                <MaterialCommunityIcons name="map-marker" size={24} color="#111814" />
-                <Text style={styles.ctaButtonText}>Ir al local</Text>
-              </TouchableOpacity>
-            </View>
+                {establishment.tiktok && (
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={handleTikTokPress}
+                    activeOpacity={0.7}>
+                    <View style={[styles.socialIconContainer, styles.tiktokBg]}>
+                      <TikTokIcon size={24} color="#000000" />
+                    </View>
+                    <Text style={styles.socialLabel}>TikTok</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
           </View>
         </Pressable>
       </Pressable>
@@ -316,7 +329,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 16,
+    gap: 12,
   },
   socialButton: {
     flex: 1,
@@ -342,42 +355,13 @@ const styles = StyleSheet.create({
   websiteBg: {
     backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
-  disabledButton: {
-    opacity: 0.3,
+  tiktokBg: {
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   socialLabel: {
     fontSize: 12,
     fontWeight: '600',
     color: '#6B7280',
-  },
-  ctaContainer: {
-    paddingTop: 8,
-  },
-  ctaButton: {
-    width: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  ctaButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  ctaButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111814',
   },
 });
 

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  Alert,
   TouchableOpacity,
   Image,
   Text,
@@ -40,6 +39,8 @@ export const CreatePostScreen = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const navigation = useNavigation<CreatePostScreenNavigationProp>();
 
   useHideNavbar(true);
@@ -57,7 +58,7 @@ export const CreatePostScreen = () => {
       }
 
       if (result.errorCode) {
-        Alert.alert('Error', 'No se pudo acceder a las imágenes. Verifica los permisos de la aplicación.');
+        showError('No se pudo acceder a las imágenes. Verifica los permisos de la aplicación.');
         return;
       }
 
@@ -68,15 +69,15 @@ export const CreatePostScreen = () => {
           type: asset.type ?? 'image/jpeg',
           fileName: asset.fileName ?? `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`,
         }));
-        
+
         if (imagesToAdd.length > 0) {
           setImages([...images, ...imagesToAdd]);
         } else {
-          Alert.alert('Información', 'Ya has seleccionado el máximo de 4 imágenes');
+          showError('Ya has seleccionado el máximo de 4 imágenes');
         }
       }
     } catch (error: any) {
-      Alert.alert('Error', 'Ocurrió un error al seleccionar las imágenes. Intenta nuevamente.');
+      showError('Ocurrió un error al seleccionar las imágenes. Intenta nuevamente.');
       console.error('Error selecting images:', error);
     }
   };
@@ -85,24 +86,29 @@ export const CreatePostScreen = () => {
     setImages(images.filter((_, i) => i !== index));
   };
 
+  const showError = (message: string) => {
+    setErrorMessage(message);
+    setShowErrorModal(true);
+  };
+
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim() || !category.trim()) {
-      Alert.alert('Error', 'Por favor completa todos los campos requeridos');
+      showError('Por favor completa todos los campos requeridos');
       return;
     }
 
     if (!price.trim()) {
-      Alert.alert('Error', 'El precio es requerido');
+      showError('El precio es requerido');
       return;
     }
 
     if (!phoneNumber.trim()) {
-      Alert.alert('Error', 'El número de contacto es requerido');
+      showError('El número de contacto es requerido');
       return;
     }
 
     if (images.length === 0) {
-      Alert.alert('Error', 'Por favor selecciona al menos una imagen');
+      showError('Por favor selecciona al menos una imagen');
       return;
     }
 
@@ -110,39 +116,35 @@ export const CreatePostScreen = () => {
       setLoading(true);
       // Construir el contenido con toda la información
       const fullContent = `${description.trim()}\n\nPrecio: ${currency} $${price}\nCategoría: ${category}\nContacto: ${phoneNumber}`;
-      
+
       // Crear FormData para enviar la imagen
       const formData = new FormData();
       formData.append('title', title.trim());
       formData.append('content', fullContent);
       formData.append('type', 'MARKETPLACE');
-      
+
       // Agregar la primera imagen (principal)
       if (images[0]) {
-        const imageUri = Platform.OS === 'android' 
-          ? images[0].uri 
+        const imageUri = Platform.OS === 'android'
+          ? images[0].uri
           : images[0].uri.replace('file://', '');
-        
+
         formData.append('image', {
           uri: imageUri,
           type: images[0].type || 'image/jpeg',
           name: images[0].fileName || `marketplace_${Date.now()}.jpg`,
         } as any);
       }
-      
+
       await postService.createPost(formData);
       setShowSuccessModal(true);
     } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || 'No se pudo crear la publicación. Intenta nuevamente.'
-      );
+      showError(error.response?.data?.message || 'No se pudo crear la publicación. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
   };
 
-  const currencies = ['USD', 'EUR', 'PEN'];
   const paymentMethods = ['Todas', 'Efectivo', 'Transferencia', 'Tarjeta'];
   const categories = ['Tecnología', 'Libros', 'Ropa', 'Servicios', 'Otros'];
 
@@ -171,7 +173,7 @@ export const CreatePostScreen = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        
+
         {/* Título Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Título</Text>
@@ -351,20 +353,19 @@ export const CreatePostScreen = () => {
                 <MaterialCommunityIcons name="close" size={24} color="#131413" />
               </TouchableOpacity>
             </View>
-            {currencies.map((curr) => (
-              <TouchableOpacity
-                key={curr}
-                style={styles.modalOption}
-                onPress={() => {
-                  setCurrency(curr);
-                  setShowCurrencyModal(false);
-                }}>
-                <Text style={styles.modalOptionText}>{curr}</Text>
-                {currency === curr && (
-                  <MaterialCommunityIcons name="check" size={24} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
+
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={() => {
+                setCurrency('USD');
+                setShowCurrencyModal(false);
+              }}>
+              <Text style={styles.modalOptionText}>USD</Text>
+
+              <MaterialCommunityIcons name="check" size={24} color={colors.primary} />
+
+            </TouchableOpacity>
+
           </View>
         </View>
       </Modal>
@@ -429,6 +430,29 @@ export const CreatePostScreen = () => {
                 )}
               </TouchableOpacity>
             ))}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal
+        visible={showErrorModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowErrorModal(false)}>
+        <View style={styles.successModalOverlay}>
+          <View style={styles.successModalContent}>
+            <View style={styles.successIconContainer}>
+              <MaterialCommunityIcons name="alert-circle" size={64} color={colors.error} />
+            </View>
+            <Text style={styles.successTitle}>Error</Text>
+            <Text style={styles.successMessage}>{errorMessage}</Text>
+            <TouchableOpacity
+              style={[styles.successButton, { backgroundColor: colors.error }]}
+              onPress={() => setShowErrorModal(false)}
+              activeOpacity={0.8}>
+              <Text style={styles.successButtonText}>Entendido</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

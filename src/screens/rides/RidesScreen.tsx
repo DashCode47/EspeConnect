@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../config/colors';
@@ -27,6 +27,7 @@ type TravelMode = 'search' | 'offer';
 
 export const RidesScreen = () => {
   const navigation = useNavigation<RidesScreenNavigationProp>();
+  const route = useRoute<any>();
   const insets = useSafeAreaInsets();
   const { profile, fetchProfile } = useUserStore();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -36,7 +37,7 @@ export const RidesScreen = () => {
   const [destination, setDestination] = useState('');
   const [myTrips, setMyTrips] = useState<Trip[]>([]);
   const [loadingMyTrips, setLoadingMyTrips] = useState(false);
-  const [travelMode, setTravelMode] = useState<TravelMode>('search');
+  const [travelMode, setTravelMode] = useState<TravelMode>(route.params?.initialTab ?? 'search');
 
   useEffect(() => {
     if (!profile) {
@@ -44,11 +45,7 @@ export const RidesScreen = () => {
     }
   }, []);
 
-  useEffect(() => {
-    if (profile?.id) {
-      fetchTrips();
-    }
-  }, [profile?.id]);
+  // Initial fetch handled by the travelMode/profile useEffect below
 
   const fetchTrips = async () => {
     try {
@@ -57,10 +54,13 @@ export const RidesScreen = () => {
         page: 1,
         limit: 20,
       });
-      let filteredTrips = response.data.trips;
+      const now = new Date();
+      let filteredTrips = response.data.trips.filter(
+        (trip) => new Date(trip.departureTime) > now
+      );
 
-      // Filtrar viajes creados por el usuario actual si tenemos el ID
-      if (profile?.id && travelMode === 'search') {
+      // Filtrar viajes creados por el usuario actual
+      if (profile?.id) {
         filteredTrips = filteredTrips.filter((trip) => trip.driverId !== profile.id);
       }
 
@@ -91,8 +91,11 @@ export const RidesScreen = () => {
         page: 1,
         limit: 20,
       });
-      // Filter only trips created by the current user
-      const userTrips = response.data.trips.filter((trip) => trip.driverId === profile.id);
+      // Filter only trips created by the current user and not expired
+      const now = new Date();
+      const userTrips = response.data.trips.filter(
+        (trip) => trip.driverId === profile.id && new Date(trip.departureTime) > now
+      );
       setMyTrips(userTrips);
     } catch (error) {
       console.error('Error fetching my trips:', error);
@@ -103,19 +106,29 @@ export const RidesScreen = () => {
     }
   };
 
-  // When switching to offer mode, fetch user's trips
+  // When switching modes, fetch the appropriate trips
   useEffect(() => {
-    if (travelMode === 'offer' && profile?.id) {
+    if (!profile?.id) return;
+    if (travelMode === 'offer') {
       fetchMyTrips();
+    } else {
+      fetchTrips();
     }
   }, [travelMode, profile?.id]);
+
+  const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const filteredTrips = trips.filter((trip) => {
+    const originMatch = !origin || normalize(trip.origin).includes(normalize(origin));
+    const destMatch = !destination || normalize(trip.destination).includes(normalize(destination));
+    return originMatch && destMatch;
+  });
 
   const handleCreateTrip = () => {
     navigation.navigate('CreateTrip');
   };
 
   const handleSearchTrips = () => {
-    // Navegar a resultados de búsqueda o filtrar
     fetchTrips();
   };
 
@@ -152,10 +165,10 @@ export const RidesScreen = () => {
 
   const formatCurrentDate = () => {
     const today = new Date();
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'short', 
-      day: 'numeric', 
-      month: 'short' 
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short'
     };
     const formatted = today.toLocaleDateString('es-ES', options);
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
@@ -195,7 +208,7 @@ export const RidesScreen = () => {
         onPress={() => !isFull && handleTripPress(trip.id)}
         activeOpacity={isFull ? 1 : 0.7}
         disabled={isFull}>
-        
+
         {/* Full overlay */}
         {isFull && (
           <View style={styles.fullOverlay}>
@@ -234,9 +247,9 @@ export const RidesScreen = () => {
               <Text style={styles.driverCareer}>{trip.driver.career || 'Estudiante'}</Text>
             </View>
           </View>
-          
+
           <View style={[
-            styles.priceBadge, 
+            styles.priceBadge,
             isFull && styles.priceBadgeFull,
             { transform: [{ rotate: index % 2 === 0 ? '-2deg' : '1deg' }] }
           ]}>
@@ -257,7 +270,7 @@ export const RidesScreen = () => {
               {formatEstimatedArrival(trip.departureTime)}
             </Text>
           </View>
-          
+
           <View style={[styles.routeContainer, isFull && styles.routeContainerFull]}>
             <View style={styles.routeItem}>
               <View style={[styles.routeDot, styles.routeDotOrigin, isFull && styles.routeDotFull]} />
@@ -289,7 +302,7 @@ export const RidesScreen = () => {
               {seatsInfo.text}
             </Text>
           </View>
-          
+
           <TouchableOpacity
             style={[styles.reserveButton, isFull && styles.reserveButtonDisabled]}
             onPress={() => !isFull && handleReserve(trip.id)}
@@ -360,7 +373,7 @@ export const RidesScreen = () => {
             <View style={styles.searchCard}>
               {/* Decorative blob */}
               <View style={styles.decorativeBlob} />
-              
+
               <View style={styles.searchCardContent}>
                 {/* Origin Input */}
                 <View style={styles.inputContainer}>
@@ -431,7 +444,7 @@ export const RidesScreen = () => {
               </View>
             ) : (
               <View style={styles.tripsList}>
-                {trips.map((trip, index) => renderTripCard(trip, index))}
+                {filteredTrips.map((trip, index) => renderTripCard(trip, index))}
               </View>
             )}
 
@@ -459,11 +472,11 @@ export const RidesScreen = () => {
               <View style={styles.heroBlob1} />
               <View style={styles.heroBlob2} />
               <View style={styles.heroBlob3} />
-              
+
               <View style={styles.heroContent}>
                 <Text style={styles.heroTitle}>¿A dónde vas hoy?</Text>
                 <Text style={styles.heroSubtitle}>Comparte tu ruta y reduce costos.</Text>
-                
+
                 <TouchableOpacity
                   style={styles.publishButton}
                   onPress={handleCreateTrip}
@@ -505,7 +518,18 @@ export const RidesScreen = () => {
                     <View style={styles.activeRouteHeader}>
                       <View style={styles.activeRouteTimeContainer}>
                         <Text style={styles.activeRouteTimeLabel}>
-                          {new Date(trip.departureTime).toDateString() === new Date().toDateString() ? 'Salida' : 'Mañana'}
+                          {(() => {
+                            const tripDate = new Date(trip.departureTime);
+                            const today = new Date();
+                            const tomorrow = new Date();
+                            tomorrow.setDate(today.getDate() + 1);
+
+                            if (tripDate.toDateString() === today.toDateString()) return 'Hoy';
+                            if (tripDate.toDateString() === tomorrow.toDateString()) return 'Mañana';
+
+                            const options: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' };
+                            return tripDate.toLocaleDateString('es-ES', options);
+                          })()}
                         </Text>
                         <View style={styles.activeRouteTime}>
                           <Text style={styles.activeRouteTimeValue}>{formatTime(trip.departureTime)}</Text>
@@ -514,7 +538,7 @@ export const RidesScreen = () => {
                           </Text>
                         </View>
                       </View>
-                      
+
                       <View style={[
                         styles.activeRouteStatus,
                         (trip.requests?.filter(r => r.status === 'ACCEPTED').length ?? 0) > 0
@@ -588,12 +612,17 @@ export const RidesScreen = () => {
                           }
                         })()}
                       </View>
-                      <TouchableOpacity
-                        onPress={() => navigation.navigate('ManageTripRequests', { tripId: trip.id })}>
-                        <Text style={styles.manageText}>
-                          {(trip.requests?.filter(r => r.status === 'ACCEPTED').length ?? 0) > 0 ? 'Gestionar' : 'Editar'}
-                        </Text>
-                      </TouchableOpacity>
+                      {(trip.requests?.filter(r => r.status === 'ACCEPTED').length ?? 0) > 0 ? (
+                        <TouchableOpacity
+                          onPress={() => navigation.navigate('ManageTripRequests', { tripId: trip.id })}>
+                          <Text style={styles.manageText}>Gestionar</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          onPress={() => navigation.navigate('EditTrip', { tripId: trip.id })}>
+                          <Text style={styles.manageText}>Editar</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -611,7 +640,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F6F8F7', // background-light
   },
-  
+
   // Header
   header: {
     flexDirection: 'row',
@@ -644,7 +673,7 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 40,
   },
-  
+
   // Toggle
   toggleContainer: {
     paddingHorizontal: 16,
@@ -689,7 +718,7 @@ const styles = StyleSheet.create({
   toggleTextActive: {
     color: colors.white,
   },
-  
+
   // Search Card
   searchCard: {
     marginHorizontal: 16,
@@ -764,7 +793,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.BOLD,
     color: colors.white,
   },
-  
+
   // Section Header
   sectionHeader: {
     flexDirection: 'row',
@@ -797,7 +826,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.MEDIUM,
     color: '#9CA3AF',
   },
-  
+
   // Trip Cards
   tripsList: {
     paddingHorizontal: 16,
@@ -837,7 +866,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.BOLD,
     color: colors.white,
   },
-  
+
   // Trip Card Header
   tripCardHeader: {
     flexDirection: 'row',
@@ -936,7 +965,7 @@ const styles = StyleSheet.create({
   priceTextFull: {
     color: '#9CA3AF',
   },
-  
+
   // Route Timeline
   routeTimeline: {
     flexDirection: 'row',
@@ -1005,7 +1034,7 @@ const styles = StyleSheet.create({
   textMuted: {
     color: '#9CA3AF',
   },
-  
+
   // Trip Card Footer
   tripCardFooter: {
     flexDirection: 'row',
@@ -1045,7 +1074,7 @@ const styles = StyleSheet.create({
   reserveButtonTextDisabled: {
     color: '#9CA3AF',
   },
-  
+
   // Scroll
   scrollView: {
     flex: 1,
@@ -1053,7 +1082,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
   },
-  
+
   // Loading & Empty states
   loadingContainer: {
     paddingVertical: 60,
@@ -1094,7 +1123,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.BOLD,
     color: colors.white,
   },
-  
+
   // My Trips Card
   myTripsCard: {
     flexDirection: 'row',

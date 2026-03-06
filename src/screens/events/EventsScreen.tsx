@@ -487,69 +487,69 @@ export const EventsScreen = () => {
           <>
             {/* Featured Section */}
             {featuredEvents.length > 0 && (
-          <View style={styles.featuredSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Próximamente</Text>
-              {/* <TouchableOpacity>
+              <View style={styles.featuredSection}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Próximamente</Text>
+                  {/* <TouchableOpacity>
                 <Text style={styles.seeAllText}>Ver todo</Text>
               </TouchableOpacity> */}
-            </View>
+                </View>
 
-            <FlatList
-              ref={featuredScrollRef}
-              data={featuredEvents}
-              renderItem={renderFeaturedCard}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featuredList}
-              snapToInterval={FEATURED_CARD_WIDTH + 16}
-              decelerationRate="fast"
-            />
-          </View>
-        )}
+                <FlatList
+                  ref={featuredScrollRef}
+                  data={featuredEvents}
+                  renderItem={renderFeaturedCard}
+                  keyExtractor={(item) => item.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.featuredList}
+                  snapToInterval={FEATURED_CARD_WIDTH + 16}
+                  decelerationRate="fast"
+                />
+              </View>
+            )}
 
-        {/* Weekly Calendar Strip */}
-        {calendarDays.length > 0 && (
-          <View style={styles.calendarSection}>
-            <Text style={styles.calendarTitle}>Calendario Semanal</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.calendarContainer}>
-              {calendarDays.map(renderCalendarDay)}
-            </ScrollView>
-          </View>
-        )}
+            {/* Weekly Calendar Strip */}
+            {calendarDays.length > 0 && (
+              <View style={styles.calendarSection}>
+                <Text style={styles.calendarTitle}>Calendario Semanal</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.calendarContainer}>
+                  {calendarDays.map(renderCalendarDay)}
+                </ScrollView>
+              </View>
+            )}
 
-        {/* Events Feed */}
-        <View style={styles.eventsSection}>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Cargando eventos...</Text>
+            {/* Events Feed */}
+            <View style={styles.eventsSection}>
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={styles.loadingText}>Cargando eventos...</Text>
+                </View>
+              ) : eventsForSelectedDate.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <MaterialCommunityIcons name="calendar-blank" size={64} color="#D1D5DB" />
+                  <Text style={styles.emptyTitle}>No hay eventos</Text>
+                  <Text style={styles.emptySubtitle}>
+                    No hay eventos programados para esta fecha
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.createEventButton}
+                    onPress={handleCreateEvent}
+                    activeOpacity={0.8}>
+                    <MaterialCommunityIcons name="plus" size={20} color={colors.white} />
+                    <Text style={styles.createEventButtonText}>Crear Evento</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.eventsList}>
+                  {eventsForSelectedDate.map(renderEventCard)}
+                </View>
+              )}
             </View>
-          ) : eventsForSelectedDate.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="calendar-blank" size={64} color="#D1D5DB" />
-              <Text style={styles.emptyTitle}>No hay eventos</Text>
-              <Text style={styles.emptySubtitle}>
-                No hay eventos programados para esta fecha
-              </Text>
-              <TouchableOpacity
-                style={styles.createEventButton}
-                onPress={handleCreateEvent}
-                activeOpacity={0.8}>
-                <MaterialCommunityIcons name="plus" size={20} color={colors.white} />
-                <Text style={styles.createEventButtonText}>Crear Evento</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.eventsList}>
-              {eventsForSelectedDate.map(renderEventCard)}
-            </View>
-          )}
-        </View>
           </>
         )}
 

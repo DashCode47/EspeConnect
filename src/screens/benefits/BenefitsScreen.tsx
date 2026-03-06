@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -17,200 +17,13 @@ import { BenefitsStackParamList } from '../../navigation/types';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../config/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { promotionService, Promotion } from '../../services/promotion.service';
+import { Promotion } from '../../services/promotion.service';
 import { establishmentService, Establishment } from '../../services/establishment.service';
 import { BENEFIT_DETAILS } from '../../config/constants';
-import Carousel, { ICarouselInstance } from 'react-native-reanimated-carousel';
-import EstablishmentModal from '../../components/EstablishmentModal';
 
 type BenefitsScreenNavigationProp = NativeStackNavigationProp<BenefitsStackParamList>;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-interface PromotionCardProps {
-  promotion: Promotion;
-  establishment: Establishment;
-  onPress: () => void;
-}
-
-const PromotionCard: React.FC<PromotionCardProps> = ({ promotion, establishment, onPress }) => {
-  // Helper function to format category name
-  const getCategoryName = (category: string) => {
-    const categoryMap: { [key: string]: string } = {
-      'FOOD': 'Comida',
-      'DRINKS': 'Bebidas',
-      'EVENTS': 'Eventos',
-      'PARTIES': 'Fiestas',
-      'OTHER': 'Otros',
-    };
-    return categoryMap[category] || category;
-  };
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-    } catch {
-      return '';
-    }
-  };
-
-  // Check if promotion is still active based on dates
-  const isCurrentlyActive = () => {
-    try {
-      const now = new Date();
-      const startDate = new Date(promotion.startDate);
-      const endDate = new Date(promotion.endDate);
-      return now >= startDate && now <= endDate && promotion.isActive;
-    } catch {
-      return promotion.isActive;
-    }
-  };
-
-  return (
-    <TouchableOpacity style={styles.promotionCard} onPress={onPress}>
-      {/* Header */}
-      <View style={styles.promotionCardHeader}>
-        <View style={styles.promotionCardHeaderLeft}>
-          {promotion.discount !== undefined && promotion.discount > 0 ? (
-            <View style={styles.promotionCardDiscountIcon}>
-              <MaterialCommunityIcons name="tag" size={20} color={colors.primary} />
-              <Text style={styles.promotionCardDiscountIconText}>
-                -{promotion.discount}%
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.promotionCardAvatarPlaceholder}>
-              <MaterialCommunityIcons name="store" size={20} color={colors.primary} />
-            </View>
-          )}
-          <View>
-            {establishment.name ? (
-              <Text style={styles.promotionCardTitle} numberOfLines={1}>
-                {establishment.name}
-              </Text>
-            ) : null}
-            {promotion.category ? (
-              <Text style={styles.promotionCardCategory}>
-                {getCategoryName(promotion.category)}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-        <TouchableOpacity>
-          <MaterialCommunityIcons name="bookmark-outline" size={24} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Image - Main Large Image */}
-      {establishment.imageUrl ? (
-        <Image source={{ uri: establishment.imageUrl }} style={styles.promotionCardImage} resizeMode="cover" />
-      ) : (
-        <View style={styles.promotionCardImagePlaceholder}>
-          <MaterialCommunityIcons name="image" size={48} color="#ccc" />
-        </View>
-      )}
-
-      {/* Description */}
-      {promotion.description ? (
-        <View style={styles.promotionCardDescriptionContainer}>
-          <Text style={styles.promotionCardDescriptionText} numberOfLines={2}>
-            {promotion.description}
-          </Text>
-        </View>
-      ) : null}
-
-      {/* Details */}
-      <View style={styles.promotionCardDetails}>
-        {establishment.address ? (
-          <View style={styles.promotionCardDetailItem}>
-            <MaterialCommunityIcons name="map-marker" size={16} color={colors.error} />
-            <Text style={styles.promotionCardDetailText} numberOfLines={1}>
-              {establishment.address}
-            </Text>
-          </View>
-        ) : null}
-        
-        {promotion.startDate ? (
-          <View style={styles.promotionCardDetailItem}>
-            <MaterialCommunityIcons name="calendar" size={16} color={colors.accent} />
-            <Text style={styles.promotionCardDetailText} numberOfLines={1}>
-              {formatDate(promotion.startDate)}
-            </Text>
-          </View>
-        ) : null}
-        
-        {promotion.endDate ? (
-          <View style={styles.promotionCardDetailItem}>
-            <MaterialCommunityIcons name="calendar-clock" size={16} color={colors.black} />
-            <Text style={styles.promotionCardDetailText} numberOfLines={1}>
-              Hasta {formatDate(promotion.endDate)}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      {/* Action Buttons */}
-      <View style={styles.promotionCardActions}>
-        {/* {promotion.discount !== undefined && promotion.discount > 0 ? (
-          <TouchableOpacity style={styles.promotionCardButtonOutline}>
-            <Text style={styles.promotionCardButtonOutlineText}>
-              -{promotion.discount}% {isCurrentlyActive() ? 'hoy' : ''}
-            </Text>
-          </TouchableOpacity>
-        ) : null} */}
-        {promotion.discount !== undefined && promotion.discount > 0 ? (
-          <TouchableOpacity style={styles.promotionCardButton}>
-            <Text style={styles.promotionCardButtonText}>
-              -{promotion.discount}%
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-interface TrendingProductProps {
-  title: string;
-  imageUrl?: string;
-  currentPrice: number;
-  originalPrice: number;
-  onPress: () => void;
-}
-
-const TrendingProductCard: React.FC<TrendingProductProps> = ({
-  title,
-  imageUrl,
-  currentPrice,
-  originalPrice,
-  onPress,
-}) => {
-  return (
-    <TouchableOpacity style={styles.trendingCard} onPress={onPress}>
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.trendingImage} resizeMode="cover" />
-      ) : (
-        <View style={styles.trendingImagePlaceholder}>
-          <MaterialCommunityIcons name="image" size={40} color="#ccc" />
-        </View>
-      )}
-      <View style={styles.trendingContent}>
-        <Text style={styles.trendingTitle} numberOfLines={2}>
-          {title}
-        </Text>
-        <View style={styles.trendingPriceContainer}>
-          <Text style={styles.trendingCurrentPrice}>${currentPrice.toFixed(2)}</Text>
-          <Text style={styles.trendingOriginalPrice}>${originalPrice.toFixed(2)}</Text>
-        </View>
-        <View style={styles.freeDeliveryBadge}>
-          <Text style={styles.freeDeliveryText}>Domicilio gratis</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
 
 // Masonry benefit card aspect ratios for variety
 const ASPECT_RATIOS = [1.25, 1, 0.75, 0.8, 1] as const;
@@ -234,10 +47,11 @@ const MasonryBenefitCard: React.FC<MasonryBenefitCardProps> = ({
   const imageHeight = cardWidth * aspectRatio;
 
   const getDiscountLabel = () => {
-    if (promotion.discount && promotion.discount > 0) {
+    if (promotion?.discount !== undefined && promotion?.discount !== null && promotion.discount > 0) {
       return `${promotion.discount}% OFF`;
     }
-    return promotion.title?.includes('2x1') ? '2x1' : 'OFERTA';
+    if (promotion?.title?.includes('2x1')) return '2x1';
+    return null;
   };
 
   return (
@@ -259,16 +73,18 @@ const MasonryBenefitCard: React.FC<MasonryBenefitCardProps> = ({
             <MaterialCommunityIcons name="store" size={48} color="#ccc" />
           </View>
         )}
-        
+
         {/* Discount Badge */}
-        <View
-          style={[
-            styles.masonryBadge,
-            { transform: [{ rotate: `${badgeRotation}deg` }] },
-          ]}
-        >
-          <Text style={styles.masonryBadgeText}>{getDiscountLabel()}</Text>
-        </View>
+        {getDiscountLabel() && (
+          <View
+            style={[
+              styles.masonryBadge,
+              { transform: [{ rotate: `${badgeRotation}deg` }] },
+            ]}
+          >
+            <Text style={styles.masonryBadgeText}>{getDiscountLabel()}</Text>
+          </View>
+        )}
 
         {/* Gradient Overlay */}
         <View style={styles.masonryGradient} />
@@ -282,14 +98,16 @@ const MasonryBenefitCard: React.FC<MasonryBenefitCardProps> = ({
         <Text style={styles.masonrySubtitle} numberOfLines={1}>
           {promotion.title || 'Promoción especial'}
         </Text>
-        
+
         {/* Footer with distance and action */}
         <View style={styles.masonryFooter}>
-          <View style={styles.masonryDistance}>
-            <MaterialCommunityIcons name="map-marker" size={14} color="#999" />
-            <Text style={styles.masonryDistanceText}>500m</Text>
-          </View>
-          <TouchableOpacity style={styles.masonryActionButton}>
+          {establishment.address ? (
+            <View style={styles.masonryDistance}>
+              <MaterialCommunityIcons name="map-marker" size={14} color="#999" />
+              <Text style={styles.masonryDistanceText} numberOfLines={1}>{establishment.address}</Text>
+            </View>
+          ) : <View />}
+          <TouchableOpacity style={styles.masonryActionButton} onPress={onPress}>
             <MaterialCommunityIcons name="arrow-right" size={18} color={colors.white} />
           </TouchableOpacity>
         </View>
@@ -301,14 +119,9 @@ const MasonryBenefitCard: React.FC<MasonryBenefitCardProps> = ({
 export const BenefitsScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<BenefitsScreenNavigationProp>();
-  const [promotionsWithEstablishments, setPromotionsWithEstablishments] = useState<Array<{promotion: Promotion; establishment: Establishment}>>([]);
-  const [establishmentsWithoutPromotions, setEstablishmentsWithoutPromotions] = useState<Establishment[]>([]);
+  const [promotionsWithEstablishments, setPromotionsWithEstablishments] = useState<Array<{ promotion: Promotion; establishment: Establishment }>>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
-  const [activePromoIndex, setActivePromoIndex] = useState(0);
-  const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null);
-  const [showEstablishmentModal, setShowEstablishmentModal] = useState(false);
-  const promoCarouselRef = useRef<ICarouselInstance>(null);
 
   const categories = ['Todos', 'Comida', 'Bebidas', 'Entretenimiento', 'Otros'];
 
@@ -324,50 +137,50 @@ export const BenefitsScreen = () => {
 
       // Response structure from Supabase: { establishments, pagination }
       const establishments = response.establishments || [];
-      
+
       // Separate establishments: with and without promotions
       const establishmentsWithPromos: Establishment[] = [];
       const establishmentsWithoutPromos: Establishment[] = [];
-      
+
       establishments.forEach(establishment => {
-        const activePromotions = establishment.promotions.filter(promo => {
+        const activePromotions = (establishment.promotions || []).filter(promo => {
           try {
             const now = new Date();
             const startDate = new Date(promo.startDate);
             const endDate = new Date(promo.endDate);
-            return now >= startDate && now <= endDate && promo.isActive;
+            return now >= startDate && now <= endDate && (promo.isActive || promo.is_active);
           } catch {
-            return promo.isActive;
+            return promo.isActive || promo.is_active;
           }
         });
-        
+
         if (activePromotions.length > 0) {
           establishmentsWithPromos.push(establishment);
         } else {
           establishmentsWithoutPromos.push(establishment);
         }
       });
-      
+
       // Extract all promotions with their establishments
-      const allPromotionsData: Array<{promotion: Promotion; establishment: Establishment}> = [];
+      const allPromotionsData: Array<{ promotion: Promotion; establishment: Establishment }> = [];
       establishmentsWithPromos.forEach(establishment => {
         const activePromotions = establishment.promotions.filter(promo => {
           try {
             const now = new Date();
             const startDate = new Date(promo.startDate);
             const endDate = new Date(promo.endDate);
-            return now >= startDate && now <= endDate && promo.isActive;
+            return now >= startDate && now <= endDate && (promo.isActive || promo.is_active);
           } catch {
-            return promo.isActive;
+            return promo.isActive || promo.is_active;
           }
         });
-        
+
         activePromotions.forEach(promotion => {
-          allPromotionsData.push({promotion, establishment});
+          allPromotionsData.push({ promotion, establishment });
         });
       });
-      
-      
+
+
       // Filter by category if not "Todos"
       const categoryMap: { [key: string]: string } = {
         'Todos': '',
@@ -376,27 +189,20 @@ export const BenefitsScreen = () => {
         'Entretenimiento': 'EVENTS',
         'Otros': 'OTHER',
       };
-      
+
       const categoryFilter = categoryMap[selectedCategory] || '';
-      const filtered = selectedCategory === 'Todos' 
-        ? allPromotionsData 
+      const filtered = selectedCategory === 'Todos'
+        ? allPromotionsData
         : allPromotionsData.filter(item => item.promotion.category === categoryFilter);
-      
+
       setPromotionsWithEstablishments(filtered);
-      setEstablishmentsWithoutPromotions(establishmentsWithoutPromos);
     } catch (error) {
       console.error('Error fetching establishments:', error);
       setPromotionsWithEstablishments([]);
-      setEstablishmentsWithoutPromotions([]);
     } finally {
       setLoading(false);
     }
   };
-
-  const handlePromoSnapToItem = (index: number) => {
-    setActivePromoIndex(index);
-  };
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -409,7 +215,7 @@ export const BenefitsScreen = () => {
 
       <ScrollView
         style={styles.scrollView} contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]} showsVerticalScrollIndicator={false}>
-        
+
         {/* Category Slider */}
         <ScrollView
           horizontal
@@ -433,63 +239,6 @@ export const BenefitsScreen = () => {
             </TouchableOpacity>
           ))}
         </ScrollView>
-
-          {/* Productos en Tendencia Section */}
-          <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Productos en tendencia</Text>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-          ) : promotionsWithEstablishments && promotionsWithEstablishments.length > 0 ? (
-            <>
-              <Carousel
-                ref={promoCarouselRef}
-                loop={promotionsWithEstablishments.length > 1}
-                width={SCREEN_WIDTH - 40}
-                height={490}
-                data={promotionsWithEstablishments}
-                renderItem={({ item }: { item: {promotion: Promotion; establishment: Establishment} }) => (
-                  <View style={styles.promotionCardWrapper}>
-                    <PromotionCard
-                      promotion={item.promotion}
-                      establishment={item.establishment}
-                      onPress={() =>
-                        navigation.navigate(BENEFIT_DETAILS, {
-                          data: {promotion: item.promotion, establishment: item.establishment},
-                        })
-                      }
-                    />
-                  </View>
-                )}
-                onSnapToItem={handlePromoSnapToItem}
-                autoPlay={promotionsWithEstablishments.length > 1}
-                autoPlayInterval={4000}
-                enabled={promotionsWithEstablishments.length > 1}
-                defaultIndex={0}
-              />
-              {/* Pagination Dots */}
-              {promotionsWithEstablishments.length > 1 && (
-                <View style={styles.promotionPaginationContainer}>
-                  {promotionsWithEstablishments.map((_, index) => (
-                    <View
-                      key={`promo-dot-${index}`}
-                      style={[
-                        styles.promotionPaginationDot,
-                        index === activePromoIndex && styles.promotionPaginationDotActive,
-                      ]}
-                    />
-                  ))}
-                </View>
-              )}
-            </>
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="store-off" size={48} color="#ccc" />
-              <Text style={styles.emptyStateText}>No hay promociones disponibles</Text>
-            </View>
-          )}
-        </View>
 
         {/* Beneficios Grid - Masonry Style */}
         <View style={styles.section}>
@@ -547,20 +296,9 @@ export const BenefitsScreen = () => {
           )}
         </View>
 
-      
+
       </ScrollView>
 
-      {/* Establishment Modal */}
-      {selectedEstablishment && (
-        <EstablishmentModal
-          visible={showEstablishmentModal}
-          onClose={() => {
-            setShowEstablishmentModal(false);
-            setSelectedEstablishment(null);
-          }}
-          establishment={selectedEstablishment}
-        />
-      )}
     </SafeAreaView>
   );
 };
@@ -867,13 +605,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   masonryDistance: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginRight: 8,
+    overflow: 'hidden',
   },
   masonryDistanceText: {
     fontSize: 11,
     color: '#999',
+    flexShrink: 1,
   },
   masonryActionButton: {
     backgroundColor: colors.primary,

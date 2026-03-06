@@ -259,6 +259,12 @@ export const MyPlansScreen: React.FC = () => {
                   <Text style={styles.actionButtonPrimaryText}>Participantes</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
+                  style={styles.actionButtonEdit}
+                  onPress={() => navigation.navigate('EditPlan', { planId: plan.id })}
+                  activeOpacity={0.7}>
+                  <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={styles.actionButtonOutline}
                   onPress={() => handleCancelPlan(plan)}
                   activeOpacity={0.7}>
@@ -641,6 +647,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONT_FAMILY.BOLD,
     color: colors.white,
+  },
+  actionButtonEdit: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: `${colors.primary}40`,
+    backgroundColor: `${colors.primary}10`,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionButtonOutline: {
     width: 40,

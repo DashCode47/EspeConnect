@@ -360,10 +360,12 @@ export const CreatePlanScreen = () => {
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.manageButton} activeOpacity={0.7}>
-            <MaterialCommunityIcons name="cog-outline" size={20} color={colors.primary} />
-            <Text style={styles.manageButtonText}>Gestionar Participantes</Text>
-          </TouchableOpacity>
+          {manualApproval && (
+            <TouchableOpacity style={styles.manageButton} activeOpacity={0.7}>
+              <MaterialCommunityIcons name="cog-outline" size={20} color={colors.primary} />
+              <Text style={styles.manageButtonText}>Gestionar Participantes</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 

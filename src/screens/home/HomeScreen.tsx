@@ -7,16 +7,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Dimensions,
   Image,
-  TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../../navigation/types';
 import { bannerService, Banner } from '../../services/bannerService';
 import useHome from './Hooks/useHome';
-import { eventService, Event, EventCategory } from '../../services/event.service';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../config/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,124 +21,71 @@ import { globalStyles } from '../../config/globalStyles';
 import { navigationRef } from '../../navigation/RootNavigator';
 import { BENEFIT_DETAILS, BENEFIT_STACK } from '../../config/constants';
 import { HomeSkeletonLoader } from '../../components/HomeSkeletonLoader';
-import { promotionService, Promotion } from '../../services/promotion.service';
+import { Promotion } from '../../services/promotion.service';
 import { establishmentService, Establishment } from '../../services/establishment.service';
 import { HorizontalIcon } from '../../assets/svg/HorizontalIcon';
+import EstablishmentModal from '../../components/EstablishmentModal';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
-interface PromotionCardProps {
-  promotion: Promotion;
+interface EstablishmentCardProps {
   establishment: Establishment;
   onPress: () => void;
 }
 
-const PromotionCard: React.FC<PromotionCardProps> = ({ promotion, establishment, onPress }) => {
-  // Helper function to format category name
-  const getCategoryName = (category: string) => {
-    const categoryMap: { [key: string]: string } = {
-      'FOOD': 'Comida',
-      'DRINKS': 'Bebidas',
-      'EVENTS': 'Eventos',
-      'PARTIES': 'Fiestas',
-      'OTHER': 'Otros',
-    };
-    return categoryMap[category] || category;
-  };
-
-  // Check if promotion is still active based on dates
-  const isCurrentlyActive = () => {
-    try {
-      const now = new Date();
-      const startDate = new Date(promotion.startDate);
-      const endDate = new Date(promotion.endDate);
-      return now >= startDate && now <= endDate && promotion.isActive;
-    } catch {
-      return promotion.isActive;
-    }
-  };
+const EstablishmentCard: React.FC<EstablishmentCardProps> = ({ establishment, onPress }) => {
+  const activePromotionsCount = establishment.promotions?.filter(p => p.isActive).length || 0;
 
   return (
-    <TouchableOpacity style={styles.promotionCard} onPress={onPress} activeOpacity={0.9}>
-      {/* Header */}
-      <View style={styles.promotionCardHeader}>
-        <View style={styles.promotionCardHeaderLeft}>
-          {promotion.imageUrl ? (
-            <Image
-              source={{ uri: promotion.imageUrl }}
-              style={styles.promotionCardAvatar}
-            />
-          ) : (
-            <View style={styles.promotionCardAvatarPlaceholder}>
-              <MaterialCommunityIcons name="store" size={20} color={colors.primary} />
-            </View>
-          )}
-          <View>
-            {establishment.name ? (
-              <Text style={styles.promotionCardRestaurantName} numberOfLines={1}>
-                {establishment.name}
-              </Text>
-            ) : null}
-            {promotion.category ? (
-              <Text style={styles.promotionCardCategory}>
-                {getCategoryName(promotion.category)}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-        <TouchableOpacity>
-          <MaterialCommunityIcons
-            name="bookmark-outline"
-            size={24}
-            color={colors.primary}
+    <TouchableOpacity style={styles.establishmentCard} onPress={onPress} activeOpacity={0.85}>
+      {/* Image */}
+      <View style={styles.establishmentCardImageContainer}>
+        {establishment.imageUrl ? (
+          <Image
+            source={{ uri: establishment.imageUrl }}
+            style={styles.establishmentCardImage}
+            resizeMode="cover"
           />
-        </TouchableOpacity>
+        ) : (
+          <View style={styles.establishmentCardImagePlaceholder}>
+            <MaterialCommunityIcons name="store" size={32} color={colors.primary} />
+          </View>
+        )}
       </View>
 
-      {/* Image - Main Large Image */}
-      {establishment.imageUrl ? (
-        <Image
-          source={{ uri: establishment.imageUrl }}
-          style={styles.promotionCardImage}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={styles.promotionCardImagePlaceholder}>
-          <MaterialCommunityIcons name="image" size={48} color="#ccc" />
+      {/* Info */}
+      <View style={styles.establishmentCardInfo}>
+        <View style={styles.establishmentCardNameRow}>
+          <Text style={styles.establishmentCardName} numberOfLines={1}>
+            {establishment.name}
+          </Text>
+          {activePromotionsCount > 0 && (
+            <View style={styles.benefitsBadge}>
+              <MaterialCommunityIcons name="tag" size={11} color="#fff" />
+              <Text style={styles.benefitsBadgeText}>
+                {activePromotionsCount} beneficio{activePromotionsCount > 1 ? 's' : ''}
+              </Text>
+            </View>
+          )}
         </View>
-      )}
 
-      {/* Content Section */}
-      <View style={styles.promotionCardContent}>
-        {promotion.title ? (
-          <Text style={styles.promotionCardMealTitle}>{promotion.title}</Text>
-        ) : null}
-
-        {promotion.description ? (
-          <Text style={styles.promotionCardDescription} numberOfLines={2}>
-            {promotion.description}
+        {establishment.description ? (
+          <Text style={styles.establishmentCardDescription} numberOfLines={2}>
+            {establishment.description}
           </Text>
         ) : null}
 
-
-        {/* Action Buttons */}
-        {/* <View style={styles.promotionCardActions}>
-          {establishment.address ? (
-            <TouchableOpacity style={styles.promotionCardButtonOutline}>
-              <Text style={styles.promotionCardButtonOutlineText} numberOfLines={1}>
-                {establishment.address}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-          {promotion.discount !== undefined && promotion.discount > 0 ? (
-            <TouchableOpacity style={styles.promotionCardButton}>
-              <Text style={styles.promotionCardButtonText}>
-                -{promotion.discount}%
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-        </View> */}
+        {establishment.address ? (
+          <View style={styles.establishmentCardAddress}>
+            <MaterialCommunityIcons name="map-marker-outline" size={13} color="#999" />
+            <Text style={styles.establishmentCardAddressText} numberOfLines={1}>
+              {establishment.address}
+            </Text>
+          </View>
+        ) : null}
       </View>
+
+      <MaterialCommunityIcons name="chevron-right" size={20} color="#ccc" style={styles.establishmentCardChevron} />
     </TouchableOpacity>
   );
 };
@@ -150,16 +94,16 @@ export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
   const [promotionsWithEstablishments, setPromotionsWithEstablishments] = useState<Array<{ promotion: Promotion; establishment: Establishment }>>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
-  const screenWidth = Dimensions.get('window').width;
   const {
     profile,
     getClosestEvent,
-    closestEvent,
   } = useHome();
+
+  const [showEstablishmentModal, setShowEstablishmentModal] = useState(false);
+  const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null);
 
   useEffect(() => {
     fetchEstablishments();
@@ -170,22 +114,20 @@ export const HomeScreen: React.FC = () => {
   const fetchEstablishments = async () => {
     try {
       setLoading(true);
-      const response = await establishmentService.getEstablishments({
-        hasActivePromotions: true,
-      });
+      const response = await establishmentService.getEstablishments();
 
       const establishmentsData = response.establishments || [];
       setEstablishments(establishmentsData);
 
-      // Extract all promotions with their establishments
+      // Extract all active promotions with their establishments
       const promotionsData: Array<{ promotion: Promotion; establishment: Establishment }> = [];
       establishmentsData.forEach(establishment => {
-        establishment.promotions.forEach(promotion => {
+        (establishment.promotions || []).filter(p => p.isActive || p.is_active).forEach(promotion => {
           promotionsData.push({ promotion, establishment });
         });
       });
 
-      setPromotionsWithEstablishments(promotionsData.slice(0, 5));
+      setPromotionsWithEstablishments(promotionsData.slice(0, 10));
     } catch (error) {
       console.error('Error fetching establishments:', error);
     } finally {
@@ -341,15 +283,47 @@ export const HomeScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Promotions Section */}
+        {/* Establishments Section — Primary */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Promociones</Text>
-          {promotionsWithEstablishments.length > 0 ? (
+          <Text style={styles.sectionTitle}>Establecimientos</Text>
+        </View>
+        <View style={styles.establishmentsList}>
+          {establishments.length > 0 ? (
+            establishments.map((establishment) => (
+              <EstablishmentCard
+                key={establishment.id}
+                establishment={establishment}
+                onPress={() => {
+                  const firstPromotion = establishment.promotions?.find(p => p.isActive || p.is_active);
+                  if (firstPromotion) {
+                    navigationRef.current?.navigate(BENEFIT_STACK, {
+                      screen: BENEFIT_DETAILS,
+                      params: { data: { promotion: firstPromotion, establishment } },
+                    });
+                  } else {
+                    setSelectedEstablishment(establishment);
+                    setShowEstablishmentModal(true);
+                  }
+                }}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="store-off" size={48} color="#ccc" />
+              <Text style={styles.emptyStateText}>No hay establecimientos disponibles</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Beneficios Section — Secondary, only shown if promotions exist */}
+        {promotionsWithEstablishments.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Beneficios activos</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.promotionsChipsContainer}>
-              {promotionsWithEstablishments.slice(0, 10).map((item) => (
+              {promotionsWithEstablishments.map((item) => (
                 <TouchableOpacity
                   key={`${item.establishment.id}-${item.promotion.id}`}
                   style={styles.promotionChipContainer}
@@ -379,66 +353,18 @@ export const HomeScreen: React.FC = () => {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          ) : (
-            <View style={styles.emptyPromotions}>
-              <Text style={styles.emptyPromotionsText}>No hay promociones disponibles</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Call to Action */}
-        <View style={styles.section}>
-          <Text style={styles.ctaTitle}>No las dejes pasar!</Text>
-        </View>
-
-        {/* Promotion Cards */}
-        <View style={styles.promotionCardsSection}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.promotionCardsContainer}
-            pagingEnabled
-            snapToInterval={screenWidth - 40}
-            decelerationRate="fast">
-            {promotionsWithEstablishments.length > 0 ? (
-              promotionsWithEstablishments.map((item, index) => (
-                <View key={`${item.establishment.id}-${item.promotion.id}`} style={styles.promotionCardWrapper}>
-                  <PromotionCard
-                    promotion={item.promotion}
-                    establishment={item.establishment}
-                    onPress={() =>
-                      navigationRef.current?.navigate(BENEFIT_STACK, {
-                        screen: BENEFIT_DETAILS,
-                        params: { data: { promotion: item.promotion, establishment: item.establishment } },
-                      })
-                    }
-                  />
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyState}>
-                <MaterialCommunityIcons name="store-off" size={48} color="#ccc" />
-                <Text style={styles.emptyStateText}>No hay promociones disponibles</Text>
-              </View>
-            )}
-          </ScrollView>
-        </View>
-
-        {/* Pagination Dots */}
-        {promotionsWithEstablishments.length > 1 && (
-          <View style={styles.paginationContainer}>
-            {promotionsWithEstablishments.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.paginationDot,
-                  index === 0 && styles.paginationDotActive,
-                ]}
-              />
-            ))}
           </View>
         )}
       </ScrollView>
+
+      <EstablishmentModal
+        visible={showEstablishmentModal}
+        onClose={() => {
+          setShowEstablishmentModal(false);
+          setSelectedEstablishment(null);
+        }}
+        establishment={selectedEstablishment!}
+      />
     </SafeAreaView>
   );
 };
@@ -636,189 +562,96 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 14,
   },
-  emptyPromotions: {
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  emptyPromotionsText: {
-    fontSize: 14,
-    color: '#999',
-  },
-  ctaTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primaryDark,
-  },
-  promotionCardsSection: {
-    marginBottom: 24,
-    paddingBottom: 20,
-  },
-  promotionCardsContainer: {
+  // Establishment list
+  establishmentsList: {
     paddingHorizontal: 20,
-    gap: 16,
+    gap: 12,
+    marginBottom: 24,
   },
-  promotionCardWrapper: {
-    width: Dimensions.get('window').width - 40,
-  },
-  promotionCard: {
+  establishmentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.white,
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: colors.primaryDark,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
+    marginBottom: 12,
   },
-  promotionCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
+  establishmentCardImageContainer: {
+    width: 90,
+    height: 90,
+    flexShrink: 0,
   },
-  promotionCardHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  establishmentCardImage: {
+    width: '100%',
+    height: '100%',
   },
-  promotionCardAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  promotionCardAvatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  promotionCardDiscountIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  establishmentCardImagePlaceholder: {
+    width: '100%',
+    height: '100%',
     backgroundColor: '#F0F7F4',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.primary,
   },
-  promotionCardDiscountIconText: {
+  establishmentCardInfo: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 4,
+  },
+  establishmentCardNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  establishmentCardName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    flexShrink: 1,
+  },
+  benefitsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  benefitsBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.primary,
+    color: '#fff',
+  },
+  establishmentCardDescription: {
+    fontSize: 13,
+    color: '#777',
+    lineHeight: 18,
+  },
+  establishmentCardAddress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     marginTop: 2,
   },
-  promotionCardRestaurantName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.primaryDark,
-  },
-  promotionCardCategory: {
+  establishmentCardAddressText: {
     fontSize: 12,
-    fontWeight: '500',
     color: '#999',
+    flexShrink: 1,
   },
-  promotionCardImage: {
-    width: '100%',
-    height: 250,
-  },
-  promotionCardImagePlaceholder: {
-    width: '100%',
-    height: 250,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  promotionCardContent: {
-    padding: 16,
-  },
-  promotionCardMealTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primaryDark,
-    marginBottom: 8,
-  },
-  promotionCardDescription: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  promotionCardPriceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-    marginBottom: 16,
-  },
-  promotionCardCurrentPrice: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primaryDark,
-  },
-  promotionCardOriginalPrice: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: '#999',
-    textDecorationLine: 'line-through',
-  },
-  promotionCardActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  promotionCardButtonOutline: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.success,
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  promotionCardButtonOutlineText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.success,
-  },
-  promotionCardButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  promotionCardButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E0E0E0',
-  },
-  paginationDotActive: {
-    backgroundColor: colors.primary,
-    width: 24,
+  establishmentCardChevron: {
+    marginRight: 12,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
-    width: Dimensions.get('window').width - 40,
   },
   emptyStateText: {
     marginTop: 16,

@@ -56,6 +56,7 @@ export interface Trip {
   availableSeats: number;
   price?: number | null;
   notes?: string | null;
+  contactPhone?: string | null;
   status: TripStatus;
   createdAt: string;
   updatedAt: string;
@@ -72,6 +73,7 @@ export interface CreateTripData {
   availableSeats: number;
   price?: number;
   notes?: string;
+  contactPhone?: string;
 }
 
 export interface UpdateTripData {
@@ -113,6 +115,7 @@ type TripRow = {
   available_seats: number;
   price: number | null;
   notes: string | null;
+  contact_phone: string | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -162,6 +165,7 @@ function mapRowToTrip(row: TripRow, requests?: TripRequest[], ratings?: Rating[]
     availableSeats: row.available_seats,
     price: row.price ? Number(row.price) : null,
     notes: row.notes || null,
+    contactPhone: row.contact_phone || null,
     status: row.status as TripStatus,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -316,6 +320,7 @@ export const tripService = {
       available_seats: data.availableSeats,
       price: data.price ?? null,
       notes: data.notes?.trim() || null,
+      contact_phone: data.contactPhone?.trim() || null,
       status: 'ACTIVE' as const,
     };
 

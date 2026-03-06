@@ -30,13 +30,27 @@ const BenefitDetail = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<RouteProp<BenefitsStackParamList, 'BenefitDetails'>>();
   const navigation = useNavigation();
-  const { data } = route.params as RouteParams;
-  const promotion = data.promotion;
-  const establishment = data.establishment;
+  const { data } = (route.params || {}) as RouteParams;
+  const promotion = data?.promotion;
+  const establishment = data?.establishment;
   const [isFavorite, setIsFavorite] = useState(false);
   const [showEstablishmentModal, setShowEstablishmentModal] = useState(false);
 
   useHideNavbar(true);
+
+  if (!establishment) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: '#64748B' }}>Detalles no disponibles</Text>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ marginTop: 20, padding: 10, backgroundColor: colors.primary, borderRadius: 8 }}
+        >
+          <Text style={{ color: 'white' }}>Volver</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   // Helper function to format category name
   const getCategoryName = (category: string) => {
@@ -124,9 +138,9 @@ const BenefitDetail = () => {
             {/* Gradient Overlay */}
             <View style={styles.imageGradient} />
 
-            {establishment.imageUrl || promotion.imageUrl ? (
+            {establishment?.imageUrl || promotion?.imageUrl ? (
               <Image
-                source={{ uri: establishment.imageUrl || promotion.imageUrl }}
+                source={{ uri: establishment?.imageUrl || promotion?.imageUrl }}
                 style={styles.heroImage}
                 resizeMode="cover"
               />
@@ -137,7 +151,7 @@ const BenefitDetail = () => {
             )}
 
             {/* Floating Discount Badge */}
-            {promotion.discount !== undefined && promotion.discount > 0 && (
+            {promotion?.discount !== undefined && promotion?.discount !== null && promotion?.discount > 0 && (
               <View style={styles.discountBadge}>
                 <MaterialCommunityIcons name="percent" size={20} color={colors.primary} />
                 <Text style={styles.discountBadgeText}>{promotion.discount}% OFF</Text>
@@ -148,15 +162,19 @@ const BenefitDetail = () => {
 
         {/* Title Section */}
         <View style={styles.titleSection}>
-          {promotion.title && (
+          {promotion?.title ? (
             <Text style={styles.title}>
               {promotion.title}
+            </Text>
+          ) : (
+            <Text style={styles.title}>
+              {establishment.name}
             </Text>
           )}
 
           {/* Category and Expiration Chips */}
           <View style={styles.chipsContainer}>
-            {promotion.category && (
+            {promotion?.category && (
               <View style={styles.categoryChip}>
                 <MaterialCommunityIcons
                   name={getCategoryIcon(promotion.category)}
@@ -167,7 +185,7 @@ const BenefitDetail = () => {
               </View>
             )}
 
-            {promotion.endDate && (
+            {promotion?.endDate && (
               <View style={styles.expirationChip}>
                 <MaterialCommunityIcons name="clock-outline" size={18} color="#64748B" />
                 <Text style={styles.expirationChipText}>Vence el: {formatDate(promotion.endDate)}</Text>
@@ -196,7 +214,7 @@ const BenefitDetail = () => {
               activeOpacity={0.7}>
               <View style={styles.establishmentLeft}>
                 <View style={styles.establishmentAvatar}>
-                  {establishment.imageUrl ? (
+                  {establishment?.imageUrl ? (
                     <Image
                       source={{ uri: establishment.imageUrl }}
                       style={styles.establishmentAvatarImage}
@@ -208,9 +226,9 @@ const BenefitDetail = () => {
                 </View>
                 <View style={styles.establishmentInfo}>
                   <Text style={styles.establishmentName} numberOfLines={1}>
-                    {establishment.name}
+                    {establishment?.name}
                   </Text>
-                  {establishment.address && (
+                  {establishment?.address && (
                     <Text style={styles.establishmentAddress} numberOfLines={1}>
                       {establishment.address}
                     </Text>
@@ -236,7 +254,7 @@ const BenefitDetail = () => {
       </ScrollView>
 
       {/* Sticky Bottom CTA */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
+      {/* <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
           style={styles.ctaButton}
           activeOpacity={0.9}>
@@ -244,7 +262,7 @@ const BenefitDetail = () => {
           <Text style={styles.ctaButtonText}>Canjear Beneficio</Text>
           <MaterialCommunityIcons name="ticket-confirmation" size={24} color={colors.accent} />
         </TouchableOpacity>
-      </View>
+      </View> */}
 
       {/* Establishment Modal */}
       <EstablishmentModal

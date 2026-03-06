@@ -32,7 +32,7 @@ export type HomeStackParamList = {
 };
 
 export type RideStackParamList = {
-  RidesList: undefined;
+  RidesList: { initialTab?: 'search' | 'offer' } | undefined;
   RidePost: { postId?: string };
   TripDetail: { tripId: string };
   CreateTrip: undefined;
@@ -71,6 +71,7 @@ export type EventStackParamList = {
   EventDetail: { eventId: string };
   CreateEvent: undefined;
   CreatePlan: undefined;
+  EditPlan: { planId: string };
   MyPlans: undefined;
   ManagePlanParticipants: { planId: string };
 };

@@ -20,6 +20,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../config/colors';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserStore } from '../store/userStore';
+import { CareerName, CAREER_LIST } from '../types/career.types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -35,16 +36,29 @@ const THEME = {
 
 const INTEREST_ICONS: Record<string, string> = {
   'Música': 'music-note',
-  'Arte': 'palette-outline',
-  'Tecnología': 'laptop',
-  'Carpooling': 'car-outline',
+  'Videojuegos': 'controller-classic-outline',
   'Deportes': 'soccer',
+  'Cine': 'movie-open-outline',
+  'Tecnología': 'laptop',
+  'Conocer gente': 'account-group-outline',
+  'Fiestas': 'glass-cocktail',
+  'Gimnasio': 'dumbbell',
+  'Comida': 'food-variant',
+  'Robótica': 'robot-outline',
+  'Arte': 'palette-outline',
   'Lectura': 'book-open-variant',
-  'Viajes': 'airplane',
   'Fotografía': 'camera-outline',
+  'Viajes': 'airplane',
+  'Emprendimiento': 'lightbulb-outline',
+  'Voluntariado': 'hand-heart-outline',
 };
 
-const DEFAULT_INTERESTS = ['Música', 'Arte', 'Tecnología', 'Carpooling', 'Deportes', 'Lectura', 'Viajes', 'Fotografía'];
+const DEFAULT_INTERESTS = [
+  'Música', 'Videojuegos', 'Deportes', 'Cine',
+  'Tecnología', 'Conocer gente', 'Fiestas', 'Gimnasio',
+  'Comida', 'Robótica', 'Arte', 'Lectura',
+  'Fotografía', 'Viajes', 'Emprendimiento', 'Voluntariado'
+];
 
 
 export const ProfileScreen = () => {
@@ -54,6 +68,8 @@ export const ProfileScreen = () => {
   const { profile, isLoading, fetchProfile, updateProfile } = useUserStore();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCareerPicker, setShowCareerPicker] = useState(false);
+  const [careerSearch, setCareerSearch] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   // Form states
@@ -186,13 +202,21 @@ export const ProfileScreen = () => {
 
               <View style={styles.formSection}>
                 <Text style={styles.inputLabel}>Carrera</Text>
-                <TextInput
+                <TouchableOpacity
                   style={styles.textInput}
-                  value={editCareer}
-                  onChangeText={setEditCareer}
-                  placeholder="Tu carrera"
-                  placeholderTextColor={THEME.textMuted}
-                />
+                  onPress={() => setShowCareerPicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{
+                      fontSize: 16,
+                      color: editCareer ? THEME.textMain : THEME.textMuted
+                    }}>
+                      {editCareer || 'Seleccionar carrera'}
+                    </Text>
+                    <MaterialCommunityIcons name="chevron-down" size={20} color={THEME.textMuted} />
+                  </View>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.formSection}>
@@ -262,6 +286,82 @@ export const ProfileScreen = () => {
                 )}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Career Selection Modal */}
+      <Modal
+        visible={showCareerPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setShowCareerPicker(false);
+          setCareerSearch('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { height: '80%', paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleccionar Carrera</Text>
+              <TouchableOpacity onPress={() => {
+                setShowCareerPicker(false);
+                setCareerSearch('');
+              }}>
+                <MaterialCommunityIcons name="close" size={24} color={THEME.textMain} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input */}
+            <View style={[styles.formSection, { marginBottom: 15 }]}>
+              <View style={[styles.textInput, { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC' }]}>
+                <MaterialCommunityIcons name="magnify" size={20} color={THEME.textMuted} style={{ marginRight: 8 }} />
+                <TextInput
+                  style={{ flex: 1, fontSize: 16, color: THEME.textMain, padding: 0 }}
+                  placeholder="Buscar carrera..."
+                  placeholderTextColor={THEME.textMuted}
+                  value={careerSearch}
+                  onChangeText={setCareerSearch}
+                  autoCorrect={false}
+                />
+                {careerSearch.length > 0 && (
+                  <TouchableOpacity onPress={() => setCareerSearch('')}>
+                    <MaterialCommunityIcons name="close-circle" size={18} color={THEME.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {CAREER_LIST
+                .filter(c => c.toLowerCase().includes(careerSearch.toLowerCase()))
+                .map((career) => (
+                  <TouchableOpacity
+                    key={career}
+                    style={styles.modalOption}
+                    onPress={() => {
+                      setEditCareer(career);
+                      setShowCareerPicker(false);
+                      setCareerSearch('');
+                    }}
+                  >
+                    <Text style={[
+                      styles.modalOptionText,
+                      editCareer === career && { color: THEME.primary, fontWeight: '700' }
+                    ]}>
+                      {career}
+                    </Text>
+                    {editCareer === career && (
+                      <MaterialCommunityIcons name="check" size={24} color={THEME.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              {CAREER_LIST.filter(c => c.toLowerCase().includes(careerSearch.toLowerCase())).length === 0 && (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text style={{ color: THEME.textMuted }}>No se encontraron carreras</Text>
+                </View>
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -442,7 +542,7 @@ export const ProfileScreen = () => {
             </View>
 
             <Text style={styles.modalMessage}>
-              ¿Estás seguro de que deseas cerrar sesión? Perderás acceso a tus cupones activos.
+              ¿Estás seguro de que deseas cerrar sesión?
             </Text>
 
             <View style={styles.modalButtons}>
@@ -471,6 +571,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.bgLight,
+    paddingBottom: 30,
   },
   centerContainer: {
     flex: 1,
@@ -907,5 +1008,19 @@ const styles = StyleSheet.create({
   },
   genderChipTextActive: {
     color: THEME.primary,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: THEME.textMain,
   },
 });

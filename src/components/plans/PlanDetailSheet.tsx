@@ -1,25 +1,24 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Modal,
   TouchableOpacity,
-  TouchableWithoutFeedback,
+  Pressable,
   ScrollView,
   Image,
-  Animated,
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import LinearGradient from 'react-native-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../config/colors';
 import { FONT_FAMILY } from '../../config/globalStyles';
-import { Plan } from '../../types/plan.types';
-import { planService } from '../../services/plan.service';
+import { usePlanDetailSheet } from '../../hooks/usePlanDetailSheet';
+import { PlanCategory } from '../../types/plan.types';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface PlanDetailSheetProps {
   planId: string | null;
@@ -28,541 +27,402 @@ interface PlanDetailSheetProps {
   onJoin: () => void;
 }
 
+const getCategoryLabel = (category: PlanCategory): string => {
+  const labels: Record<PlanCategory, string> = {
+    [PlanCategory.CAFE]: 'Café',
+    [PlanCategory.FIESTA]: 'Fiesta',
+    [PlanCategory.ESTUDIO]: 'Estudio',
+    [PlanCategory.DEPORTE]: 'Deporte',
+    [PlanCategory.CINE]: 'Cine',
+    [PlanCategory.MUSICA]: 'Música',
+    [PlanCategory.VIAJE]: 'Viaje',
+    [PlanCategory.COMIDA]: 'Comida',
+    [PlanCategory.OTRO]: 'Otro',
+  };
+  return labels[category] || 'Otro';
+};
+
 export const PlanDetailSheet: React.FC<PlanDetailSheetProps> = ({
   planId,
   visible,
   onClose,
   onJoin,
 }) => {
-  const [plan, setPlan] = useState<Plan | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [joiningLoading, setJoiningLoading] = useState(false);
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const insets = useSafeAreaInsets();
+  const {
+    plan,
+    joiningLoading,
+    handleClose,
+    handleJoinPress,
+    getCategoryEmoji,
+    formatTime,
+    formatDate,
+    displayParticipants,
+    additionalCount,
+  } = usePlanDetailSheet(planId, visible, onClose, onJoin);
 
-  useEffect(() => {
-    if (visible && planId) {
-      // Ensure it starts from bottom
-      slideAnim.setValue(SCREEN_HEIGHT);
-      fetchPlanDetails();
-      // Animate in
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 20,
-        stiffness: 90,
-      }).start();
-    } else if (!visible) {
-      // Animate out
-      Animated.timing(slideAnim, {
-        toValue: SCREEN_HEIGHT,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [visible, planId]);
-
-  const fetchPlanDetails = async () => {
-    if (!planId) return;
-
-    try {
-      setLoading(true);
-      const data = await planService.getPlanById(planId);
-      setPlan(data);
-    } catch (error) {
-      console.error('Error fetching plan details:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatTime = (time: string) => {
-    return time.slice(0, 5); // "HH:MM:SS" -> "HH:MM"
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    };
-    return date.toLocaleDateString('es-ES', options);
-  };
-
-  const getCategoryEmoji = () => {
-    if (!plan) return '📅';
-    const emojis: Record<string, string> = {
-      CAFE: '☕',
-      FIESTA: '🎉',
-      ESTUDIO: '📚',
-      DEPORTE: '⚽',
-      CINE: '🎬',
-      MUSICA: '🎵',
-      VIAJE: '✈️',
-      COMIDA: '🍕',
-      OTRO: '⭐',
-    };
-    return emojis[plan.category] || '📅';
-  };
-
-  const handleClose = () => {
-    Animated.timing(slideAnim, {
-      toValue: SCREEN_HEIGHT,
-      duration: 250,
-      useNativeDriver: true,
-    }).start(() => {
-      onClose();
-    });
-  };
-
-  const handleJoinPress = async () => {
-    try {
-      setJoiningLoading(true);
-      await onJoin();
-      await fetchPlanDetails(); // Refresh data
-    } catch (error) {
-      console.error('Error in handleJoinPress:', error);
-    } finally {
-      setJoiningLoading(false);
-    }
-  };
-
-  if (!visible || !plan) return null;
-
-  const activeParticipants = plan.participants?.filter(p => p.left_at === null) || [];
-  const displayParticipants = activeParticipants.slice(0, 3);
-  const additionalCount = Math.max(activeParticipants.length - 3, 0);
+  if (!plan) return null;
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="none"
-      onRequestClose={handleClose}>
-      <View style={styles.container}>
-        {/* Backdrop */}
-        <TouchableWithoutFeedback onPress={handleClose}>
-          <View style={styles.backdrop} />
-        </TouchableWithoutFeedback>
-
-        {/* Close Button */}
-        <TouchableOpacity style={styles.closeButton} onPress={handleClose} activeOpacity={0.8}>
-          <View style={styles.closeButtonInner}>
-            <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
-          </View>
-        </TouchableOpacity>
-
-        {/* Sheet Container */}
-        <Animated.View
+      animationType="slide"
+      onRequestClose={handleClose}
+    >
+      <Pressable style={styles.overlay} onPress={handleClose}>
+        <Pressable
           style={[
-            styles.sheetContainer,
-            {
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}>
-          {/* Floating Emoji */}
-          <Animated.View style={styles.floatingEmoji}>
-            <View style={styles.emojiCard}>
-              <Text style={styles.emojiText}>{getCategoryEmoji()}</Text>
-            </View>
-          </Animated.View>
+            styles.modalContainer,
+            { paddingBottom: insets.bottom + 16 }
+          ]}
+          onPress={(e) => e.stopPropagation()}
+        >
+          {/* Drag Handle */}
+          <View style={styles.dragHandleContainer}>
+            <View style={styles.dragHandle} />
+          </View>
 
-          {/* Sheet Content */}
-          <View style={styles.sheet}>
-            {/* Decorative blob */}
-            <LinearGradient
-              colors={[`${colors.accent}40`, `${colors.accent}10`]}
-              style={styles.decorativeBlob}
-            />
-
-            {/* Handle */}
-            <View style={styles.handle} />
-
-            <ScrollView
-              style={styles.scrollView}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}>
-              {/* Header */}
-              <View style={styles.header}>
-                <Text style={styles.title}>{plan.title}</Text>
-                <View style={styles.underline} />
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {/* Header Structure identical to EstablishmentModal */}
+            <View style={styles.header}>
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatar}>
+                  <Text style={styles.emojiText}>{getCategoryEmoji(plan.category)}</Text>
+                </View>
               </View>
 
-              {/* Organizer */}
-              <View style={styles.organizerRow}>
-                {plan.creator?.avatarUrl ? (
-                  <Image
-                    source={{ uri: plan.creator.avatarUrl }}
-                    style={styles.organizerAvatar}
-                  />
-                ) : (
-                  <View style={[styles.organizerAvatar, styles.organizerAvatarPlaceholder]}>
-                    <MaterialCommunityIcons name="account" size={16} color={colors.primary} />
+              <View style={styles.storeInfo}>
+                <View style={styles.categoryContainer}>
+                  <View style={styles.categoryChip}>
+                    <Text style={styles.categoryText}>
+                      {getCategoryLabel(plan.category as PlanCategory)}
+                    </Text>
                   </View>
-                )}
-                <Text style={styles.organizerText}>
-                  Organizado por{' '}
-                  <Text style={styles.organizerName}>@{plan.creator?.name || 'Usuario'}</Text>
+                </View>
+
+                <Text style={styles.storeName}>{plan.title}</Text>
+
+                <View style={styles.organizerRow}>
+                  {plan.creator?.avatarUrl ? (
+                    <Image source={{ uri: plan.creator.avatarUrl }} style={styles.miniAvatar} />
+                  ) : (
+                    <View style={styles.miniAvatarPlaceholder}>
+                      <MaterialCommunityIcons name="account" size={12} color={colors.primary} />
+                    </View>
+                  )}
+                  <Text style={styles.storeSubtitle}>
+                    Organizado por {plan.creator?.name || 'Usuario'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Description follows EstablishmentModal's descriptionContainer style */}
+            {plan.description && (
+              <View style={styles.descriptionContainer}>
+                <Text style={styles.description}>{plan.description}</Text>
+              </View>
+            )}
+
+            {/* Info Section - Clean icons and labels */}
+            <View style={styles.infoSection}>
+              <View style={styles.infoRow}>
+                <View style={styles.socialIconContainer}>
+                  <MaterialCommunityIcons name="calendar-multiselect" size={24} color={colors.primary} />
+                </View>
+                <View>
+                  <Text style={styles.socialLabel}>FECHA</Text>
+                  <Text style={styles.infoValue}>{formatDate(plan.date)}</Text>
+                </View>
+              </View>
+
+              <View style={styles.infoRow}>
+                <View style={styles.socialIconContainer}>
+                  <MaterialCommunityIcons name="clock-outline" size={24} color={colors.primary} />
+                </View>
+                <View>
+                  <Text style={styles.socialLabel}>HORARIO</Text>
+                  <Text style={styles.infoValue}>
+                    {formatTime(plan.start_time)}{plan.end_time ? ` - ${formatTime(plan.end_time)}` : ''}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.infoRow}>
+                <View style={[styles.socialIconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                  <MaterialCommunityIcons name="map-marker" size={24} color="#EF4444" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.socialLabel, { color: '#EF4444' }]}>UBICACIÓN</Text>
+                  <Text style={styles.infoValue} numberOfLines={1}>
+                    {plan.location_name || 'Sin dirección definida'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Participants Grid */}
+            <View style={styles.participantsSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Participantes</Text>
+                <Text style={styles.participantsCount}>
+                  {plan.participantsCount || 0}/{plan.max_participants || '∞'}
                 </Text>
               </View>
 
-              {/* Info Chips */}
-              <View style={styles.chipsContainer}>
-                {/* Time Chip */}
-                <View style={styles.chip}>
-                  <MaterialCommunityIcons name="clock-outline" size={20} color={colors.primary} />
-                  <Text style={styles.chipText}>
-                    {plan.end_time
-                      ? `${formatTime(plan.start_time)} - ${formatTime(plan.end_time)}`
-                      : formatTime(plan.start_time)}
-                  </Text>
-                </View>
-
-                {/* Location Chip */}
-                {plan.location_name && (
-                  <View style={styles.chip}>
-                    <MaterialCommunityIcons
-                      name="map-marker-outline"
-                      size={20}
-                      color={colors.primary}
-                    />
-                    <Text style={styles.chipText} numberOfLines={1}>
-                      {plan.location_name}
-                    </Text>
+              <View style={styles.avatarsContainer}>
+                {displayParticipants.map((participant, index) => (
+                  <View
+                    key={participant.id}
+                    style={[styles.attendeeAvatar, { marginLeft: index > 0 ? -12 : 0 }]}>
+                    {participant.user?.avatarUrl ? (
+                      <Image
+                        source={{ uri: participant.user.avatarUrl }}
+                        style={styles.attendeeAvatarImage}
+                      />
+                    ) : (
+                      <View style={styles.attendeeAvatarPlaceholder}>
+                        <MaterialCommunityIcons name="account" size={20} color={colors.primary} />
+                      </View>
+                    )}
+                  </View>
+                ))}
+                {additionalCount > 0 && (
+                  <View style={[styles.attendeeAvatar, styles.avatarCounter]}>
+                    <Text style={styles.counterText}>+{additionalCount}</Text>
                   </View>
                 )}
-
-                {/* Date Chip */}
-                <View style={styles.chip}>
-                  <MaterialCommunityIcons
-                    name="calendar-outline"
-                    size={20}
-                    color={colors.primary}
-                  />
-                  <Text style={styles.chipText}>{formatDate(plan.date)}</Text>
-                </View>
+                {(plan.participantsCount || 0) === 0 && (
+                  <Text style={styles.emptyText}>Sé el primero en unirte</Text>
+                )}
               </View>
-
-              {/* Description */}
-              {plan.description && (
-                <View style={styles.descriptionContainer}>
-                  <Text style={styles.description}>{plan.description}</Text>
-                </View>
-              )}
-
-              {/* Attendees Section */}
-              <View style={styles.attendeesSection}>
-                <LinearGradient
-                  colors={['rgba(248, 183, 53, 0.05)', 'rgba(248, 183, 53, 0.02)']}
-                  style={styles.attendeesGradient}
-                />
-                <View style={styles.attendeesContent}>
-                  <View style={styles.attendeesLeft}>
-                    <Text style={styles.attendeesLabel}>YA SE UNIERON</Text>
-                    <View style={styles.avatarsRow}>
-                      {displayParticipants.map((participant, index) => (
-                        <View
-                          key={participant.id}
-                          style={[styles.attendeeAvatar, { marginLeft: index > 0 ? -12 : 0 }]}>
-                          {participant.user?.avatarUrl ? (
-                            <Image
-                              source={{ uri: participant.user.avatarUrl }}
-                              style={styles.attendeeAvatarImage}
-                            />
-                          ) : (
-                            <View style={styles.attendeeAvatarPlaceholder}>
-                              <MaterialCommunityIcons
-                                name="account"
-                                size={20}
-                                color={colors.primary}
-                              />
-                            </View>
-                          )}
-                        </View>
-                      ))}
-                      {additionalCount > 0 && (
-                        <View style={[styles.attendeeAvatar, styles.attendeeAvatarCounter]}>
-                          <Text style={styles.attendeeAvatarCounterText}>+{additionalCount}</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                  <TouchableOpacity style={styles.viewAllButton} activeOpacity={0.7}>
-                    <Text style={styles.viewAllText}>Ver todos</Text>
-                    <MaterialCommunityIcons
-                      name="chevron-right"
-                      size={16}
-                      color="#9CA3AF"
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Spacer for button */}
-              <View style={{ height: 120 }} />
-            </ScrollView>
-
-            {/* Bottom CTA */}
-            <View style={styles.bottomCTA}>
-              {plan.isCreator ? (
-                <View style={styles.joinButton}>
-                  <LinearGradient
-                    colors={[`${colors.primary}20`, `${colors.primary}10`]}
-                    style={styles.joinButtonGradient}>
-                    <MaterialCommunityIcons name="crown" size={22} color={colors.primary} />
-                    <Text style={[styles.joinButtonText, { color: colors.primary }]}>
-                      Tu Plan
-                    </Text>
-                  </LinearGradient>
-                </View>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.joinButton,
-                      plan.isParticipating && styles.joinButtonActive,
-                      plan.isFull && !plan.isParticipating && styles.joinButtonDisabled,
-                    ]}
-                    onPress={handleJoinPress}
-                    disabled={joiningLoading || (plan.isFull && !plan.isParticipating)}
-                    activeOpacity={0.8}>
-                    <LinearGradient
-                      colors={
-                        plan.isParticipating
-                          ? [`${colors.primary}30`, `${colors.primary}20`]
-                          : [colors.accent, `${colors.accent}CC`]
-                      }
-                      style={styles.joinButtonGradient}>
-                      {joiningLoading ? (
-                        <View style={styles.loadingContainer}>
-                          <ActivityIndicator size="large" color={colors.primaryDark} />
-                        </View>
-                      ) : (
-                        <>
-                          <Text style={[styles.joinButtonText, plan.isParticipating && styles.joinButtonTextActive]}>
-                            {plan.isParticipating ? '✓ Ya estoy unido' : plan.isFull ? 'Plan lleno' : '¡Me uno!'}
-                          </Text>
-                          {!plan.isParticipating && !plan.isFull && (
-                            <MaterialCommunityIcons name="hand-wave" size={22} color={colors.primaryDark} />
-                          )}
-                        </>
-                      )}
-                    </LinearGradient>
-                  </TouchableOpacity>
-                  <Text style={styles.disclaimer}>
-                    Sin compromiso, puedes salirte cuando quieras.
-                  </Text>
-                </>
-              )}
             </View>
+          </ScrollView>
+
+          {/* Primary Action Button identical to EstablishmentModal's ctaButton */}
+          <View style={styles.ctaContainer}>
+            {plan.isCreator ? (
+              <View style={styles.creatorBtn}>
+                <MaterialCommunityIcons name="crown" size={24} color={colors.primary} />
+                <Text style={styles.ctaButtonText}>Es tu Plan</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.ctaButton,
+                  plan.isParticipating && styles.ctaButtonDisabled,
+                  plan.isFull && !plan.isParticipating && styles.ctaButtonDisabled,
+                ]}
+                onPress={handleJoinPress}
+                disabled={joiningLoading || (plan.isFull && !plan.isParticipating)}
+                activeOpacity={0.9}
+              >
+                {joiningLoading ? (
+                  <ActivityIndicator size="small" color="#111814" />
+                ) : (
+                  <>
+                    <Text style={styles.ctaButtonText}>
+                      {plan.isParticipating ? '✓ Ya estoy unido' : plan.isFull ? 'Plan lleno' : '¡Me uno ahora!'}
+                    </Text>
+                    {!plan.isParticipating && !plan.isFull && (
+                      <MaterialCommunityIcons name="hand-wave" size={24} color="#111814" />
+                    )}
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
-        </Animated.View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
     flex: 1,
+    backgroundColor: 'rgba(20, 20, 20, 0.6)',
     justifyContent: 'flex-end',
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 48,
-    right: 24,
-    zIndex: 100,
-  },
-  closeButtonInner: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 48,
+    borderTopRightRadius: 48,
+    maxHeight: '85%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  sheetContainer: {
-    minHeight: SCREEN_HEIGHT * 0.6,
-    maxHeight: SCREEN_HEIGHT * 0.85,
-  },
-  floatingEmoji: {
-    position: 'absolute',
-    top: -60,
-    right: 32,
-    zIndex: 50,
-  },
-  emojiCard: {
-    backgroundColor: colors.white,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    transform: [{ rotate: '-12deg' }],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: `${colors.primary}30`,
-  },
-  emojiText: {
-    fontSize: 36,
-  },
-  sheet: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
+    shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 16,
+    shadowRadius: 40,
+    elevation: 10,
   },
-  decorativeBlob: {
-    position: 'absolute',
-    top: -100,
-    right: -100,
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    opacity: 0.5,
+  dragHandleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  handle: {
+  dragHandle: {
     width: 48,
     height: 6,
-    backgroundColor: '#E5E7EB',
     borderRadius: 3,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: '#D1D5DB',
   },
   scrollContent: {
     paddingHorizontal: 24,
+    paddingTop: 8,
     paddingBottom: 24,
+    gap: 24,
   },
   header: {
-    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 16,
   },
-  title: {
-    fontSize: 32,
-    fontFamily: FONT_FAMILY.BOLD,
-    color: colors.primaryDark,
-    lineHeight: 38,
-    letterSpacing: -0.5,
+  avatarContainer: {
+    position: 'relative',
+    flexShrink: 0,
   },
-  underline: {
-    height: 12,
-    width: '60%',
-    backgroundColor: `${colors.primary}40`,
-    marginTop: -8,
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 32,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  emojiText: {
+    fontSize: 40,
+  },
+  storeInfo: {
+    flex: 1,
+    paddingTop: 4,
+  },
+  categoryContainer: {
+    marginBottom: 4,
+  },
+  categoryChip: {
+    backgroundColor: 'rgba(46, 238, 130, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 2,
     borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  categoryText: {
+    color: '#104e33',
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.BOLD,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  storeName: {
+    fontSize: 24,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: '#111814',
+    lineHeight: 30,
   },
   organizerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
+    marginTop: 4,
+    gap: 6,
   },
-  organizerAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    overflow: 'hidden',
+  miniAvatar: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
   },
-  organizerAvatarPlaceholder: {
-    backgroundColor: `${colors.primary}20`,
+  miniAvatarPlaceholder: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  organizerText: {
+  storeSubtitle: {
     fontSize: 14,
     fontFamily: FONT_FAMILY.MEDIUM,
     color: '#6B7280',
   },
-  organizerName: {
-    fontFamily: FONT_FAMILY.BOLD,
-    color: colors.primary,
-  },
-  chipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 24,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  chipText: {
-    fontSize: 14,
-    fontFamily: FONT_FAMILY.SEMI_BOLD,
-    color: '#374151',
-  },
   descriptionContainer: {
-    marginBottom: 24,
+    backgroundColor: '#F6F8F7',
+    padding: 16,
+    borderRadius: 12,
   },
   description: {
-    fontSize: 16,
-    fontFamily: FONT_FAMILY.REGULAR,
-    color: '#4B5563',
+    fontSize: 15,
+    fontFamily: FONT_FAMILY.MEDIUM,
+    color: '#111814',
     lineHeight: 24,
   },
-  attendeesSection: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
-    position: 'relative',
+  infoSection: {
+    gap: 16,
   },
-  attendeesGradient: {
-    ...StyleSheet.absoluteFillObject,
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  attendeesContent: {
+  socialIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(46, 238, 130, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  socialLabel: {
+    fontSize: 10,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: '#6B7280',
+    letterSpacing: 1,
+  },
+  infoValue: {
+    fontSize: 15,
+    fontFamily: FONT_FAMILY.SEMI_BOLD,
+    color: '#111814',
+  },
+  participantsSection: {
+    marginTop: 8,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  attendeesLeft: {
-    gap: 12,
-  },
-  attendeesLabel: {
-    fontSize: 10,
+  sectionTitle: {
+    fontSize: 16,
     fontFamily: FONT_FAMILY.BOLD,
-    color: '#9CA3AF',
-    letterSpacing: 1,
+    color: '#111814',
   },
-  avatarsRow: {
+  participantsCount: {
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
+  },
+  avatarsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   attendeeAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: colors.white,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
     overflow: 'hidden',
   },
   attendeeAvatarImage: {
@@ -570,87 +430,65 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   attendeeAvatarPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: `${colors.primary}30`,
+    flex: 1,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  attendeeAvatarCounter: {
-    backgroundColor: `${colors.primary}30`,
+  avatarCounter: {
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: -12,
   },
-  attendeeAvatarCounterText: {
-    fontSize: 12,
+  counterText: {
+    fontSize: 13,
     fontFamily: FONT_FAMILY.BOLD,
-    color: colors.primaryDark,
+    color: '#475569',
   },
-  viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  viewAllText: {
+  emptyText: {
     fontSize: 14,
     fontFamily: FONT_FAMILY.MEDIUM,
-    color: '#9CA3AF',
+    color: '#94A3B8',
+    marginLeft: 8,
   },
-  bottomCTA: {
+  ctaContainer: {
     paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 32,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    paddingTop: 8,
   },
-  joinButton: {
-    borderRadius: 20,
-    // Note: removed overflow: 'hidden' to debug clipping, 
-    // adding borderRadius to gradient instead
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  joinButtonActive: {
-    shadowOpacity: 0.15,
-  },
-  joinButtonDisabled: {
-    opacity: 0.5,
-    shadowOpacity: 0,
-  },
-  joinButtonGradient: {
+  ctaButton: {
+    width: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
-    height: 72, // Increased explicit height
-    borderRadius: 20, // Match parent
-    paddingHorizontal: 24,
+    gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  joinButtonText: {
-    fontSize: 20,
+  ctaButtonDisabled: {
+    backgroundColor: '#D1D5DB',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  ctaButtonText: {
+    fontSize: 18,
     fontFamily: FONT_FAMILY.BOLD,
-    color: colors.primaryDark,
-    letterSpacing: -0.5,
-    includeFontPadding: false, // Essential for Android, harmless for iOS
-    textAlignVertical: 'center',
+    color: '#111814',
   },
-  joinButtonTextActive: {
-    color: colors.primary,
-  },
-  loadingContainer: {
-    justifyContent: 'center',
+  creatorBtn: {
+    backgroundColor: 'rgba(46, 238, 130, 0.1)',
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  disclaimer: {
-    fontSize: 12,
-    fontFamily: FONT_FAMILY.MEDIUM,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    marginTop: 12,
+    justifyContent: 'center',
+    gap: 8,
   },
 });

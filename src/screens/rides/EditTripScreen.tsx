@@ -9,6 +9,7 @@ import {
   Modal,
 } from 'react-native';
 import { Text, TextInput, Button } from 'react-native-paper';
+import { SuccessModal } from '../../components/modals/SuccessModal';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -37,6 +38,7 @@ export const EditTripScreen = () => {
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
 
   useEffect(() => {
@@ -212,14 +214,7 @@ export const EditTripScreen = () => {
     try {
       setLoading(true);
       await tripService.updateTrip(tripId, updateData);
-      Alert.alert('Éxito', 'Viaje actualizado exitosamente', [
-        {
-          text: 'OK',
-          onPress: () => {
-            navigation.navigate('TripDetail', { tripId });
-          },
-        },
-      ]);
+      setShowSuccessModal(true);
     } catch (error: any) {
       console.error('Error updating trip:', error);
       Alert.alert(
@@ -622,6 +617,18 @@ export const EditTripScreen = () => {
           Guardar Cambios
         </Button>
       </ScrollView>
+
+      <SuccessModal
+        visible={showSuccessModal}
+        title="¡Viaje actualizado!"
+        message="Los cambios en tu viaje han sido guardados exitosamente."
+        buttonText="Ver viaje"
+        icon="check-circle"
+        onClose={() => {
+          setShowSuccessModal(false);
+          navigation.navigate('TripDetail', { tripId });
+        }}
+      />
     </SafeAreaView>
   );
 };

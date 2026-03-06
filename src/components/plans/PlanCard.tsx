@@ -50,12 +50,10 @@ const getCategoryLabel = (category: PlanCategory): string => {
 
 export const PlanCard: React.FC<PlanCardProps> = ({ plan, onPress, onJoin }) => {
   const categoryConfig = getCategoryConfig(plan.category);
-  const participantAvatars = plan.participants
-    ?.filter(p => p.left_at === null && p.user?.avatarUrl)
-    .slice(0, 3)
-    .map(p => p.user?.avatarUrl) || [];
-
+  const activeParticipants = plan.participants?.filter(p => p.left_at === null) || [];
+  const participantAvatars = activeParticipants.slice(0, 3);
   const additionalCount = Math.max((plan.participantsCount || 0) - 3, 0);
+  const hasParticipants = (plan.participantsCount || 0) > 0;
 
   // Format time
   const formatTime = (time: string) => {
@@ -111,14 +109,22 @@ export const PlanCard: React.FC<PlanCardProps> = ({ plan, onPress, onJoin }) => 
       <View style={styles.footer}>
         {/* Participants avatars */}
         <View style={styles.avatarsContainer}>
-          {participantAvatars.length > 0 ? (
+          {hasParticipants ? (
             <>
-              {participantAvatars.map((url, index) => (
-                <Image
-                  key={index}
-                  source={{ uri: url || undefined }}
-                  style={[styles.avatar, { marginLeft: index > 0 ? -8 : 0 }]}
-                />
+              {participantAvatars.map((p, index) => (
+                p.user?.avatarUrl ? (
+                  <Image
+                    key={p.id}
+                    source={{ uri: p.user.avatarUrl }}
+                    style={[styles.avatar, { marginLeft: index > 0 ? -8 : 0 }]}
+                  />
+                ) : (
+                  <View
+                    key={p.id}
+                    style={[styles.avatar, styles.avatarPlaceholder, { marginLeft: index > 0 ? -8 : 0 }]}>
+                    <MaterialCommunityIcons name="account" size={14} color="#9CA3AF" />
+                  </View>
+                )
               ))}
               {additionalCount > 0 && (
                 <Text style={styles.additionalCount}>+{additionalCount}</Text>
@@ -260,10 +266,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 16,
+    gap: 8,
   },
   avatarsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    flexShrink: 1,
   },
   avatar: {
     width: 32,
@@ -271,6 +280,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     borderColor: colors.white,
+  },
+  avatarPlaceholder: {
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   additionalCount: {
     marginLeft: 8,
@@ -285,7 +299,7 @@ const styles = StyleSheet.create({
   },
   joinButton: {
     backgroundColor: colors.accent,
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 16,
     shadowColor: colors.accent,
@@ -293,6 +307,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 2,
+    flexShrink: 0,
   },
   joinButtonCreator: {
     backgroundColor: `${colors.primary}15`,

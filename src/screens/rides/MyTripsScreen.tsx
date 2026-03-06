@@ -278,7 +278,7 @@ export const MyTripsScreen = () => {
                 activeOpacity={0.7}>
                 <RideCard
                   ride={convertTripToRide(trip)}
-                  onJoinPress={() => handleTripPress(trip.id)}
+                  onJoinPress={trip.userRole !== 'driver' ? () => handleTripPress(trip.id) : undefined}
                 />
               </TouchableOpacity>
               {trip.userRole === 'driver' && trip.status === 'ACTIVE' && (

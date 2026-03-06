@@ -18,9 +18,12 @@ export interface Promotion {
   category: PromotionCategory;
   discount?: number;
   isActive: boolean;
+  is_active?: boolean;
   establishmentId: string;
   createdAt: string;
   updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreatePromotionData {
@@ -57,7 +60,7 @@ export const promotionService = {
   // Get all promotions with optional filters
   async getPromotions(params?: GetPromotionsParams) {
     let query = supabase
-      .from('Promotion')
+      .from('promotions')
       .select('*', { count: 'exact' });
 
     if (params?.category) {
@@ -74,7 +77,7 @@ export const promotionService = {
     const to = from + limit - 1;
 
     query = query
-      .order('createdAt', { ascending: false })
+      .order('created_at', { ascending: false })
       .range(from, to);
 
     const { data, error, count } = await query;
@@ -97,7 +100,7 @@ export const promotionService = {
   // Get a single promotion by ID
   async getPromotion(promotionId: string) {
     const { data, error } = await supabase
-      .from('Promotion')
+      .from('promotions')
       .select('*')
       .eq('id', promotionId)
       .single();
@@ -129,7 +132,7 @@ export const promotionService = {
   // Create a new promotion (requires authentication)
   async createPromotion(data: CreatePromotionData) {
     const { data: promotion, error } = await supabase
-      .from('Promotion')
+      .from('promotions')
       .insert({
         ...data,
         isActive: data.isActive ?? true,
@@ -147,10 +150,10 @@ export const promotionService = {
   // Update a promotion (requires authentication)
   async updatePromotion(promotionId: string, data: UpdatePromotionData) {
     const { data: promotion, error } = await supabase
-      .from('Promotion')
+      .from('promotions')
       .update({
         ...data,
-        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .eq('id', promotionId)
       .select()
@@ -166,7 +169,7 @@ export const promotionService = {
   // Delete a promotion (requires authentication)
   async deletePromotion(promotionId: string) {
     const { error } = await supabase
-      .from('Promotion')
+      .from('promotions')
       .delete()
       .eq('id', promotionId);
 
