@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../config/colors';
 import { useAuth } from '../contexts/AuthContext';
-import { useUserStore } from '../store/userStore';
+import { useAuthStore } from '../features/auth/presentation/store/auth.store';
 import { CareerName, CAREER_LIST } from '../types/career.types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -65,7 +65,7 @@ export const ProfileScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { logout } = useAuth();
-  const { profile, isLoading, fetchProfile, updateProfile } = useUserStore();
+  const { user: profile, isLoading, fetchCurrentUser: fetchProfile, updateProfile } = useAuthStore();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCareerPicker, setShowCareerPicker] = useState(false);

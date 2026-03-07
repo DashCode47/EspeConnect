@@ -22,7 +22,7 @@ import { RideStackParamList } from '../../../../navigation/types';
 import { useHideNavbar } from '../../../../hooks/useHideNavbar';
 import { globalStyles } from '../../../../config/globalStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useUserStore } from '../../../../store/userStore';
+import { useAuthStore } from '../../../../features/auth/presentation/store/auth.store';
 import { SuccessModal } from '../../../../components/modals/SuccessModal';
 import { ErrorModal } from '../../../../components/modals/ErrorModal';
 
@@ -31,7 +31,7 @@ type CreateTripScreenNavigationProp = NativeStackNavigationProp<RideStackParamLi
 export const CreateTripScreen = () => {
   const navigation = useNavigation<CreateTripScreenNavigationProp>();
   const insets = useSafeAreaInsets();
-  const { profile } = useUserStore();
+  const { user: profile } = useAuthStore();
   const { createTrip } = useTripStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<CreateTripData>({

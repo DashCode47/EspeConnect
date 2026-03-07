@@ -1,5 +1,5 @@
-import { Post } from '../services/post.service';
-import { Product } from '../services/marketplace.service';
+import { Post } from '../features/posts/domain/entities/post.entity';
+import { Product } from '../features/marketplace/domain/entities/product.entity';
 
 export type RootStackParamList = {
   Onboarding: undefined;

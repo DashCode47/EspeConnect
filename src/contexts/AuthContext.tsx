@@ -1,15 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { useUserStore } from '../store/userStore';
+import { useAuthStore } from '../features/auth/presentation/store/auth.store';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, metadata?: { full_name?: string }) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   logout: () => Promise<void>;
   login: () => Promise<void>;
 }
@@ -20,6 +18,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const fetchCurrentUser = useAuthStore(state => state.fetchCurrentUser);
+  const storeUser = useAuthStore(state => state.user);
 
   useEffect(() => {
     // Get initial session
@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Fetch profile if user is logged in
       if (session?.user) {
-        useUserStore.getState().fetchProfile();
+        fetchCurrentUser();
       }
     });
 
@@ -40,62 +40,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       setLoading(false);
 
-      // Fetch or clear profile based on auth state
+      // Fetch profile or clear user based on auth state
       if (session?.user) {
-        useUserStore.getState().fetchProfile();
+        fetchCurrentUser();
       } else {
-        useUserStore.getState().clearProfile();
+        useAuthStore.setState({ user: null });
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
-
-  const signUp = async (email: string, password: string, metadata?: { full_name?: string }) => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: metadata,
-        },
-      });
-
-      if (error) {
-        return { error };
-      }
-
-      return { error: null };
-    } catch (error) {
-      console.error('Error during sign up:', error);
-      return { error: error as Error };
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        return { error };
-      }
-
-      return { error: null };
-    } catch (error) {
-      console.error('Error during sign in:', error);
-      return { error: error as Error };
-    }
-  };
+  }, [fetchCurrentUser]);
 
   const logout = async () => {
     try {
-      useUserStore.getState().clearProfile();
-      await supabase.auth.signOut();
+      await useAuthStore.getState().logout();
     } catch (error) {
       console.error('Error during logout:', error);
     }
@@ -121,8 +81,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         session,
         loading,
-        signUp,
-        signIn,
         logout,
         login,
       }}

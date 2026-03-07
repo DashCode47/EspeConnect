@@ -11,6 +11,9 @@ export class Left<L, R> {
   isRight(): this is Right<L, R> {
     return false;
   }
+  fold<S>(onLeft: (l: L) => S, onRight: (r: R) => S): S {
+    return onLeft(this.value);
+  }
 }
 
 export class Right<L, R> {
@@ -23,6 +26,9 @@ export class Right<L, R> {
   }
   isRight(): this is Right<L, R> {
     return true;
+  }
+  fold<S>(onLeft: (l: L) => S, onRight: (r: R) => S): S {
+    return onRight(this.value);
   }
 }
 

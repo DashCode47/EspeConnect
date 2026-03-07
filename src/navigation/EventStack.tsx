@@ -1,14 +1,14 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { EventStackParamList } from './types';
-import { EventsScreen } from '../screens/events/EventsScreen';
-import { EventDetailScreen } from '../screens/events/EventDetailScreen';
-import { CreateEventScreen } from '../screens/events/CreateEventScreen';
-import { CreatePlanScreen } from '../screens/events/CreatePlanScreen';
-import { EditPlanScreen } from '../screens/events/EditPlanScreen';
-import { MyPlansScreen } from '../screens/events/MyPlansScreen';
-import { ManagePlanParticipantsScreen } from '../screens/events/ManagePlanParticipantsScreen';
-import { PlanCommentsScreen } from '../screens/events/PlanCommentsScreen';
+import { EventsScreen } from '../features/events/presentation/screens/EventsScreen';
+import { EventDetailScreen } from '../features/events/presentation/screens/EventDetailScreen';
+import { CreateEventScreen } from '../features/events/presentation/screens/CreateEventScreen';
+import { CreatePlanScreen } from '../features/events/presentation/screens/CreatePlanScreen';
+import { EditPlanScreen } from '../features/events/presentation/screens/EditPlanScreen';
+import { MyPlansScreen } from '../features/events/presentation/screens/MyPlansScreen';
+import { ManagePlanParticipantsScreen } from '../features/events/presentation/screens/ManagePlanParticipantsScreen';
+import { PlanCommentsScreen } from '../features/events/presentation/screens/PlanCommentsScreen';
 
 const Stack = createNativeStackNavigator<EventStackParamList>();
 

@@ -15,7 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Trip, TripRequest } from '../../domain/entities/trip.entity';
 import { useTripStore } from '../store/trip.store';
-import { useUserStore } from '../../../../store/userStore';
+import { useAuthStore } from '../../../../features/auth/presentation/store/auth.store';
 import { colors } from '../../../../config/colors';
 import { RideStackParamList } from '../../../../navigation/types';
 import { useHideNavbar } from '../../../../hooks/useHideNavbar';
@@ -31,7 +31,7 @@ export const TripDetailScreen = () => {
   const navigation = useNavigation<TripDetailScreenNavigationProp>();
   const { tripId } = route.params;
 
-  const { profile } = useUserStore();
+  const { user: profile } = useAuthStore();
   const { trips, myTrips, joinTrip, fetchTripById } = useTripStore();
   const trip = [...trips, ...myTrips].find((t: Trip) => t.id === tripId) || null;
   const [loading, setLoading] = useState(!trip);

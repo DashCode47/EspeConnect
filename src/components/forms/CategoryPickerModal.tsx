@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PlanCategory } from '../../types/plan.types';
+import { PlanCategory } from '../../features/events/domain/entities/plan.entity';
 import { colors } from '../../config/colors';
 import { FONT_FAMILY } from '../../config/globalStyles';
 

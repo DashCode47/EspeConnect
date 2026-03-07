@@ -17,7 +17,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { colors } from '../../../../config/colors';
 import { RideStackParamList } from '../../../../navigation/types';
 import { TripStatus, Trip, Rating, TripRequest } from '../../domain/entities/trip.entity';
-import { useUserStore } from '../../../../store/userStore';
+import { useAuthStore } from '../../../../features/auth/presentation/store/auth.store';
 import { useTripStore } from '../store/trip.store';
 import { globalStyles, FONT_FAMILY } from '../../../../config/globalStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,7 +30,7 @@ export const RidesScreen = () => {
   const navigation = useNavigation<RidesScreenNavigationProp>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
-  const { profile, fetchProfile } = useUserStore();
+  const { user: profile, fetchCurrentUser: fetchProfile } = useAuthStore();
   const { trips: allTrips, tripsLoading, myTrips: allMyTrips, myTripsLoading, fetchTrips, fetchMyTrips } = useTripStore();
   const [refreshing, setRefreshing] = useState(false);
   const [origin, setOrigin] = useState('');

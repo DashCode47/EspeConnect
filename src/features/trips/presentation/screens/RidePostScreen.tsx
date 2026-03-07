@@ -9,7 +9,7 @@ import { CommentInput } from '../../../../components/rides/CommentInput';
 import { CommentList } from '../../../../components/CommentList';
 import { Post, postService } from '../../../../services/post.service';
 import { Comment, commentService } from '../../../../services/comment.service';
-import { useUserStore } from '../../../../store/userStore';
+import { useAuthStore } from '../../../../features/auth/presentation/store/auth.store';
 import { colors } from '../../../../config/colors';
 
 type RidePostScreenRouteProp = RouteProp<any, 'RidePost'>;
@@ -25,7 +25,7 @@ export const RidePostScreen = () => {
   const [hasMore, setHasMore] = useState(true);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const { profile } = useUserStore();
+  const { user: profile } = useAuthStore();
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
 

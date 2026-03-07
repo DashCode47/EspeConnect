@@ -1,9 +1,9 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { PostStackParamList } from './types';
-import { PostScreen } from '../screens/posts/PostScreen';
-import { CreatePostScreen } from '../screens/home/CreatePostScreen';
-import { PostDetailsScreen } from '../screens/home/PostDetailsScreen';
+import { PostScreen } from '../features/posts/presentation/screens/PostScreen';
+import { CreatePostScreen } from '../features/posts/presentation/screens/CreatePostScreen';
+import { PostDetailsScreen } from '../features/posts/presentation/screens/PostDetailsScreen';
 
 const Stack = createNativeStackNavigator<PostStackParamList>();
 

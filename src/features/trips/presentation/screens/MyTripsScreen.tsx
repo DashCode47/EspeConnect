@@ -15,7 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Trip, TripType } from '../../domain/entities/trip.entity';
 import { TripRepositoryImpl } from '../../data/repositories/trip.repository.impl';
-import { useUserStore } from '../../../../store/userStore';
+import { useAuthStore } from '../../../../features/auth/presentation/store/auth.store';
 import { RideCard, Ride } from '../../../../components/rides/RideCard';
 import { colors } from '../../../../config/colors';
 import { RideStackParamList } from '../../../../navigation/types';
@@ -28,7 +28,7 @@ const repository = new TripRepositoryImpl();
 
 export const MyTripsScreen = () => {
   const navigation = useNavigation<MyTripsScreenNavigationProp>();
-  const { profile } = useUserStore();
+  const { user: profile } = useAuthStore();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
