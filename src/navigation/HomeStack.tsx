@@ -6,7 +6,7 @@ import { CreatePostScreen } from '../features/posts/presentation/screens/CreateP
 import { PostDetailsScreen } from '../features/posts/presentation/screens/PostDetailsScreen';
 import { BenefitsNavigator } from './BenefitsNavigator';
 import { BENEFIT_STACK } from '../config/constants';
-import { ProfileScreen } from '../screens/ProfileScreen';
+import { ProfileScreen } from '../features/auth/presentation/screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 

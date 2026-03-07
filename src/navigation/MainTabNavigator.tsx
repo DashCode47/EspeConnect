@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from './types';
 import { HomeStack } from './HomeStack';
@@ -6,7 +6,6 @@ import { AnimatedNavigator } from '../components/AnimatedNavigator';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MarketplaceStack } from './MarketplaceStack';
-import { ComunityStack } from './ComunityStack';
 import { RideStack } from './RideStack';
 import { EventStack } from './EventStack';
 import { BenefitsNavigator } from './BenefitsNavigator';
@@ -39,12 +38,12 @@ export const MainTabNavigator = () => {
           if (hideNavbar) {
             return null;
           }
-          
+
           return (
-            <View style={{ 
-              position: 'absolute', 
-              bottom: insets.bottom > 0 ? insets.bottom : 0, 
-              left: 0, 
+            <View style={{
+              position: 'absolute',
+              bottom: insets.bottom > 0 ? insets.bottom : 0,
+              left: 0,
               right: 0,
               zIndex: 1000,
               pointerEvents: 'box-none',
@@ -62,10 +61,6 @@ export const MainTabNavigator = () => {
         <Tab.Screen
           name="home"
           component={HomeStack}
-        />
-        <Tab.Screen
-          name="carreers"
-          component={ComunityStack}
         />
         <Tab.Screen
           name="posts"

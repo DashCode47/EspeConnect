@@ -1,23 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
 import { Text } from 'react-native-paper';
-import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useRoute, RouteProp } from '@react-navigation/native';
 import { RidePostHeader } from '../../../../components/rides/RidePostHeader';
 import { RidePostCard } from '../../../../components/rides/RidePostCard';
 import { CommentInput } from '../../../../components/rides/CommentInput';
-import { CommentList } from '../../../../components/CommentList';
 import { Post, postService } from '../../../../services/post.service';
 import { Comment, commentService } from '../../../../services/comment.service';
 import { useAuthStore } from '../../../../features/auth/presentation/store/auth.store';
 import { colors } from '../../../../config/colors';
 
 type RidePostScreenRouteProp = RouteProp<any, 'RidePost'>;
-type RidePostScreenNavigationProp = NativeStackNavigationProp<any>;
 
 export const RidePostScreen = () => {
   const route = useRoute<RidePostScreenRouteProp>();
-  const navigation = useNavigation<RidePostScreenNavigationProp>();
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,12 +192,12 @@ export const RidePostScreen = () => {
 
         <View style={styles.commentsSection}>
           <Text style={styles.commentsTitle}>Comentarios</Text>
-          <CommentList
+          {/* <CommentList
             comments={comments}
             loading={loading}
             hasMore={hasMore}
             onLoadMore={handleLoadMore}
-          />
+          /> */}
         </View>
       </ScrollView>
 

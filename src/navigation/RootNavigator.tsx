@@ -1,39 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AppState, AppStateStatus } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from './types';
 import { AuthNavigator } from './AuthNavigator';
 import { MainTabNavigator } from './MainTabNavigator';
-import { OnboardingScreen } from '../screens/OnboardingScreen';
+import { OnboardingScreen } from '../features/onboarding/presentation/screens/OnboardingScreen';
 import { useAuth } from '../contexts/AuthContext';
-import { SplashScreen } from '../screens/SplashScreen';
+import { SplashScreen } from '../features/onboarding/presentation/screens/SplashScreen';
+import { useOnboardingStore } from '../features/onboarding/presentation/store/onboarding.store';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const navigationRef: any = React.createRef()
 
 export const RootNavigator = () => {
-  const { isAuthenticated, loading } = useAuth();
-  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
-
-  const checkOnboardingStatus = useCallback(async () => {
-    try {
-      const completed = await AsyncStorage.getItem('onboarding_completed');
-      const isCompleted = completed === 'true';
-      setOnboardingCompleted(prev => {
-        // Only update if value actually changed
-        if (prev !== isCompleted) {
-          return isCompleted;
-        }
-        return prev;
-      });
-    } catch (error) {
-      console.error('Error checking onboarding status:', error);
-      setOnboardingCompleted(false);
-    }
-  }, []);
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const {
+    isCompleted: onboardingCompleted,
+    isLoading: onboardingLoading,
+    checkOnboardingStatus
+  } = useOnboardingStore();
 
   useEffect(() => {
     // Check on mount
@@ -51,17 +38,9 @@ export const RootNavigator = () => {
     };
   }, [checkOnboardingStatus]);
 
-  // Also expose a method to manually refresh onboarding status
-  // This can be called from OnboardingScreen after completing
-  useEffect(() => {
-    if (navigationRef.current) {
-      (navigationRef.current as any).refreshOnboarding = checkOnboardingStatus;
-    }
-  }, [checkOnboardingStatus]);
-
   // Navigate when authentication state changes
   useEffect(() => {
-    if (!loading && onboardingCompleted !== null && navigationRef.current) {
+    if (!authLoading && onboardingCompleted !== null && navigationRef.current) {
       // Small delay to ensure state is fully propagated
       const timeoutId = setTimeout(() => {
         if (!navigationRef.current) return;
@@ -89,9 +68,9 @@ export const RootNavigator = () => {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [isAuthenticated, loading, onboardingCompleted]);
+  }, [isAuthenticated, authLoading, onboardingCompleted]);
 
-  if (loading || onboardingCompleted === null) {
+  if (authLoading || onboardingCompleted === null) {
     return <SplashScreen />;
   }
 
@@ -117,4 +96,4 @@ export const RootNavigator = () => {
       </Stack.Navigator>
     </NavigationContainer>
   );
-}; 
+};

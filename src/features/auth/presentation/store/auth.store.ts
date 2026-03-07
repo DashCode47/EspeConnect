@@ -2,8 +2,21 @@ import { create } from 'zustand';
 import { AuthUser } from '../../domain/entities/auth_user.entity';
 import { AuthRepositoryImpl } from '../../data/repositories/auth.repository.impl';
 import { LoginData, RegisterData } from '../../domain/repositories/auth.repository';
+import { LoginUseCase } from '../../domain/usecases/login.usecase';
+import { RegisterUseCase } from '../../domain/usecases/register.usecase';
+import { LogoutUseCase } from '../../domain/usecases/logout.usecase';
+import { GetCurrentUserUseCase } from '../../domain/usecases/get_current_user.usecase';
+import { UpdateProfileUseCase } from '../../domain/usecases/update_profile.usecase';
+import { UpdateAvatarUseCase } from '../../domain/usecases/update_avatar.usecase';
+import { NoParams } from '../../../../core/usecase/usecase';
 
 const repository = new AuthRepositoryImpl();
+const loginUseCase = new LoginUseCase(repository);
+const registerUseCase = new RegisterUseCase(repository);
+const logoutUseCase = new LogoutUseCase(repository);
+const getCurrentUserUseCase = new GetCurrentUserUseCase(repository);
+const updateProfileUseCase = new UpdateProfileUseCase(repository);
+const updateAvatarUseCase = new UpdateAvatarUseCase(repository);
 
 interface AuthStore {
   user: AuthUser | null;
@@ -26,7 +39,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   login: async (data: LoginData) => {
     set({ isLoading: true, error: null });
-    const result = await repository.login(data);
+    const result = await loginUseCase.execute(data);
     if (result.isRight()) {
       set({ user: result.value, isLoading: false });
     } else {
@@ -37,7 +50,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   register: async (data: RegisterData) => {
     set({ isLoading: true, error: null });
-    const result = await repository.register(data);
+    const result = await registerUseCase.execute(data);
     if (result.isRight()) {
       set({ user: result.value, isLoading: false });
     } else {
@@ -48,7 +61,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   logout: async () => {
     set({ isLoading: true, error: null });
-    const result = await repository.logout();
+    const result = await logoutUseCase.execute(new NoParams());
     if (result.isRight()) {
       set({ user: null, isLoading: false });
     } else {
@@ -58,7 +71,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   fetchCurrentUser: async () => {
     set({ isLoading: true, error: null });
-    const result = await repository.getCurrentUser();
+    const result = await getCurrentUserUseCase.execute(new NoParams());
     if (result.isRight()) {
       set({ user: result.value, isLoading: false });
     } else {
@@ -68,7 +81,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   updateProfile: async (data: Partial<AuthUser>) => {
     set({ isLoading: true, error: null });
-    const result = await repository.updateProfile(data);
+    const result = await updateProfileUseCase.execute(data);
     if (result.isRight()) {
       set({ user: result.value, isLoading: false });
     } else {
@@ -79,7 +92,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   updateAvatar: async (imageUri: string) => {
     set({ isLoading: true, error: null });
-    const result = await repository.updateAvatar(imageUri);
+    const result = await updateAvatarUseCase.execute(imageUri);
     if (result.isRight()) {
       set({ isLoading: false });
       return result.value;
