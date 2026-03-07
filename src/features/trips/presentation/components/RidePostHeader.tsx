@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { colors } from '../../config/colors';
+import { colors } from '../../../../config/colors';
 
 interface RidePostHeaderProps {
   title?: string;

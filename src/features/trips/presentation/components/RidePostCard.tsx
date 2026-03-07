@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { Text, Avatar } from 'react-native-paper';
-import { colors } from '../../config/colors';
+import { colors } from '../../../../config/colors';
 import { ReactionBar } from './ReactionBar';
 
 interface Author {

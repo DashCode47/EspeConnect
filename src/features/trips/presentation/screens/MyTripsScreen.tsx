@@ -16,7 +16,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { Trip, TripType } from '../../domain/entities/trip.entity';
 import { TripRepositoryImpl } from '../../data/repositories/trip.repository.impl';
 import { useAuthStore } from '../../../../features/auth/presentation/store/auth.store';
-import { RideCard, Ride } from '../../../../components/rides/RideCard';
+import { RideCard, Ride } from '../components/RideCard';
 import { colors } from '../../../../config/colors';
 import { RideStackParamList } from '../../../../navigation/types';
 import { useHideNavbar } from '../../../../hooks/useHideNavbar';
