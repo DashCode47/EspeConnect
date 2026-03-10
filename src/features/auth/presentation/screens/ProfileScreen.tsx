@@ -12,10 +12,12 @@ import {
     Dimensions,
     Pressable,
     TextInput,
+    Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { launchImageLibrary } from 'react-native-image-picker';
 // import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../../../../config/colors';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -65,7 +67,7 @@ export const ProfileScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
     const { logout } = useAuth();
-    const { user: profile, isLoading, fetchCurrentUser: fetchProfile, updateProfile } = useAuthStore();
+    const { user: profile, isLoading, fetchCurrentUser: fetchProfile, updateProfile, updateAvatar } = useAuthStore();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showCareerPicker, setShowCareerPicker] = useState(false);
@@ -77,6 +79,10 @@ export const ProfileScreen = () => {
     const [editCareer, setEditCareer] = useState('');
     const [editGender, setEditGender] = useState('');
     const [editInterests, setEditInterests] = useState<string[]>([]);
+    const [pendingAvatarUri, setPendingAvatarUri] = useState<string | null>(null);
+    const [pendingAvatarBase64, setPendingAvatarBase64] = useState<string | null>(null);
+    const [pendingAvatarExt, setPendingAvatarExt] = useState<string>('jpg');
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
     useEffect(() => {
         if (!profile) {
@@ -95,13 +101,33 @@ export const ProfileScreen = () => {
             setEditCareer(profile.career || '');
             setEditGender(profile.gender || '');
             setEditInterests(profile.interests || []);
+            setPendingAvatarUri(null);
+            setPendingAvatarBase64(null);
+            setPendingAvatarExt('jpg');
             setShowEditModal(true);
         }
+    };
+
+    const handlePickAvatar = () => {
+        launchImageLibrary({ mediaType: 'photo', quality: 0.8, includeBase64: true }, (response) => {
+            if (response.didCancel || response.errorCode) return;
+            const asset = response.assets?.[0];
+            if (!asset?.uri || !asset.base64) return;
+            const ext = asset.uri.split('.').pop()?.split('?')[0] || 'jpg';
+            setPendingAvatarUri(asset.uri);
+            setPendingAvatarBase64(asset.base64);
+            setPendingAvatarExt(ext);
+        });
     };
 
     const handleUpdateProfile = async () => {
         try {
             setIsSaving(true);
+            if (pendingAvatarBase64) {
+                setIsUploadingAvatar(true);
+                await updateAvatar({ base64: pendingAvatarBase64, fileExt: pendingAvatarExt });
+                setIsUploadingAvatar(false);
+            }
             await updateProfile({
                 name: editName,
                 career: editCareer,
@@ -111,8 +137,10 @@ export const ProfileScreen = () => {
             setShowEditModal(false);
         } catch (error) {
             console.error('Error updating profile:', error);
+            Alert.alert('Error', 'No se pudo guardar el perfil. Intenta nuevamente.');
         } finally {
             setIsSaving(false);
+            setIsUploadingAvatar(false);
         }
     };
 
@@ -188,6 +216,31 @@ export const ProfileScreen = () => {
                         </View>
 
                         <ScrollView showsVerticalScrollIndicator={false}>
+                            {/* Avatar picker */}
+                            <View style={[styles.formSection, { alignItems: 'center' }]}>
+                                <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.8} style={styles.avatarPickerWrapper}>
+                                    {pendingAvatarUri || profile?.avatarUrl ? (
+                                        <Image
+                                            source={{ uri: pendingAvatarUri ?? profile!.avatarUrl }}
+                                            style={styles.avatarPickerImage}
+                                        />
+                                    ) : (
+                                        <View style={styles.avatarPickerPlaceholder}>
+                                            <MaterialCommunityIcons name="account" size={48} color="#CBD5E1" />
+                                        </View>
+                                    )}
+                                    <View style={styles.avatarPickerBadge}>
+                                        <MaterialCommunityIcons name="camera" size={16} color={THEME.surface} />
+                                    </View>
+                                </TouchableOpacity>
+                                {isUploadingAvatar && (
+                                    <ActivityIndicator size="small" color={THEME.primary} style={{ marginTop: 8 }} />
+                                )}
+                                <Text style={[styles.inputLabel, { marginTop: 8, textTransform: 'none', letterSpacing: 0 }]}>
+                                    Toca para cambiar foto
+                                </Text>
+                            </View>
+
                             <View style={styles.formSection}>
                                 <Text style={styles.inputLabel}>Nombre Completo</Text>
                                 <TextInput
@@ -553,6 +606,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: THEME.bgLight,
         paddingBottom: 30,
+        paddingTop: 20,
     },
     centerContainer: {
         flex: 1,
@@ -998,5 +1052,42 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '400',
         color: THEME.textMain,
+    },
+    avatarPickerWrapper: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        overflow: 'visible',
+        position: 'relative',
+    },
+    avatarPickerImage: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        borderWidth: 3,
+        borderColor: THEME.primary,
+    },
+    avatarPickerPlaceholder: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#F1F5F9',
+        borderWidth: 3,
+        borderColor: '#E2E8F0',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatarPickerBadge: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: THEME.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: THEME.surface,
     },
 });

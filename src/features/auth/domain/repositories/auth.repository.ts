@@ -23,5 +23,5 @@ export interface IAuthRepository {
   getCurrentUser(): Promise<Either<Failure, AuthUser | null>>;
   isAuthenticated(): Promise<Either<Failure, boolean>>;
   updateProfile(profileData: Partial<AuthUser>): Promise<Either<Failure, AuthUser>>;
-  updateAvatar(imageUri: string): Promise<Either<Failure, string>>;
+  updateAvatar(params: { base64: string; fileExt: string }): Promise<Either<Failure, string>>;
 }

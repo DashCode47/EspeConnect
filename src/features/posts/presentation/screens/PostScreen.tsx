@@ -196,20 +196,7 @@ export const PostScreen = () => {
         {/* Header */}
         <View style={styles.marketplaceHeader}>
           <View style={styles.headerTop}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}>
-              <MaterialCommunityIcons name="chevron-left" size={24} color={colors.white} />
-            </TouchableOpacity>
             <Text style={styles.headerTitle}>Marketplace</Text>
-            <View style={styles.headerRight}>
-              <TouchableOpacity style={styles.notificationButton}>
-                <MaterialCommunityIcons name="bell" size={20} color={colors.white} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.bookmarkButton}>
-                <MaterialCommunityIcons name="bookmark" size={20} color={colors.white} />
-              </TouchableOpacity>
-            </View>
           </View>
           <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
@@ -250,7 +237,7 @@ export const PostScreen = () => {
                 <MaterialCommunityIcons
                   name={cat.icon}
                   size={20}
-                  color={isActive ? '#fff' : colors.primaryDark}
+                  color={isActive ? colors.white : colors.primary}
                 />
                 <Text
                   style={[
@@ -280,8 +267,8 @@ export const PostScreen = () => {
   return (
     <View style={styles.container}>
       <Appbar.Header style={styles.header}>
-        <Appbar.Content title="Posts" titleStyle={{ color: '#000000' }} />
-        <Appbar.Action icon="plus" onPress={handleCreatePost} iconColor="#FFFFFF" />
+        <Appbar.Content title="Posts" titleStyle={{ color: colors.black }} />
+        <Appbar.Action icon="plus" onPress={handleCreatePost} iconColor={colors.black} />
       </Appbar.Header>
 
       {renderPostTypeChips()}
@@ -314,18 +301,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
-    paddingTop: globalStyles.screenHeight * 0.01,
   },
   header: {
-    backgroundColor: '#0000',
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
     elevation: 2,
   },
   marketplaceHeader: {
     backgroundColor: colors.white,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    gap: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
   },
   headerTop: {
     flexDirection: 'row',
@@ -333,17 +323,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.primaryDark,
-    borderRadius: 8,
+    padding: 8,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primaryDark,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.black,
     flex: 1,
     textAlign: 'center',
   },
@@ -404,25 +389,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 2,
-    borderColor: colors.primaryDark,
-    backgroundColor: '#fff',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 3,
+    borderColor: colors.primary,
+    backgroundColor: colors.white,
+    elevation: 2,
   },
   categoryChipActive: {
-    backgroundColor: colors.primaryDark,
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
+    backgroundColor: colors.primary,
   },
   categoryChipText: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.primaryDark,
+    color: colors.primary,
   },
   categoryChipTextActive: {
     color: '#fff',
@@ -437,9 +414,9 @@ const styles = StyleSheet.create({
   },
   chip: {
     marginRight: 8,
-    backgroundColor: '#F0F8F0',
+    backgroundColor: '#F5F5F5',
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: '#E0E0E0',
   },
   categoryChipsScrollView: {
     flexGrow: 0,
@@ -474,7 +451,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 16,
     fontSize: 16,
-    color: colors.primary,
+    color: colors.black,
     fontWeight: '600',
   },
   fab: {

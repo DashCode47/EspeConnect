@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  Alert,
   TouchableOpacity,
   Image,
   Text,
@@ -12,6 +11,8 @@ import {
   Modal,
   Platform,
 } from 'react-native';
+import { SuccessModal } from '../../../../components/modals/SuccessModal';
+import { ErrorModal } from '../../../../components/modals/ErrorModal';
 import { TextInput, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -37,10 +38,13 @@ export const CreateEventScreen = () => {
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [location, setLocation] = useState('');
   const [price, setPrice] = useState('');
-  const [image, setImage] = useState<{ uri: string; type?: string; fileName?: string } | null>(null);
+  const [image, setImage] = useState<{ uri: string; base64?: string; type?: string; fileName?: string } | null>(null);
 
   const { createEvent } = useEventStore();
   const [loading, setLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
@@ -62,6 +66,11 @@ export const CreateEventScreen = () => {
     { key: EventCategory.OTHER, label: 'Otro' },
   ];
 
+  const showError = (msg: string) => {
+    setErrorMessage(msg);
+    setShowErrorModal(true);
+  };
+
   const handleImagePick = async () => {
     Alert.alert(
       'Seleccionar Imagen',
@@ -73,12 +82,14 @@ export const CreateEventScreen = () => {
             const result = await ImagePicker.launchImageLibrary({
               mediaType: 'photo',
               quality: 0.8,
+              includeBase64: true,
             });
 
             if (result.assets && result.assets[0]?.uri) {
               const asset = result.assets[0];
               setImage({
                 uri: asset.uri!,
+                base64: asset.base64 ?? undefined,
                 type: asset.type ?? 'image/jpeg',
                 fileName: asset.fileName ?? `image_${Date.now()}.jpg`,
               });
@@ -91,12 +102,14 @@ export const CreateEventScreen = () => {
             const result = await ImagePicker.launchCamera({
               mediaType: 'photo',
               quality: 0.8,
+              includeBase64: true,
             });
 
             if (result.assets && result.assets[0]?.uri) {
               const asset = result.assets[0];
               setImage({
                 uri: asset.uri!,
+                base64: asset.base64 ?? undefined,
                 type: asset.type ?? 'image/jpeg',
                 fileName: asset.fileName ?? `image_${Date.now()}.jpg`,
               });
@@ -255,23 +268,23 @@ export const CreateEventScreen = () => {
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'El nombre del evento es requerido');
+      showError('El nombre del evento es requerido');
       return;
     }
     if (!description.trim()) {
-      Alert.alert('Error', 'La descripción es requerida');
+      showError('La descripción es requerida');
       return;
     }
     if (!startTime) {
-      Alert.alert('Error', 'La fecha de inicio es requerida');
+      showError('La fecha de inicio es requerida');
       return;
     }
     if (!location.trim()) {
-      Alert.alert('Error', 'La ubicación es requerida');
+      showError('La ubicación es requerida');
       return;
     }
     if (endTime && endTime <= startTime) {
-      Alert.alert('Error', 'La fecha de fin debe ser posterior a la fecha de inicio');
+      showError('La fecha de fin debe ser posterior a la fecha de inicio');
       return;
     }
 
@@ -290,14 +303,12 @@ export const CreateEventScreen = () => {
       });
 
       if (success) {
-        Alert.alert('Éxito', 'Evento creado exitosamente', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        setShowSuccessModal(true);
       } else {
-        Alert.alert('Error', 'No se pudo crear el evento. Intenta nuevamente.');
+        showError('No se pudo crear el evento. Intenta nuevamente.');
       }
     } catch (error: any) {
-      Alert.alert('Error', 'Ocurrió un error inesperado.');
+      showError('Ocurrió un error inesperado.');
     } finally {
       setLoading(false);
     }
@@ -899,6 +910,24 @@ export const CreateEventScreen = () => {
           </View>
         </View>
       </Modal>
+
+      <SuccessModal
+        visible={showSuccessModal}
+        title="¡Evento creado!"
+        message="Tu evento fue publicado exitosamente."
+        buttonText="Ver eventos"
+        onClose={() => {
+          setShowSuccessModal(false);
+          navigation.goBack();
+        }}
+      />
+
+      <ErrorModal
+        visible={showErrorModal}
+        title="Error"
+        message={errorMessage}
+        onClose={() => setShowErrorModal(false)}
+      />
     </SafeAreaView>
   );
 };

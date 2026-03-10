@@ -97,16 +97,17 @@ export class EventRepositoryImpl implements IEventRepository {
       if (authError || !user) return left(new ServerFailure('No authenticated user'));
 
       let imagen: string | null = null;
-      if (data.image?.uri) {
+      if (data.image?.uri && data.image.base64) {
         try {
-          const ext = data.image.uri.split('.').pop() || 'jpg';
+          const ext = (data.image.fileName?.split('.').pop()) || data.image.uri.split('.').pop() || 'jpg';
           const path = `${user.id}/events/${Date.now()}.${ext}`;
           const contentType = data.image.type || 'image/jpeg';
-          const response = await fetch(data.image.uri);
-          const blob = await response.blob();
+          const binary = atob(data.image.base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
           const { error: uploadError } = await supabase.storage
             .from('events')
-            .upload(path, blob, { contentType, upsert: true });
+            .upload(path, bytes, { contentType, upsert: true });
           if (!uploadError) {
             const { data: urlData } = supabase.storage.from('events').getPublicUrl(path);
             imagen = urlData.publicUrl;
@@ -159,16 +160,17 @@ export class EventRepositoryImpl implements IEventRepository {
       if (data.location !== undefined) update.ubicacion = data.location;
       if (data.price !== undefined) update.precio = data.price;
 
-      if (data.image?.uri) {
+      if (data.image?.uri && data.image.base64) {
         try {
-          const ext = data.image.uri.split('.').pop() || 'jpg';
+          const ext = (data.image.fileName?.split('.').pop()) || data.image.uri.split('.').pop() || 'jpg';
           const path = `${user.id}/events/${id}_${Date.now()}.${ext}`;
           const contentType = data.image.type || 'image/jpeg';
-          const response = await fetch(data.image.uri);
-          const blob = await response.blob();
+          const binary = atob(data.image.base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
           const { error: uploadError } = await supabase.storage
             .from('events')
-            .upload(path, blob, { contentType, upsert: true });
+            .upload(path, bytes, { contentType, upsert: true });
           if (!uploadError) {
             const { data: urlData } = supabase.storage.from('events').getPublicUrl(path);
             update.imagen = urlData.publicUrl;

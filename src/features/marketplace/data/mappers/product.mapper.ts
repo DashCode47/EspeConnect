@@ -9,6 +9,7 @@ export class ProductMapper {
       price: model.price,
       category: model.category as ProductCategory,
       imageUrl: model.imageUrl,
+      imageUrls: Array.isArray(model.imageUrls) ? model.imageUrls : (model.imageUrl ? [model.imageUrl] : []),
       authorId: model.authorId,
       author: model.author ? {
         id: model.author.id,

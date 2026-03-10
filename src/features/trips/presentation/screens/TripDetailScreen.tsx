@@ -99,10 +99,9 @@ export const TripDetailScreen = () => {
       setShowReserveModal(false);
       await joinTrip(tripId);
       setShowSuccessModal(true);
-      fetchTripData();
     } catch (error: any) {
       setErrorMessage(
-        error.response?.data?.message || 'No se pudo reservar el viaje. Intenta nuevamente.'
+        error.response?.data?.message || error.message || 'No se pudo reservar el viaje. Intenta nuevamente.'
       );
       setShowErrorModal(true);
     } finally {
@@ -153,6 +152,10 @@ export const TripDetailScreen = () => {
   }
 
   const isDriver = trip.driverId === profile?.id;
+  const myRequest = trip.requests?.find((req: TripRequest) => req.passengerId === profile?.id);
+  const isRequested = !!myRequest;
+  const requestStatus = myRequest?.status;
+
   const occupiedSeats = trip.requests?.filter((req: TripRequest) => req.status === 'ACCEPTED').length || 0;
   const totalSeats = trip.availableSeats + occupiedSeats;
   const pendingRequests = trip.requests?.filter((req: TripRequest) => req.status === 'PENDING').length || 0;
@@ -310,7 +313,7 @@ export const TripDetailScreen = () => {
                     )}
                   </View>
                   <Text style={styles.passengerName} numberOfLines={1}>
-                    {req.passenger.name?.split(' ')[0] || 'Pasajero'}
+                    {req.passengerId === profile?.id ? 'Tu' : (req.passenger.name?.split(' ')[0] || 'Pasajero')}
                   </Text>
                 </View>
               ))}
@@ -378,14 +381,23 @@ export const TripDetailScreen = () => {
             <TouchableOpacity
               style={[
                 styles.confirmButton,
-                (actionLoading || trip.availableSeats === 0) && styles.confirmButtonDisabled,
+                (actionLoading || trip.availableSeats === 0 || isRequested) && styles.confirmButtonDisabled,
+                isRequested && requestStatus === 'ACCEPTED' && styles.confirmButtonSuccess,
               ]}
               onPress={handleReserve}
-              disabled={actionLoading || trip.availableSeats === 0}
+              disabled={actionLoading || trip.availableSeats === 0 || isRequested}
               activeOpacity={0.8}
             >
-              <Text style={styles.confirmButtonText}>Confirmar Reserva</Text>
-              <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
+              <Text style={styles.confirmButtonText}>
+                {isRequested
+                  ? (requestStatus === 'ACCEPTED' ? 'Aceptado' : 'Solicitado')
+                  : 'Confirmar Reserva'}
+              </Text>
+              <MaterialCommunityIcons
+                name={isRequested ? (requestStatus === 'ACCEPTED' ? 'check-circle' : 'clock-outline') : "arrow-right"}
+                size={20}
+                color="#fff"
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -1011,6 +1023,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc',
     shadowOpacity: 0,
     elevation: 0,
+  },
+  confirmButtonSuccess: {
+    backgroundColor: colors.success,
   },
   confirmButtonText: {
     fontSize: 16,

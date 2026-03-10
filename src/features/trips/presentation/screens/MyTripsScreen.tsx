@@ -9,14 +9,19 @@ import {
   TouchableOpacity,
   Text,
 } from 'react-native';
-import { Chip } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Trip, TripType } from '../../domain/entities/trip.entity';
 import { TripRepositoryImpl } from '../../data/repositories/trip.repository.impl';
 import { useAuthStore } from '../../../../features/auth/presentation/store/auth.store';
-import { RideCard, Ride } from '../components/RideCard';
+import {
+  RideCard,
+  Ride,
+  TripBadge,
+  TripSectionHeader,
+  MyTripItem
+} from '../components';
 import { colors } from '../../../../config/colors';
 import { RideStackParamList } from '../../../../navigation/types';
 import { useHideNavbar } from '../../../../hooks/useHideNavbar';
@@ -143,7 +148,7 @@ export const MyTripsScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={styles.header} >
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.black} />
         </TouchableOpacity>
@@ -225,81 +230,98 @@ export const MyTripsScreen = () => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {trips.map((trip) => (
-            <View key={trip.id} style={styles.tripCardContainer}>
-              <View style={styles.tripBadge}>
-                <Chip
-                  icon={() => (
-                    <MaterialCommunityIcons
-                      name={trip.userRole === 'driver' ? 'car' : 'account'}
-                      size={16}
-                      color={colors.white}
-                    />
-                  )}
-                  style={[
-                    styles.roleChip,
-                    {
-                      backgroundColor:
-                        trip.userRole === 'driver' ? colors.primary : colors.secondary,
-                    },
-                  ]}
-                  textStyle={styles.roleChipText}
-                >
-                  {trip.userRole === 'driver' ? 'Conductor' : 'Pasajero'}
-                </Chip>
-                <Chip
-                  icon={() => (
-                    <MaterialCommunityIcons
-                      name={
-                        trip.status === 'ACTIVE'
-                          ? 'check-circle'
-                          : trip.status === 'FULL'
-                            ? 'account-group'
-                            : 'cancel'
-                      }
-                      size={16}
-                      color={colors.white}
-                    />
-                  )}
-                  style={[
-                    styles.statusChip,
-                    {
-                      backgroundColor:
-                        trip.status === 'ACTIVE'
-                          ? '#4CAF50'
-                          : trip.status === 'FULL'
-                            ? '#FF9800'
-                            : '#F44336',
-                    },
-                  ]}
-                  textStyle={styles.statusChipText}
-                >
-                  {trip.status === 'ACTIVE'
-                    ? 'Activo'
-                    : trip.status === 'FULL'
-                      ? 'Completo'
-                      : 'Cancelado'}
-                </Chip>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleTripPress(trip.id)}
-                activeOpacity={0.7}>
-                <RideCard
-                  ride={convertTripToRide(trip)}
-                  onJoinPress={trip.userRole !== 'driver' ? () => handleTripPress(trip.id) : undefined}
+          {(() => {
+            if (tripType !== 'joined') {
+              return trips.map(trip => (
+                <MyTripItem
+                  key={trip.id}
+                  trip={trip}
+                  profileId={profile?.id}
+                  onPress={handleTripPress}
+                  onManageRequests={handleManageRequests}
+                  convertTripToRide={convertTripToRide}
                 />
-              </TouchableOpacity>
-              {trip.userRole === 'driver' && trip.status === 'ACTIVE' && (
-                <TouchableOpacity
-                  style={styles.manageButton}
-                  onPress={() => handleManageRequests(trip.id)}
-                  activeOpacity={0.7}>
-                  <MaterialCommunityIcons name="account-group" size={18} color={colors.primary} />
-                  <Text style={styles.manageButtonText}>Gestionar Solicitudes</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
+              ));
+            }
+
+            const now = new Date();
+            const accepted = trips.filter(t => {
+              const myReq = t.requests?.find(r => r.passengerId === profile?.id);
+              return myReq?.status === 'ACCEPTED' && new Date(t.departureTime) >= now;
+            });
+            const pending = trips.filter(t => {
+              const myReq = t.requests?.find(r => r.passengerId === profile?.id);
+              return myReq?.status === 'PENDING' && new Date(t.departureTime) >= now;
+            });
+            const rejected = trips.filter(t => {
+              const myReq = t.requests?.find(r => r.passengerId === profile?.id);
+              return myReq?.status === 'REJECTED' && new Date(t.departureTime) >= now;
+            });
+            const expired = trips.filter(t => new Date(t.departureTime) < now);
+
+            return (
+              <>
+                {accepted.length > 0 && (
+                  <>
+                    <TripSectionHeader
+                      title="Reservas Aceptadas"
+                      iconName="check-decagram"
+                      iconColor={colors.primary}
+                    />
+                    {accepted.map(trip => (
+                      <MyTripItem
+                        key={trip.id}
+                        trip={trip}
+                        profileId={profile?.id}
+                        onPress={handleTripPress}
+                        convertTripToRide={convertTripToRide}
+                      />
+                    ))}
+                  </>
+                )}
+
+                {pending.length > 0 && (
+                  <>
+                    <TripSectionHeader
+                      title="Solicitudes Pendientes"
+                      iconName="clock-outline"
+                      iconColor="#FBC02D"
+                      style={{ marginTop: accepted.length > 0 ? 32 : 16 }}
+                    />
+                    {pending.map(trip => (
+                      <MyTripItem
+                        key={trip.id}
+                        trip={trip}
+                        profileId={profile?.id}
+                        onPress={handleTripPress}
+                        convertTripToRide={convertTripToRide}
+                      />
+                    ))}
+                  </>
+                )}
+
+                {(rejected.length > 0 || expired.length > 0) && (
+                  <>
+                    <TripSectionHeader
+                      title="Historial y Otros"
+                      iconName="history"
+                      iconColor="#666"
+                      style={{ marginTop: (accepted.length > 0 || pending.length > 0) ? 32 : 16 }}
+                    />
+                    {[...rejected, ...expired].map(trip => (
+                      <MyTripItem
+                        key={trip.id}
+                        trip={trip}
+                        profileId={profile?.id}
+                        onPress={handleTripPress}
+                        convertTripToRide={convertTripToRide}
+                      />
+                    ))}
+                  </>
+                )}
+              </>
+            );
+          })()}
         </ScrollView>
       )}
 
@@ -378,24 +400,6 @@ const styles = StyleSheet.create({
   filterButtonTextActive: {
     color: colors.white,
   },
-  manageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#E8F5E9',
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  manageButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -412,29 +416,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 32,
-  },
-  tripCardContainer: {
-    marginBottom: 16,
-  },
-  tripBadge: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
-  roleChip: {
-    paddingHorizontal: 8,
-  },
-  roleChipText: {
-    color: colors.white,
-    fontSize: 12,
-  },
-  statusChip: {
-    paddingHorizontal: 8,
-  },
-  statusChipText: {
-    color: colors.white,
-    fontSize: 12,
   },
   emptyContainer: {
     flex: 1,

@@ -12,7 +12,7 @@ export interface Banner {
 export const bannerService = {
   getAll: async (): Promise<Banner[]> => {
     const { data, error } = await supabase
-      .from('Banner')
+      .from('banner')
       .select('*')
       .order('createdAt', { ascending: false });
 
@@ -26,7 +26,7 @@ export const bannerService = {
 
   getActive: async (): Promise<Banner[]> => {
     const { data, error } = await supabase
-      .from('Banner')
+      .from('banner')
       .select('*')
       .eq('isActive', true)
       .order('createdAt', { ascending: false });
@@ -41,7 +41,7 @@ export const bannerService = {
 
   create: async (banner: Omit<Banner, 'id' | 'createdAt'>): Promise<Banner> => {
     const { data, error } = await supabase
-      .from('Banner')
+      .from('banner')
       .insert(banner)
       .select()
       .single();
@@ -56,7 +56,7 @@ export const bannerService = {
 
   update: async (id: string, banner: Partial<Banner>): Promise<Banner> => {
     const { data, error } = await supabase
-      .from('Banner')
+      .from('banner')
       .update(banner)
       .eq('id', id)
       .select()
@@ -72,7 +72,7 @@ export const bannerService = {
 
   delete: async (id: string): Promise<void> => {
     const { error } = await supabase
-      .from('Banner')
+      .from('banner')
       .delete()
       .eq('id', id);
 

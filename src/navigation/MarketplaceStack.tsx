@@ -12,6 +12,10 @@ export const MarketplaceStack = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        contentStyle: {
+          backgroundColor: '#fff',
+          paddingTop: 20,
+        },
       }}
     >
       <Stack.Screen name="Feed" component={PostScreen} />

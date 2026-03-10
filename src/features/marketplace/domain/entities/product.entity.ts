@@ -13,6 +13,7 @@ export interface Product {
   price: number;
   category: ProductCategory;
   imageUrl: string | null;
+  imageUrls: string[];
   authorId: string;
   author?: ProductAuthor;
   contact?: string;

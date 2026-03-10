@@ -14,8 +14,11 @@ import { AuthProvider } from './src/contexts/AuthContext';
 import { NavbarProvider } from './src/contexts/NavbarContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { theme } from './src/config/theme';
+import { useNotifications } from './src/hooks/useNotifications';
 
 const App = () => {
+  useNotifications();
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>

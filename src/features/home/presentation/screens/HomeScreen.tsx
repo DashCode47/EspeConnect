@@ -24,7 +24,6 @@ import { EstablishmentCard } from '../../../establishments/presentation/componen
 import EstablishmentModal from '../../../establishments/presentation/components/EstablishmentModal';
 import { HomeSkeletonLoader } from '../components/HomeSkeletonLoader';
 import { Establishment, Promotion } from '../../../establishments/domain/entities/establishment.entity';
-import { Banner } from '../../../marketing/domain/entities/banner.entity';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -152,7 +151,7 @@ export const HomeScreen: React.FC = () => {
                     </View>
                   )}
                   <View style={styles.bannerCardGradient} />
-                  <View style={styles.bannerCardContent}>
+                  {/* <View style={styles.bannerCardContent}>
                     <Text style={styles.bannerCardTitle} numberOfLines={2}>
                       {banner.title}
                     </Text>
@@ -161,7 +160,7 @@ export const HomeScreen: React.FC = () => {
                         {banner.description}
                       </Text>
                     ) : null}
-                  </View>
+                  </View> */}
                 </TouchableOpacity>
               ))}
             </ScrollView>

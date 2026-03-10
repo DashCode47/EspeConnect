@@ -150,26 +150,26 @@ export class AuthRepositoryImpl implements IAuthRepository {
     }
   }
 
-  async updateAvatar(imageUri: string): Promise<Either<Failure, string>> {
-     try {
+  async updateAvatar({ base64, fileExt }: { base64: string; fileExt: string }): Promise<Either<Failure, string>> {
+    try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return left({ message: 'No authenticated user' });
 
-      const fileExt = imageUri.split('.').pop() || 'jpg';
+      const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
       const fileName = `${user.id}/avatar.${fileExt}`;
 
-      const formData = new FormData();
-      formData.append('file', {
-        uri: imageUri,
-        type: `image/${fileExt}`,
-        name: `avatar.${fileExt}`,
-      } as any);
+      // Decode base64 → Uint8Array — works on Android and iOS without native modules
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, formData, {
+        .upload(fileName, bytes, {
           upsert: true,
-          contentType: `image/${fileExt}`,
+          contentType,
         });
 
       if (uploadError) return left({ message: uploadError.message });
@@ -178,9 +178,11 @@ export class AuthRepositoryImpl implements IAuthRepository {
         .from('avatars')
         .getPublicUrl(uploadData.path);
 
-      await this.updateProfile({ avatarUrl: publicUrl });
+      const publicUrlWithCacheBust = `${publicUrl}?t=${Date.now()}`;
 
-      return right(publicUrl);
+      await this.updateProfile({ avatarUrl: publicUrlWithCacheBust });
+
+      return right(publicUrlWithCacheBust);
     } catch (error: any) {
       return left({ message: error.message });
     }

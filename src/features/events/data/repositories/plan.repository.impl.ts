@@ -1,6 +1,7 @@
 import { supabase } from '../../../../lib/supabase';
 import { Either, left, right } from '../../../../core/utils/either';
 import { Failure, ServerFailure } from '../../../../core/errors/failure';
+import { sendPushToUser } from '../../../../services/notificationService';
 import {
   Plan,
   PlanParticipant,
@@ -231,7 +232,7 @@ export class PlanRepositoryImpl implements IPlanRepository {
 
       const { data: planData, error: planError } = await supabase
         .from('plans')
-        .select('requires_approval')
+        .select('requires_approval, title, creator_id')
         .eq('id', planId)
         .single();
 
@@ -252,11 +253,24 @@ export class PlanRepositoryImpl implements IPlanRepository {
 
       if (error) return left(new ServerFailure(error.message));
 
+      const joinerName = user.user_metadata?.name || 'Alguien';
+
       if (status === PlanParticipantStatus.APPROVED) {
         await this.sendMessage(planId, {
-          message: `${user.user_metadata?.name || 'Alguien'} se unió al plan`,
+          message: `${joinerName} se unió al plan`,
           messageType: PlanMessageType.SYSTEM,
         });
+        sendPushToUser(
+          planData.creator_id,
+          `Nueva participación en "${planData.title}"`,
+          `${joinerName} se unió a tu plan`,
+        );
+      } else {
+        sendPushToUser(
+          planData.creator_id,
+          `Nueva solicitud en "${planData.title}"`,
+          `${joinerName} quiere unirse a tu plan`,
+        );
       }
 
       return right(undefined);
@@ -485,10 +499,24 @@ export class PlanRepositoryImpl implements IPlanRepository {
 
       if (error) return left(new ServerFailure(error.message));
 
+      const { data: planData } = await supabase
+        .from('plans')
+        .select('title')
+        .eq('id', planId)
+        .single();
+
       await this.sendMessage(planId, {
         message: 'Un nuevo participante fue aprobado al plan',
         messageType: PlanMessageType.SYSTEM,
       });
+
+      if (planData) {
+        sendPushToUser(
+          userId,
+          `¡Solicitud aceptada!`,
+          `Tu solicitud para unirte a "${planData.title}" fue aceptada`,
+        );
+      }
 
       return right(undefined);
     } catch (error: any) {
@@ -498,6 +526,12 @@ export class PlanRepositoryImpl implements IPlanRepository {
 
   async removeParticipant(planId: string, userId: string): Promise<Either<Failure, void>> {
     try {
+      const { data: planData } = await supabase
+        .from('plans')
+        .select('title')
+        .eq('id', planId)
+        .single();
+
       const { error } = await supabase
         .from('plan_participants')
         .update({ left_at: new Date().toISOString() })
@@ -511,6 +545,14 @@ export class PlanRepositoryImpl implements IPlanRepository {
         message: 'Un participante fue removido del plan',
         messageType: PlanMessageType.SYSTEM,
       });
+
+      if (planData) {
+        sendPushToUser(
+          userId,
+          `Solicitud rechazada`,
+          `Tu solicitud para unirte a "${planData.title}" fue rechazada`,
+        );
+      }
 
       return right(undefined);
     } catch (error: any) {

@@ -84,6 +84,7 @@ export const PostDetailsScreen = () => {
         category: getCategoryLabel(productData.category),
         description: productData.description,
         imageUrl: productData.imageUrl,
+        imageUrls: productData.imageUrls?.length ? productData.imageUrls : (productData.imageUrl ? [productData.imageUrl] : []),
         contact: productData.contact,
         createdAt: productData.createdAt,
       };
@@ -119,6 +120,7 @@ export const PostDetailsScreen = () => {
         category,
         description,
         imageUrl: postData.imageUrl,
+        imageUrls: postData.imageUrl ? [postData.imageUrl] : [],
         contact: null,
         createdAt: postData.createdAt,
       };
@@ -129,7 +131,7 @@ export const PostDetailsScreen = () => {
   const displayData = getDisplayData();
   if (!displayData) return null;
 
-  const images = displayData.imageUrl ? [displayData.imageUrl] : [];
+  const images = displayData.imageUrls ?? [];
 
   const handleSnapToItem = (index: number) => {
     setActiveIndex(index);
@@ -216,10 +218,13 @@ export const PostDetailsScreen = () => {
             </View>
           )}
           {images.length > 1 && (
-            <View style={styles.imageCounter}>
-              <Text style={styles.imageCounterText}>
-                {activeIndex + 1} / {images.length}
-              </Text>
+            <View style={styles.dotsContainer}>
+              {images.map((_, i) => (
+                <View
+                  key={i}
+                  style={[styles.dot, i === activeIndex && styles.dotActive]}
+                />
+              ))}
             </View>
           )}
         </View>
@@ -390,19 +395,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  imageCounter: {
+  dotsContainer: {
     position: 'absolute',
-    bottom: 16,
-    right: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    bottom: 12,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
   },
-  imageCounterText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  dotActive: {
+    backgroundColor: colors.white,
+    width: 20,
+    borderRadius: 4,
   },
   contentSection: {
     padding: 16,

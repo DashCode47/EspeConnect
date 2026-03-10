@@ -225,7 +225,7 @@ export const EditTripScreen = () => {
       console.error('Error updating trip:', error);
       Alert.alert(
         'Error',
-        error.response?.data?.message || 'No se pudo actualizar el viaje. Intenta nuevamente.'
+        error.response?.data?.message || error.message || 'No se pudo actualizar el viaje. Intenta nuevamente.'
       );
     } finally {
       setLoading(false);

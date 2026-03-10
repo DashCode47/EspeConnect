@@ -14,7 +14,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { PostStackParamList } from '../../../../navigation/types';
-import { usePostStore, useAuthStore } from '../../../../store';
+import { useAuthStore, useMarketplaceStore } from '../../../../store';
+import { ProductCategory } from '../../../marketplace/domain/entities/product.entity';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'react-native-image-picker';
 import { colors } from '../../../../config/colors';
@@ -34,7 +35,7 @@ export const CreatePostScreen = () => {
   const [description, setDescription] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
-  const [images, setImages] = useState<{ uri: string; type?: string; fileName?: string }[]>([]);
+  const [images, setImages] = useState<{ uri: string; base64?: string; type: string; name: string }[]>([]);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -43,7 +44,8 @@ export const CreatePostScreen = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const navigation = useNavigation<CreatePostScreenNavigationProp>();
   const { user } = useAuthStore();
-  const { createPost, isLoading: postLoading } = usePostStore();
+
+  const { createProduct } = useMarketplaceStore();
 
   useHideNavbar(true);
 
@@ -53,10 +55,11 @@ export const CreatePostScreen = () => {
         mediaType: 'photo',
         quality: 0.8,
         selectionLimit: 4,
+        includeBase64: true,
       });
 
       if (result.didCancel) {
-        return; // Usuario canceló la selección
+        return;
       }
 
       if (result.errorCode) {
@@ -68,8 +71,9 @@ export const CreatePostScreen = () => {
         const availableSlots = 4 - images.length;
         const imagesToAdd = result.assets.slice(0, availableSlots).map((asset) => ({
           uri: asset.uri!,
+          base64: asset.base64 ?? undefined,
           type: asset.type ?? 'image/jpeg',
-          fileName: asset.fileName ?? `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`,
+          name: asset.fileName ?? `image_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`,
         }));
 
         if (imagesToAdd.length > 0) {
@@ -118,16 +122,18 @@ export const CreatePostScreen = () => {
       setLoading(true);
       if (!user) throw new Error('Usuario no autenticado');
 
-      // Construir el contenido con toda la información
-      const fullContent = `${description.trim()}\n\nPrecio: ${currency} $${price}\nCategoría: ${category}\nContacto: ${phoneNumber}`;
-
-      await createPost({
+      await createProduct({
         title: title.trim(),
-        content: fullContent,
-        type: 'MARKETPLACE',
+        description: description.trim(),
+        price: parseFloat(price),
+        category: categoryMap[category] ?? 'OTHER',
+        images: images.filter(img => img.base64).map(img => ({
+          base64: img.base64!,
+          type: img.type,
+          name: img.name,
+        })),
+        contact: phoneNumber.trim(),
         authorId: user.id,
-        // For now, ignoring images as the store createPost doesn't handle them properly yet
-        // or I should update it to handle multipart
       });
       setShowSuccessModal(true);
     } catch (error: any) {
@@ -135,6 +141,14 @@ export const CreatePostScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const categoryMap: Record<string, ProductCategory> = {
+    'Tecnología': 'TECHNOLOGY',
+    'Libros': 'BOOKS',
+    'Ropa': 'UNIFORMS',
+    'Servicios': 'OTHER',
+    'Otros': 'OTHER',
   };
 
   const paymentMethods = ['Todas', 'Efectivo', 'Transferencia', 'Tarjeta'];
@@ -223,12 +237,10 @@ export const CreatePostScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Precio</Text>
           <View style={styles.priceContainer}>
-            <TouchableOpacity
-              style={styles.currencySelector}
-              onPress={() => setShowCurrencyModal(true)}>
+            <View
+              style={styles.currencySelector}>
               <Text style={styles.currencyText}>{currency}</Text>
-              <MaterialCommunityIcons name="chevron-down" size={20} color="#131413" />
-            </TouchableOpacity>
+            </View>
             <View style={styles.priceInputWrapper}>
               <Text style={styles.pricePrefix}>$</Text>
               <TextInput
@@ -330,37 +342,6 @@ export const CreatePostScreen = () => {
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Currency Modal */}
-      <Modal
-        visible={showCurrencyModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowCurrencyModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Seleccionar Moneda</Text>
-              <TouchableOpacity onPress={() => setShowCurrencyModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#131413" />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={() => {
-                setCurrency('USD');
-                setShowCurrencyModal(false);
-              }}>
-              <Text style={styles.modalOptionText}>USD</Text>
-
-              <MaterialCommunityIcons name="check" size={24} color={colors.primary} />
-
-            </TouchableOpacity>
-
-          </View>
-        </View>
-      </Modal>
 
       {/* Payment Method Modal */}
       <Modal

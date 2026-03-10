@@ -8,10 +8,14 @@ interface NavbarContextType {
 const NavbarContext = createContext<NavbarContextType | undefined>(undefined);
 
 export const NavbarProvider = ({ children }: { children: ReactNode }) => {
-  const [hideNavbar, setHideNavbar] = useState(false);
+  const [hideCount, setHideCount] = useState(0);
+
+  const setHideNavbar = (hide: boolean) => {
+    setHideCount(prev => hide ? prev + 1 : Math.max(0, prev - 1));
+  };
 
   return (
-    <NavbarContext.Provider value={{ hideNavbar, setHideNavbar }}>
+    <NavbarContext.Provider value={{ hideNavbar: hideCount > 0, setHideNavbar }}>
       {children}
     </NavbarContext.Provider>
   );

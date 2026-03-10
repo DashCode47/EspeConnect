@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ActivityIndicator,
 } from 'react-native';
@@ -79,17 +80,51 @@ export const PlanCommentsScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   }, [comments.length]);
 
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+    return () => showSubscription.remove();
+  }, []);
+
   const handleSend = async () => {
     if (!inputText.trim() || sending) return;
     const text = inputText;
     setInputText('');
     setSending(true);
+
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg: PlanChatMessage = {
+      id: tempId,
+      planId,
+      senderId: currentUserId || '',
+      message: text,
+      messageType: PlanMessageType.TEXT,
+      createdAt: new Date().toISOString(),
+      user: {
+        id: currentUserId || '',
+        name: user?.name || 'Yo',
+        avatarUrl: user?.avatarUrl || null,
+      }
+    };
+
+    setComments(prev => [...prev, optimisticMsg]);
+
     try {
       const msg = await sendMessage(planId, { message: text });
-      if (!msg) {
+      if (msg) {
+        // Replace optimistic message with the real one
+        setComments(prev => prev.map(c => c.id === tempId ? msg : c));
+      } else {
+        // Rollback on error
+        setComments(prev => prev.filter(c => c.id !== tempId));
         setInputText(text);
       }
     } catch {
+      setComments(prev => prev.filter(c => c.id !== tempId));
       setInputText(text);
     } finally {
       setSending(false);
@@ -119,18 +154,11 @@ export const PlanCommentsScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   };
 
-  // For full screen, show ALL messages (including system)
-  const allMessages = React.useMemo(() => {
-    // Re-fetch includes only TEXT from the hook, but for full screen we want system too
-    // The hook filters TEXT only, so we show what we have
-    return comments;
-  }, [comments]);
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={0}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 60}
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -157,12 +185,13 @@ export const PlanCommentsScreen: React.FC<Props> = ({ navigation, route }) => {
       ) : (
         <FlatList
           ref={flatListRef}
-          data={allMessages}
+          data={comments}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
+          extraData={comments}
           contentContainerStyle={[
             styles.listContent,
-            allMessages.length === 0 && styles.emptyListContent,
+            comments.length === 0 && styles.emptyListContent,
           ]}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
@@ -176,7 +205,7 @@ export const PlanCommentsScreen: React.FC<Props> = ({ navigation, route }) => {
       )}
 
       {/* Input Bar */}
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8 }]}>
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : 12 }]}>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.textInput}

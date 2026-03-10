@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   StyleSheet,
@@ -10,6 +11,7 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +23,7 @@ import { useAuthStore } from '../../../../features/auth/presentation/store/auth.
 import { useTripStore } from '../store/trip.store';
 import { globalStyles, FONT_FAMILY } from '../../../../config/globalStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RidesScreenNavigationProp = NativeStackNavigationProp<RideStackParamList, 'RidesList'>;
 
@@ -36,22 +39,32 @@ export const RidesScreen = () => {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [travelMode, setTravelMode] = useState<TravelMode>(route.params?.initialTab ?? 'search');
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
 
   useEffect(() => {
     if (!profile) {
       fetchProfile();
     }
+    AsyncStorage.getItem('rides_disclaimer_seen').then(seen => {
+      if (!seen) {
+        setInfoModalVisible(true);
+        AsyncStorage.setItem('rides_disclaimer_seen', '1');
+      }
+    });
   }, []);
 
-  // When switching modes or profile loads, fetch the appropriate trips
-  useEffect(() => {
-    if (!profile?.id) return;
-    if (travelMode === 'offer') {
-      fetchMyTrips(profile.id);
-    } else {
-      fetchTrips();
-    }
-  }, [travelMode, profile?.id]);
+  // Auto-refresh when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (profile?.id) {
+        if (travelMode === 'offer') {
+          fetchMyTrips(profile.id);
+        } else {
+          fetchTrips();
+        }
+      }
+    }, [travelMode, profile?.id, fetchTrips, fetchMyTrips])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -164,6 +177,10 @@ export const RidesScreen = () => {
     const isFull = seatsInfo.isFull;
     const rating = getDriverRating(trip);
 
+    const myRequest = trip.requests?.find((req: TripRequest) => req.passengerId === profile?.id);
+    const isRequested = !!myRequest;
+    const requestStatus = myRequest?.status;
+
     return (
       <TouchableOpacity
         key={trip.id}
@@ -267,12 +284,16 @@ export const RidesScreen = () => {
           </View>
 
           <TouchableOpacity
-            style={[styles.reserveButton, isFull && styles.reserveButtonDisabled]}
-            onPress={() => !isFull && handleReserve(trip.id)}
-            disabled={isFull}
+            style={[
+              styles.reserveButton,
+              (isFull || isRequested) && styles.reserveButtonDisabled,
+              isRequested && requestStatus === 'ACCEPTED' && styles.reserveButtonSuccess
+            ]}
+            onPress={() => !isFull && !isRequested && handleReserve(trip.id)}
+            disabled={isFull || isRequested}
             activeOpacity={0.8}>
-            <Text style={[styles.reserveButtonText, isFull && styles.reserveButtonTextDisabled]}>
-              {isFull ? 'Agotado' : 'Reservar'}
+            <Text style={[styles.reserveButtonText, (isFull || isRequested) && styles.reserveButtonTextDisabled]}>
+              {isFull ? 'Agotado' : isRequested ? (requestStatus === 'ACCEPTED' ? 'Aceptado' : 'Solicitado') : 'Reservar'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -284,13 +305,41 @@ export const RidesScreen = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.headerBackButton}
           onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Viajes Compartidos</Text>
+        </TouchableOpacity> */}
+        <View style={styles.headerTitleRow}>
+          <Text style={styles.headerTitle}>Viajes Compartidos</Text>
+          <TouchableOpacity onPress={() => setInfoModalVisible(true)} style={styles.infoButton}>
+            <MaterialCommunityIcons name="shield-check" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
         <View style={styles.headerSpacer} />
+
+        <Modal
+          visible={infoModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setInfoModalVisible(false)}>
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setInfoModalVisible(false)}>
+            <View style={styles.modalCard}>
+              <MaterialCommunityIcons name="shield-check" size={32} color={colors.primary} style={{ marginBottom: 12 }} />
+              <Text style={styles.modalTitle}>Plataforma 100% estudiantil</Text>
+              <Text style={styles.modalBody}>
+                Todos los viajes en CamPlus son ofrecidos y solicitados exclusivamente por estudiantes verificados de tu institución.{'\n\n'}
+                Viajas con compañeros reales, en un entorno seguro y de confianza.
+              </Text>
+              <TouchableOpacity style={styles.modalButton} onPress={() => setInfoModalVisible(false)}>
+                <Text style={styles.modalButtonText}>Entendido</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </View>
 
       <ScrollView
@@ -502,26 +551,39 @@ export const RidesScreen = () => {
                         </View>
                       </View>
 
-                      <View style={[
-                        styles.activeRouteStatus,
-                        (trip.requests?.filter((r: TripRequest) => r.status === 'ACCEPTED').length ?? 0) > 0
-                          ? styles.activeRouteStatusConfirmed
-                          : styles.activeRouteStatusPending
-                      ]}>
-                        {(trip.requests?.filter((r: TripRequest) => r.status === 'ACCEPTED').length ?? 0) > 0 ? (
-                          <>
-                            <View style={styles.statusDot} />
-                            <Text style={styles.statusTextConfirmed}>
-                              {trip.requests?.filter((r: TripRequest) => r.status === 'ACCEPTED').length} Pasajeros confirmados
-                            </Text>
-                          </>
-                        ) : (
-                          <>
+                      {(() => {
+                        const pendingRequests = trip.requests?.filter((r: TripRequest) => r.status === 'PENDING').length ?? 0;
+                        const acceptedRequests = trip.requests?.filter((r: TripRequest) => r.status === 'ACCEPTED').length ?? 0;
+
+                        if (pendingRequests > 0) {
+                          return (
+                            <View style={[styles.activeRouteStatus, styles.activeRouteStatusPending]}>
+                              <MaterialCommunityIcons name="account-alert" size={14} color="#D97706" />
+                              <Text style={styles.statusTextPending}>
+                                {pendingRequests} {pendingRequests === 1 ? 'solicitud' : 'solicitudes'}
+                              </Text>
+                            </View>
+                          );
+                        }
+
+                        if (acceptedRequests > 0) {
+                          return (
+                            <View style={[styles.activeRouteStatus, styles.activeRouteStatusConfirmed]}>
+                              <View style={styles.statusDot} />
+                              <Text style={styles.statusTextConfirmed}>
+                                {acceptedRequests} {acceptedRequests === 1 ? 'pasajero' : 'pasajeros'}
+                              </Text>
+                            </View>
+                          );
+                        }
+
+                        return (
+                          <View style={[styles.activeRouteStatus, styles.activeRouteStatusPending]}>
                             <MaterialCommunityIcons name="timer-sand" size={14} color="#D97706" />
                             <Text style={styles.statusTextPending}>Esperando solicitudes</Text>
-                          </>
-                        )}
-                      </View>
+                          </View>
+                        );
+                      })()}
                     </View>
 
                     {/* Route Timeline */}
@@ -575,17 +637,24 @@ export const RidesScreen = () => {
                           }
                         })()}
                       </View>
-                      {(trip.requests?.filter((r: TripRequest) => r.status === 'ACCEPTED').length ?? 0) > 0 ? (
-                        <TouchableOpacity
-                          onPress={() => navigation.navigate('ManageTripRequests', { tripId: trip.id })}>
-                          <Text style={styles.manageText}>Gestionar</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity
-                          onPress={() => navigation.navigate('EditTrip', { tripId: trip.id })}>
-                          <Text style={styles.manageText}>Editar</Text>
-                        </TouchableOpacity>
-                      )}
+                      {(() => {
+                        const hasRequests = (trip.requests?.filter((r: TripRequest) => r.status === 'ACCEPTED' || r.status === 'PENDING').length ?? 0) > 0;
+                        if (hasRequests) {
+                          return (
+                            <TouchableOpacity
+                              onPress={() => navigation.navigate('ManageTripRequests', { tripId: trip.id })}>
+                              <Text style={styles.manageText}>Gestionar</Text>
+                            </TouchableOpacity>
+                          );
+                        } else {
+                          return (
+                            <TouchableOpacity
+                              onPress={() => navigation.navigate('EditTrip', { tripId: trip.id })}>
+                              <Text style={styles.manageText}>Editar</Text>
+                            </TouchableOpacity>
+                          );
+                        }
+                      })()}
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -626,15 +695,69 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  headerTitleRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
   headerTitle: {
     fontSize: 18,
     fontFamily: FONT_FAMILY.BOLD,
     color: colors.primary,
-    flex: 1,
     textAlign: 'center',
+  },
+  infoButton: {
+    padding: 2,
   },
   headerSpacer: {
     width: 40,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  modalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalBody: {
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.REGULAR,
+    color: '#444',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.white,
   },
 
   // Toggle
@@ -1028,6 +1151,9 @@ const styles = StyleSheet.create({
   },
   reserveButtonDisabled: {
     backgroundColor: '#F3F4F6',
+  },
+  reserveButtonSuccess: {
+    backgroundColor: colors.success,
   },
   reserveButtonText: {
     fontSize: 14,

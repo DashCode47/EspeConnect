@@ -10,7 +10,7 @@ export class BannerRepositoryImpl implements IBannerRepository {
   async getActiveBanners(): Promise<Either<Failure, Banner[]>> {
     try {
       const { data, error } = await supabase
-        .from('Banner')
+        .from('banner')
         .select('*')
         .eq('isActive', true)
         .order('createdAt', { ascending: false });
@@ -25,7 +25,7 @@ export class BannerRepositoryImpl implements IBannerRepository {
   async getAllBanners(): Promise<Either<Failure, Banner[]>> {
     try {
       const { data, error } = await supabase
-        .from('Banner')
+        .from('banner')
         .select('*')
         .order('createdAt', { ascending: false });
 

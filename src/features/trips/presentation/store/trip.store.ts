@@ -57,7 +57,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
   joinTrip: async (tripId: string) => {
     const result = await joinTripUseCase.execute(tripId);
     if (result.isRight()) {
-      get().fetchTrips();
+      await get().fetchTripById(tripId);
     } else {
       throw new Error(result.value.message);
     }
@@ -117,7 +117,14 @@ export const useTripStore = create<TripStore>((set, get) => ({
     const result = await repository.getTripById(tripId);
     if (result.isRight()) {
       const trip = result.value;
-      get().updateTripInStore(trip);
+      const { trips, myTrips } = get();
+      const existsInTrips = trips.some(t => t.id === tripId);
+      const existsInMyTrips = myTrips.some(t => t.id === tripId);
+      if (existsInTrips || existsInMyTrips) {
+        get().updateTripInStore(trip);
+      } else {
+        set(state => ({ trips: [...state.trips, trip] }));
+      }
       return trip;
     } else {
       console.error('Error fetching trip by id:', result.value.message);

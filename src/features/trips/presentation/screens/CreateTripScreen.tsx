@@ -201,7 +201,7 @@ export const CreateTripScreen = () => {
     } catch (error: any) {
       console.error('Error creating trip:', error);
       setErrorMessage(
-        error.response?.data?.message || 'No se pudo crear el viaje. Intenta nuevamente.'
+        error.response?.data?.message || error.message || 'No se pudo crear el viaje. Intenta nuevamente.'
       );
       setShowErrorModal(true);
     } finally {

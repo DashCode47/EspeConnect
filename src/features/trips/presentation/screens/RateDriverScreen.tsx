@@ -82,7 +82,7 @@ export const RateDriverScreen = () => {
       console.error('Error rating driver:', error);
       Alert.alert(
         'Error',
-        error.response?.data?.message || 'No se pudo enviar la calificación. Intenta nuevamente.'
+        error.response?.data?.message || error.message || 'No se pudo enviar la calificación. Intenta nuevamente.'
       );
     } finally {
       setSubmitting(false);

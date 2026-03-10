@@ -70,12 +70,19 @@ export const PlanCard: React.FC<PlanCardProps> = ({ plan, onPress, onJoin }) => 
       onPress={onPress}
       activeOpacity={0.9}>
 
-      {/* Badge for featured/full plans */}
-      {plan.isFull && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>🔥 LLENO</Text>
+      {/* Top Badges */}
+      <View style={styles.topBadgesContainer}>
+        <View style={[styles.badge, plan.isFull && styles.fullBadge]}>
+          <MaterialCommunityIcons
+            name={plan.isFull ? "fire" : "account-group"}
+            size={14}
+            color={plan.isFull ? colors.white : colors.primary}
+          />
+          <Text style={[styles.badgeText, plan.isFull && styles.fullBadgeText]}>
+            {plan.participantsCount}{plan.maxParticipants ? `/${plan.maxParticipants}` : ''}
+          </Text>
         </View>
-      )}
+      </View>
 
       {/* Content */}
       <View style={styles.content}>
@@ -179,28 +186,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.5)',
   },
-  badge: {
+  topBadgesContainer: {
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: colors.white,
-    paddingHorizontal: 10,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  badge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
-    transform: [{ rotate: '12deg' }],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  fullBadge: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: FONT_FAMILY.BOLD,
-    color: '#374151',
-    letterSpacing: 0.5,
+    color: colors.primary,
+  },
+  fullBadgeText: {
+    color: colors.white,
   },
   content: {
     alignItems: 'center',
@@ -214,7 +233,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -225,40 +244,40 @@ const styles = StyleSheet.create({
     fontSize: 32,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: FONT_FAMILY.BOLD,
     color: colors.primaryDark,
     textAlign: 'center',
-    marginBottom: 4,
-    lineHeight: 22,
+    marginBottom: 2,
+    lineHeight: 20,
   },
   subtitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: FONT_FAMILY.MEDIUM,
     color: '#6B7280',
   },
   dot: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
     backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    borderRadius: 12,
+    borderRadius: 10,
     maxWidth: '100%',
   },
   locationText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: FONT_FAMILY.MEDIUM,
     color: '#6B7280',
     flex: 1,
@@ -267,19 +286,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: 12,
     gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.3)',
+    paddingTop: 12,
   },
   avatarsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
     flexShrink: 1,
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: colors.white,
   },
@@ -289,13 +310,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   additionalCount: {
-    marginLeft: 8,
-    fontSize: 12,
+    marginLeft: 4,
+    fontSize: 11,
     fontFamily: FONT_FAMILY.SEMI_BOLD,
-    color: '#9CA3AF',
+    color: '#6B7280',
   },
   noParticipants: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: FONT_FAMILY.SEMI_BOLD,
     color: '#9CA3AF',
   },

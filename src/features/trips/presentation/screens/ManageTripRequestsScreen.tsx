@@ -76,7 +76,7 @@ export const ManageTripRequestsScreen = () => {
       fetchTripData(); // Refrescar datos
     } catch (error: any) {
       setErrorMessage(
-        error.response?.data?.message || 'No se pudo aceptar la solicitud. Intenta nuevamente.'
+        error.response?.data?.message || error.message || 'No se pudo aceptar la solicitud. Intenta nuevamente.'
       );
       setShowErrorModal(true);
     } finally {
@@ -101,7 +101,7 @@ export const ManageTripRequestsScreen = () => {
       fetchTripData(); // Refrescar datos
     } catch (error: any) {
       setErrorMessage(
-        error.response?.data?.message || 'No se pudo rechazar la solicitud. Intenta nuevamente.'
+        error.response?.data?.message || error.message || 'No se pudo rechazar la solicitud. Intenta nuevamente.'
       );
       setShowErrorModal(true);
     } finally {

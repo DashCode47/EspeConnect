@@ -12,7 +12,7 @@ export class ProductRepositoryImpl implements IProductRepository {
 
     let query = supabase
       .from('Product')
-      .select('*, author:User(id, name, profiles(avatar_url))', { count: 'exact' })
+      .select('*, author:profiles!authorId(id, full_name, avatar_url)', { count: 'exact' })
       .eq('isActive', true)
       .order('createdAt', { ascending: false })
       .range(from, to);
@@ -34,8 +34,8 @@ export class ProductRepositoryImpl implements IProductRepository {
         ...item,
         author: item.author ? {
           id: item.author.id,
-          name: item.author.name,
-          avatarUrl: item.author.profiles?.[0]?.avatar_url || item.author.profiles?.avatar_url
+          name: item.author.full_name,
+          avatarUrl: item.author.avatar_url
         } : undefined
       };
       return ProductMapper.toEntity(mappedItem);
@@ -50,7 +50,7 @@ export class ProductRepositoryImpl implements IProductRepository {
   async getProductById(id: string): Promise<Product | null> {
     const { data, error } = await supabase
       .from('Product')
-      .select('*, author:User(id, name, profiles(avatar_url))')
+      .select('*, author:profiles!authorId(id, full_name, avatar_url)')
       .eq('id', id)
       .single();
 
@@ -60,15 +60,16 @@ export class ProductRepositoryImpl implements IProductRepository {
       ...data,
       author: data.author ? {
         id: data.author.id,
-        name: data.author.name,
-        avatarUrl: data.author.profiles?.[0]?.avatar_url || data.author.profiles?.avatar_url
+        name: data.author.full_name,
+        avatarUrl: data.author.avatar_url
       } : undefined
     };
 
     return ProductMapper.toEntity(mappedItem);
   }
 
-  async createProduct(data: { title: string; description: string; price: number; category: ProductCategory; imageUrl?: string; contact?: string; authorId: string }): Promise<Product> {
+  async createProduct(data: { title: string; description: string; price: number; category: ProductCategory; imageUrls?: string[]; contact?: string; authorId: string }): Promise<Product> {
+    const urls = data.imageUrls ?? [];
     const { data: product, error } = await supabase
       .from('Product')
       .insert({
@@ -76,12 +77,13 @@ export class ProductRepositoryImpl implements IProductRepository {
         description: data.description,
         price: data.price,
         category: data.category,
-        imageUrl: data.imageUrl || null,
+        imageUrl: urls[0] || null,
+        imageUrls: urls,
         contact: data.contact || null,
         authorId: data.authorId,
         isActive: true,
       })
-      .select('*, author:User(id, name, profiles(avatar_url))')
+      .select('*, author:profiles!authorId(id, full_name, avatar_url)')
       .single();
 
     if (error) throw error;
@@ -114,30 +116,25 @@ export class ProductRepositoryImpl implements IProductRepository {
     if (error) throw error;
   }
 
-  async uploadImage(file: { uri: string; type: string; name: string }): Promise<string> {
+  async uploadImage(file: { base64: string; type: string; name: string }): Promise<string> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    const fileExt = file.name.split('.').pop();
+    const fileExt = file.name.split('.').pop() || 'jpg';
     const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-    const formData = new FormData();
-    formData.append('file', {
-      uri: file.uri,
-      type: file.type,
-      name: file.name,
-    } as any);
+    const binary = atob(file.base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
     const { data, error } = await supabase.storage
-      .from('products')
-      .upload(fileName, formData, {
-        contentType: file.type,
-      });
+      .from('posts')
+      .upload(fileName, bytes, { contentType: file.type });
 
     if (error) throw error;
 
     const { data: { publicUrl } } = supabase.storage
-      .from('products')
+      .from('posts')
       .getPublicUrl(data.path);
 
     return publicUrl;

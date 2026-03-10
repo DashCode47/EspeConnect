@@ -18,6 +18,7 @@ import {
 } from '../../domain/repositories/trip.repository';
 import { TripRow, TripRequestRow, RatingRow } from '../models/trip.model';
 import { TripMapper } from '../mappers/trip.mapper';
+import { sendPushToUser } from '../../../../services/notificationService';
 
 export class TripRepositoryImpl implements ITripRepository {
   
@@ -68,18 +69,31 @@ export class TripRepositoryImpl implements ITripRepository {
       const page = Math.max(params?.page ?? 1, 1);
       query = query.range((page - 1) * limit, page * limit - 1);
 
-      const { data: rows, error } = await query;
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: userRequests } = user 
+        ? await supabase
+          .from('trip_requests')
+          .select('trip_id, status, passenger_id')
+          .eq('passenger_id', user.id)
+        : { data: null };
+      
+      const { data: rows, error, count: totalCount } = await query;
       if (error) return left(new ServerFailure(error.message));
 
-      const trips: Trip[] = (rows || []).map((row) => TripMapper.mapRowToTrip(row as TripRow));
+      const trips: Trip[] = (rows || []).map((row) => {
+        const myRequests = (userRequests || [])
+          .filter(ur => ur.trip_id === row.id)
+          .map(ur => TripMapper.mapRowToTripRequest({ ...ur, created_at: new Date().toISOString() } as TripRequestRow));
+        return TripMapper.mapRowToTrip(row as TripRow, myRequests);
+      });
       
       return right({
         trips,
         pagination: { 
           page, 
           limit, 
-          total: trips.length, 
-          pages: Math.ceil(trips.length / limit) || 1 
+          total: totalCount || trips.length, 
+          pages: Math.ceil((totalCount || trips.length) / limit) || 1 
         },
       });
     } catch (e: any) {
@@ -257,6 +271,22 @@ export class TripRepositoryImpl implements ITripRepository {
       if (error) return left(new ServerFailure(error.message));
 
       const request = TripMapper.mapRowToTripRequest(inserted as TripRequestRow);
+
+      // Notify the driver that someone requested to join
+      const { data: tripInfo } = await supabase
+        .from('trips')
+        .select('driver_id, origin, destination')
+        .eq('id', id)
+        .single();
+      if (tripInfo) {
+        const passengerName = inserted.profiles?.full_name || 'Un pasajero';
+        sendPushToUser(
+          tripInfo.driver_id,
+          'Nueva solicitud de viaje',
+          `${passengerName} quiere unirse a tu viaje de ${tripInfo.origin} a ${tripInfo.destination}`,
+        );
+      }
+
       return right({ request });
     } catch (e: any) {
       return left(new ServerFailure(e.message));
@@ -311,6 +341,13 @@ export class TripRepositoryImpl implements ITripRepository {
         .single();
       const tripObj = tripData ? TripMapper.mapRowToTrip(tripData as TripRow) : null;
 
+      // Notify the passenger that their request was accepted
+      sendPushToUser(
+        updated.passenger_id,
+        '¡Solicitud aceptada!',
+        `Tu solicitud para el viaje de ${tripObj?.origin ?? ''} a ${tripObj?.destination ?? ''} fue aceptada`,
+      );
+
       return right({ request, trip: tripObj });
     } catch (e: any) {
       return left(new ServerFailure(e.message));
@@ -342,6 +379,19 @@ export class TripRepositoryImpl implements ITripRepository {
       if (error) return left(new ServerFailure(error.message));
 
       const request = TripMapper.mapRowToTripRequest(deleted as TripRequestRow);
+
+      // Notify the passenger that their request was rejected
+      const { data: tripInfo } = await supabase
+        .from('trips')
+        .select('origin, destination')
+        .eq('id', tripId)
+        .single();
+      sendPushToUser(
+        deleted.passenger_id,
+        'Solicitud no aceptada',
+        `Tu solicitud para el viaje de ${tripInfo?.origin ?? ''} a ${tripInfo?.destination ?? ''} no fue aceptada`,
+      );
+
       return right({ request });
     } catch (e: any) {
       return left(new ServerFailure(e.message));
@@ -420,20 +470,40 @@ export class TripRepositoryImpl implements ITripRepository {
           .order('departure_time', { ascending: false });
           
         if (!createdError && createdRows) {
-          trips = [...trips, ...createdRows.map((r) => ({ ...TripMapper.mapRowToTrip(r as TripRow), userRole: 'driver' as const }))];
+          // Fetch requests for these trips
+          const tripIds = createdRows.map(r => r.id);
+          let allRequests: any[] = [];
+          if (tripIds.length > 0) {
+            const { data: requestsData } = await supabase
+              .from('trip_requests')
+              .select('*, profiles!passenger_id(full_name, avatar_url, career)')
+              .in('trip_id', tripIds);
+            allRequests = requestsData || [];
+          }
+
+          const mappedCreated = createdRows.map((r) => {
+            const tripRequests = allRequests
+              .filter((req) => req.trip_id === r.id)
+              .map((req) => TripMapper.mapRowToTripRequest(req as TripRequestRow));
+            
+            return { 
+              ...TripMapper.mapRowToTrip(r as TripRow, tripRequests), 
+              userRole: 'driver' as const 
+            };
+          });
+          trips = [...trips, ...mappedCreated];
         }
       }
 
       if (params?.type === 'joined' || params?.type === 'all') {
-        // Trips user joined (accepted requests)
-        const { data: requests, error: requestsError } = await supabase
+        // Trips user joined or requested
+        const { data: userRequests, error: requestsError } = await supabase
           .from('trip_requests')
-          .select('trip_id')
-          .eq('passenger_id', userId)
-          .eq('status', 'ACCEPTED');
+          .select('*, profiles!passenger_id(full_name, avatar_url, career)')
+          .eq('passenger_id', userId);
           
-        if (!requestsError && requests) {
-          const tripIds = requests.map((r) => r.trip_id);
+        if (!requestsError && userRequests) {
+          const tripIds = userRequests.map((r) => r.trip_id);
           if (tripIds.length > 0) {
             const { data: joinedRows, error: joinedError } = await supabase
               .from('trips')
@@ -442,7 +512,17 @@ export class TripRepositoryImpl implements ITripRepository {
               .order('departure_time', { ascending: false });
               
             if (!joinedError && joinedRows) {
-              trips = [...trips, ...joinedRows.map((r) => ({ ...TripMapper.mapRowToTrip(r as TripRow), userRole: 'passenger' as const }))];
+              const mappedJoined = joinedRows.map((r) => {
+                const tripRequests = userRequests
+                  .filter((req) => req.trip_id === r.id)
+                  .map((req) => TripMapper.mapRowToTripRequest(req as TripRequestRow));
+                
+                return { 
+                  ...TripMapper.mapRowToTrip(r as TripRow, tripRequests), 
+                  userRole: 'passenger' as const 
+                };
+              });
+              trips = [...trips, ...mappedJoined];
             }
           }
         }

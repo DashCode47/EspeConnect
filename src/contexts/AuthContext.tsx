@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../features/auth/presentation/store/auth.store';
+import { saveUserFCMToken } from '../services/notificationService';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -43,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Fetch profile or clear user based on auth state
       if (session?.user) {
         fetchCurrentUser();
+        saveUserFCMToken(session.user.id);
       } else {
         useAuthStore.setState({ user: null });
       }

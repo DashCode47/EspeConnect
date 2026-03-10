@@ -28,7 +28,7 @@ interface AuthStore {
   logout: () => Promise<void>;
   fetchCurrentUser: () => Promise<void>;
   updateProfile: (data: Partial<AuthUser>) => Promise<void>;
-  updateAvatar: (imageUri: string) => Promise<string>;
+  updateAvatar: (params: { base64: string; fileExt: string }) => Promise<string>;
   clearError: () => void;
 }
 
@@ -90,11 +90,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  updateAvatar: async (imageUri: string) => {
+  updateAvatar: async (params: { base64: string; fileExt: string }) => {
     set({ isLoading: true, error: null });
-    const result = await updateAvatarUseCase.execute(imageUri);
+    const result = await updateAvatarUseCase.execute(params);
     if (result.isRight()) {
-      set({ isLoading: false });
+      // Refresh user so avatarUrl in store reflects the new photo
+      const userResult = await getCurrentUserUseCase.execute(new NoParams());
+      if (userResult.isRight()) set({ user: userResult.value, isLoading: false });
+      else set({ isLoading: false });
       return result.value;
     } else {
       set({ error: result.value.message, isLoading: false });

@@ -19,7 +19,7 @@ export interface CreateEventData {
   endTime?: string | null;
   location: string;
   price?: number;
-  image?: { uri: string; type?: string; fileName?: string } | null;
+  image?: { uri: string; base64?: string; type?: string; fileName?: string } | null;
 }
 
 export interface IEventRepository {

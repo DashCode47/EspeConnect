@@ -17,6 +17,10 @@ export const RideStack = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        contentStyle: {
+          backgroundColor: '#fff',
+          paddingTop: 20,
+        },
       }}
     >
       <Stack.Screen name="RidesList" component={RidesScreen} />
