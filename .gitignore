@@ -71,6 +71,10 @@ yarn-error.log
 .env
 .env.*
 
+# Firebase config (contains API keys — do not commit to public repos)
+google-services.json
+GoogleService-Info.plist
+
 # testing
 /coverage
 

@@ -30,7 +30,7 @@ export const EstablishmentsScreen: React.FC = () => {
     const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null);
 
     useEffect(() => {
-        fetchEstablishments();
+        fetchEstablishments({ limit: 100 });
     }, []);
 
     const categories = [
