@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp",
+      "metadata": {
+        "description": "Supabase MCP server for CamPlus project migration",
+        "documentation": "https://supabase.com/docs/guides/getting-started/mcp"
+      }
+    }
+  }
+}

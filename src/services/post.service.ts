@@ -16,8 +16,11 @@ export interface Post {
   };
   createdAt: string;
   updatedAt: string;
-  likes: number;
   comments: number;
+  reactions: {
+    type: 'like' | 'dislike';
+    userId: string;
+  }[];
 }
 
 interface PostsResponse {
@@ -107,11 +110,27 @@ export const postService = {
     }
   },
 
-  async createPost(data: CreatePostData) {
+  async createPost(data: any) {
     try {
-      const response = await api.post<Post>('/posts', data);
+      const isFormData = data instanceof FormData;
+      const config: any = {
+        headers: {},
+      };
+      
+      // Para FormData, establecer multipart/form-data (el interceptor también lo manejará)
+      // Para JSON, establecer application/json
+      if (isFormData) {
+        config.headers['Content-Type'] = 'multipart/form-data';
+      } else {
+        config.headers['Content-Type'] = 'application/json';
+      }
+      
+      const response = await api.post<Post>('/posts', data, config);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        await AsyncStorage.removeItem('token');
+      }
       throw error;
     }
   },
@@ -135,7 +154,9 @@ export const postService = {
 
   async likePost(id: string) {
     try {
-      const response = await api.post<Post>(`/posts/${id}/like`);
+      const response = await api.post<Post>(`/posts/${id}/react`, {
+        reactionType: 'like'
+      });
       return response.data;
     } catch (error) {
       throw error;
@@ -144,7 +165,11 @@ export const postService = {
 
   async unlikePost(id: string) {
     try {
-      const response = await api.delete<Post>(`/posts/${id}/like`);
+      const response = await api.delete<Post>(`/posts/${id}/react`, {
+        data: {
+          reactionType: 'like'
+        }
+      });
       return response.data;
     } catch (error) {
       throw error;

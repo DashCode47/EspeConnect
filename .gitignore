@@ -21,6 +21,10 @@ DerivedData
 *.ipa
 *.xcuserstate
 ios/.xcode.env.local
+.claude
+.expo
+.env
+.env.local
 
 # Android/IntelliJ
 #
@@ -66,6 +70,10 @@ yarn-error.log
 # Environment variables
 .env
 .env.*
+
+# Firebase config (contains API keys — do not commit to public repos)
+google-services.json
+GoogleService-Info.plist
 
 # testing
 /coverage

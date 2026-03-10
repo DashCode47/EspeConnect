@@ -1,55 +1,90 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../features/auth/presentation/store/auth.store';
+import { saveUserFCMToken } from '../services/notificationService';
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
+  user: User | null;
+  session: Session | null;
   loading: boolean;
+  logout: () => Promise<void>;
+  login: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const fetchCurrentUser = useAuthStore(state => state.fetchCurrentUser);
+  const storeUser = useAuthStore(state => state.user);
 
   useEffect(() => {
-    checkAuthState();
-  }, []);
-
-  const checkAuthState = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      setIsAuthenticated(!!token);
-    } catch (error) {
-      setIsAuthenticated(false);
-    } finally {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
-    }
-  };
 
-  const login = async () => {
-    setIsAuthenticated(true);
-  };
+      // Fetch profile if user is logged in
+      if (session?.user) {
+        fetchCurrentUser();
+      }
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+
+      // Fetch profile or clear user based on auth state
+      if (session?.user) {
+        fetchCurrentUser();
+        saveUserFCMToken(session.user.id);
+      } else {
+        useAuthStore.setState({ user: null });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchCurrentUser]);
 
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
-      setIsAuthenticated(false);
+      await useAuthStore.getState().logout();
     } catch (error) {
       console.error('Error during logout:', error);
     }
   };
 
+  // Legacy login function for backward compatibility
+  const login = async () => {
+    // This function is kept for backward compatibility
+    // The actual authentication state is now managed by onAuthStateChange
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      setSession(session);
+      setUser(session.user);
+    }
+  };
+
+  const isAuthenticated = !!session;
+
   return (
     <AuthContext.Provider
       value={{
         isAuthenticated,
-        login,
-        logout,
+        user,
+        session,
         loading,
+        logout,
+        login,
       }}
     >
       {children}
@@ -63,4 +98,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};

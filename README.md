@@ -59,6 +59,17 @@ yarn ios
 - React Native Paper
 - TypeScript
 - Axios
+- League Spartan (Typography)
+
+## Fonts Setup
+
+This application uses **League Spartan** as the primary font family. To set up the fonts:
+
+1. Download League Spartan font files from [Google Fonts](https://fonts.google.com/specimen/League+Spartan)
+2. Follow the instructions in [FONTS_SETUP.md](./FONTS_SETUP.md) to configure the fonts for both Android and iOS platforms
+3. Rebuild the application after adding the font files
+
+The font configuration is already set up in the codebase - you just need to add the font files to the appropriate directories.
 
 ## Contributing
 
