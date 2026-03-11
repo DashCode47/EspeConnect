@@ -1,17 +1,20 @@
 import React, { useEffect, useRef } from 'react';
 import {
     View,
+    Text,
     StyleSheet,
     TouchableOpacity,
     Animated,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../config/colors';
+import { FONT_FAMILY } from '../config/globalStyles';
 
 interface NavigationItem {
     key: string;
     icon: string;
     iconActive: string;
+    label: string;
 }
 
 interface AnimatedNavigatorProps {
@@ -20,12 +23,11 @@ interface AnimatedNavigatorProps {
 }
 
 const navigationItems: NavigationItem[] = [
-    { key: 'home', icon: 'home-outline', iconActive: 'home' },
-    { key: 'establishments', icon: 'storefront-outline', iconActive: 'storefront' },
-    { key: 'posts', icon: 'ticket-percent-outline', iconActive: 'ticket-percent' },
-    { key: 'marketplace', icon: 'store-outline', iconActive: 'store' },
-    { key: 'rides', icon: 'car-outline', iconActive: 'car' },
-    { key: 'events', icon: 'calendar-outline', iconActive: 'calendar' },
+    { key: 'home', icon: 'home-outline', iconActive: 'home', label: 'Inicio' },
+    { key: 'establishments', icon: 'storefront-outline', iconActive: 'storefront', label: 'Locales' },
+    { key: 'marketplace', icon: 'store-outline', iconActive: 'store', label: 'Market' },
+    { key: 'rides', icon: 'car-outline', iconActive: 'car', label: 'Viajes' },
+    { key: 'events', icon: 'calendar-outline', iconActive: 'calendar', label: 'Eventos' },
 ];
 
 export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigatorProps) => {
@@ -87,9 +89,15 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
                                 activeOpacity={0.7}>
                                 <MaterialCommunityIcons
                                     name={isActive ? item.iconActive : item.icon}
-                                    size={24}
+                                    size={22}
                                     color={isActive ? colors.white : '#9CA3AF'}
                                 />
+                                <Text
+                                    style={[styles.navLabel, isActive && styles.navLabelActive]}
+                                    numberOfLines={1}
+                                    adjustsFontSizeToFit>
+                                    {item.label}
+                                </Text>
                             </TouchableOpacity>
                         </Animated.View>
                     );
@@ -112,12 +120,11 @@ const styles = StyleSheet.create({
     navContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: 2,
         backgroundColor: '#1E2A25',
         borderRadius: 32,
         paddingVertical: 6,
-        paddingLeft: 8,
-        paddingRight: 24,
+        paddingHorizontal: 10,
         shadowColor: colors.primary,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
@@ -127,11 +134,13 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.1)',
     },
     navItem: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        paddingHorizontal: 12,
+        height: 56,
+        borderRadius: 28,
         justifyContent: 'center',
         alignItems: 'center',
+        flexDirection: 'column',
+        minWidth: 56,
     },
     navItemActive: {
         backgroundColor: colors.primary,
@@ -140,5 +149,15 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.4,
         shadowRadius: 8,
         elevation: 8,
+    },
+    navLabel: {
+        fontSize: 10,
+        fontFamily: FONT_FAMILY.MEDIUM,
+        color: '#9CA3AF',
+        marginTop: 2,
+    },
+    navLabelActive: {
+        color: colors.white,
+        fontFamily: FONT_FAMILY.BOLD,
     },
 });

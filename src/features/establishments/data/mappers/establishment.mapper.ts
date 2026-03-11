@@ -14,6 +14,7 @@ export class EstablishmentMapper {
       website: row.website,
       instagram: row.instagram,
       tiktok: row.tiktok,
+      type: row.type,
       isActive: row.isActive ?? row.is_active ?? true,
       createdAt: row.createdAt || row.created_at,
       updatedAt: row.updatedAt || row.updated_at,

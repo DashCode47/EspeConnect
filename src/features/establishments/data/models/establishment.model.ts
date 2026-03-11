@@ -32,6 +32,7 @@ export interface EstablishmentRow {
   website?: string;
   instagram?: string;
   tiktok?: string;
+  type?: string;
   isActive: boolean;
   is_active?: boolean;
   createdAt: string;

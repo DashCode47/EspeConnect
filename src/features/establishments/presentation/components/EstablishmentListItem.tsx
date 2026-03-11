@@ -10,11 +10,7 @@ interface EstablishmentListItemProps {
 }
 
 export const EstablishmentListItem: React.FC<EstablishmentListItemProps> = ({ establishment, onPress }) => {
-    // Mocking some data for the premium feel if not in entity
-    const rating = 4.8;
-    const isRecommended = Math.random() > 0.5; // Mocking for UI demonstration
-    const distance = "5 min"; // Mocking
-    const isOpen = true; // Mocking
+    const distance = "Frente a la ESPE";
 
     return (
         <TouchableOpacity
@@ -34,47 +30,22 @@ export const EstablishmentListItem: React.FC<EstablishmentListItemProps> = ({ es
                         <MaterialCommunityIcons name="store" size={48} color={`${colors.primary}33`} />
                     </View>
                 )}
-
-                {isRecommended && (
-                    <View style={styles.badgeRecommended}>
-                        <Text style={styles.badgeText}>RECOMENDADO</Text>
-                    </View>
-                )}
-
-                <TouchableOpacity style={styles.bookmarkButton}>
-                    <MaterialCommunityIcons name="bookmark" size={20} color={colors.white} />
-                </TouchableOpacity>
-
-                <View style={styles.ratingBadge}>
-                    <MaterialCommunityIcons name="star" size={14} color={colors.accent} />
-                    <Text style={styles.ratingText}>{rating}</Text>
-                </View>
             </View>
 
             <View style={styles.content}>
                 <View style={styles.headerRow}>
                     <Text style={styles.name} numberOfLines={1}>{establishment.name}</Text>
-                    <Text style={styles.category} numberOfLines={1}>CAFETERÍA</Text>
+                    {establishment.type && (
+                        <Text style={styles.category} numberOfLines={1}>
+                            {establishment.type.toUpperCase()}
+                        </Text>
+                    )}
                 </View>
 
                 <View style={styles.footerRow}>
-                    <View style={styles.statusContainer}>
-                        <MaterialCommunityIcons
-                            name={isOpen ? "clock-outline" : "lock-outline"}
-                            size={16}
-                            color={isOpen ? colors.primary : '#94A3B8'}
-                        />
-                        <Text style={[
-                            styles.statusText,
-                            { color: isOpen ? colors.primary : '#94A3B8' }
-                        ]}>
-                            {isOpen ? "Abierto ahora" : "Cerrado"}
-                        </Text>
-                    </View>
-
                     <View style={styles.distanceContainer}>
                         <MaterialCommunityIcons name="map-marker-distance" size={16} color="#94A3B8" />
-                        <Text style={styles.distanceText}>A {distance}</Text>
+                        <Text style={styles.distanceText}>{distance}</Text>
                     </View>
                 </View>
             </View>

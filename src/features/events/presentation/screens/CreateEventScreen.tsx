@@ -5,435 +5,397 @@ import {
   TouchableOpacity,
   Image,
   Text,
+  TextInput,
   ScrollView,
   SafeAreaView,
-  TextInput as RNTextInput,
-  Modal,
   Platform,
 } from 'react-native';
-import { SuccessModal } from '../../../../components/modals/SuccessModal';
-import { ErrorModal } from '../../../../components/modals/ErrorModal';
-import { TextInput, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import * as ImagePicker from 'react-native-image-picker';
 import { EventStackParamList } from '../../../../navigation/types';
 import { useEventStore } from '../store/event.store';
 import { EventCategory } from '../../domain/entities/event.entity';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import * as ImagePicker from 'react-native-image-picker';
 import { colors } from '../../../../config/colors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FONT_FAMILY } from '../../../../config/globalStyles';
 import { useHideNavbar } from '../../../../hooks/useHideNavbar';
-import { globalStyles } from '../../../../config/globalStyles';
+import { FormInput } from '../../../../components/forms/FormInput';
+import { FormTextArea } from '../../../../components/forms/FormTextArea';
+import { SuccessModal } from '../../../../components/modals/SuccessModal';
+import { ErrorModal } from '../../../../components/modals/ErrorModal';
 
 type CreateEventScreenNavigationProp = NativeStackNavigationProp<EventStackParamList, 'CreateEvent'>;
+
+const BACKGROUND_COLOR = '#F6F8F7';
+
+const EVENT_CATEGORIES = [
+  { key: EventCategory.ACADEMIC, label: 'Académico', emoji: '🎓' },
+  { key: EventCategory.SPORTS,   label: 'Deportivo',  emoji: '⚽' },
+  { key: EventCategory.SOCIAL,   label: 'Social',     emoji: '🎉' },
+  { key: EventCategory.PRIVATE,  label: 'Privado',    emoji: '🔒' },
+  { key: EventCategory.OTHER,    label: 'Otro',       emoji: '📌' },
+];
 
 export const CreateEventScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<CreateEventScreenNavigationProp>();
-  const [title, setTitle] = useState('');
+
+  useHideNavbar(true);
+
+  // ── Form state ──────────────────────────────────────────────────────────
+  const [title, setTitle]             = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<EventCategory>(EventCategory.ACADEMIC);
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [endTime, setEndTime] = useState<Date | null>(null);
-  const [location, setLocation] = useState('');
-  const [price, setPrice] = useState('');
-  const [image, setImage] = useState<{ uri: string; base64?: string; type?: string; fileName?: string } | null>(null);
+  const [category, setCategory]       = useState<EventCategory>(EventCategory.ACADEMIC);
+  const [startTime, setStartTime]     = useState<Date | null>(null);
+  const [endTime, setEndTime]         = useState<Date | null>(null);
+  const [location, setLocation]       = useState('');
+  const [price, setPrice]             = useState('');
+  const [image, setImage]             = useState<{ uri: string; base64?: string; type?: string; fileName?: string } | null>(null);
 
   const { createEvent } = useEventStore();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]             = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [tempDate, setTempDate] = useState(new Date());
-  const [tempTime, setTempTime] = useState({ hours: 9, minutes: 0 });
+  const [errorModal, setErrorModal]       = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+
+  const showError = (message: string) => setErrorModal({ visible: true, message });
+
+  // ── Sheet visibility ────────────────────────────────────────────────────
+  const [showCategorySheet,  setShowCategorySheet]  = useState(false);
+  const [showDatePicker,     setShowDatePicker]     = useState(false);
+  const [showTimePicker,     setShowTimePicker]     = useState(false);
+  const [showEndDatePicker,  setShowEndDatePicker]  = useState(false);
+  const [showEndTimePicker,  setShowEndTimePicker]  = useState(false);
+
+  // ── Temp picker state ───────────────────────────────────────────────────
+  const [tempDate,    setTempDate]    = useState(new Date());
+  const [tempTime,    setTempTime]    = useState({ hours: 9,  minutes: 0 });
   const [tempEndDate, setTempEndDate] = useState(new Date());
   const [tempEndTime, setTempEndTime] = useState({ hours: 18, minutes: 0 });
 
-  // Ocultar el navbar en esta pantalla
-  useHideNavbar(true);
-
-  const categories = [
-    { key: EventCategory.ACADEMIC, label: 'Académico' },
-    { key: EventCategory.SPORTS, label: 'Deportivo' },
-    { key: EventCategory.SOCIAL, label: 'Social' },
-    { key: EventCategory.PRIVATE, label: 'Privado' },
-    { key: EventCategory.OTHER, label: 'Otro' },
-  ];
-
-  const showError = (msg: string) => {
-    setErrorMessage(msg);
-    setShowErrorModal(true);
-  };
-
+  // ── Image pick ──────────────────────────────────────────────────────────
   const handleImagePick = async () => {
-    Alert.alert(
-      'Seleccionar Imagen',
-      '¿Desde dónde deseas seleccionar la imagen?',
-      [
-        {
-          text: 'Galería',
-          onPress: async () => {
-            const result = await ImagePicker.launchImageLibrary({
-              mediaType: 'photo',
-              quality: 0.8,
-              includeBase64: true,
-            });
-
-            if (result.assets && result.assets[0]?.uri) {
-              const asset = result.assets[0];
-              setImage({
-                uri: asset.uri!,
-                base64: asset.base64 ?? undefined,
-                type: asset.type ?? 'image/jpeg',
-                fileName: asset.fileName ?? `image_${Date.now()}.jpg`,
-              });
-            }
-          },
-        },
-        {
-          text: 'Cámara',
-          onPress: async () => {
-            const result = await ImagePicker.launchCamera({
-              mediaType: 'photo',
-              quality: 0.8,
-              includeBase64: true,
-            });
-
-            if (result.assets && result.assets[0]?.uri) {
-              const asset = result.assets[0];
-              setImage({
-                uri: asset.uri!,
-                base64: asset.base64 ?? undefined,
-                type: asset.type ?? 'image/jpeg',
-                fileName: asset.fileName ?? `image_${Date.now()}.jpg`,
-              });
-            }
-          },
-        },
-        { text: 'Cancelar', style: 'cancel' },
-      ]
-    );
+    const result = await ImagePicker.launchImageLibrary({
+      mediaType: 'photo',
+      quality: 0.8,
+      includeBase64: true,
+    });
+    if (result.assets && result.assets[0]?.uri) {
+      const asset = result.assets[0];
+      setImage({
+        uri: asset.uri!,
+        base64: asset.base64 ?? undefined,
+        type: asset.type ?? 'image/jpeg',
+        fileName: asset.fileName ?? `image_${Date.now()}.jpg`,
+      });
+    }
   };
 
+  // ── Picker openers ──────────────────────────────────────────────────────
   const openDatePicker = () => {
     setTempDate(startTime || new Date());
     setShowDatePicker(true);
   };
-
   const openTimePicker = () => {
-    if (startTime) {
-      setTempTime({
-        hours: startTime.getHours(),
-        minutes: startTime.getMinutes(),
-      });
-    }
+    if (startTime) setTempTime({ hours: startTime.getHours(), minutes: startTime.getMinutes() });
     setShowTimePicker(true);
   };
-
   const openEndDatePicker = () => {
     setTempEndDate(endTime || new Date());
     setShowEndDatePicker(true);
   };
-
   const openEndTimePicker = () => {
-    if (endTime) {
-      setTempEndTime({
-        hours: endTime.getHours(),
-        minutes: endTime.getMinutes(),
-      });
-    }
+    if (endTime) setTempEndTime({ hours: endTime.getHours(), minutes: endTime.getMinutes() });
     setShowEndTimePicker(true);
   };
 
+  // ── Adjust helpers ──────────────────────────────────────────────────────
+  const adjustDate = (days: number) => {
+    const d = new Date(tempDate);
+    d.setDate(d.getDate() + days);
+    if (d >= new Date()) setTempDate(d);
+  };
+  const adjustMonth = (months: number) => {
+    const d = new Date(tempDate);
+    d.setMonth(d.getMonth() + months);
+    if (d >= new Date()) setTempDate(d);
+  };
+  const adjustHour = (delta: number) => {
+    setTempTime(prev => {
+      let h = prev.hours + delta;
+      if (h < 0) h = 23;
+      if (h > 23) h = 0;
+      return { ...prev, hours: h };
+    });
+  };
+  const adjustMinute = (delta: number) => {
+    setTempTime(prev => {
+      let m = prev.minutes + delta;
+      if (m < 0) m = 45;
+      if (m > 59) m = 0;
+      return { ...prev, minutes: m };
+    });
+  };
+  const adjustEndDate = (days: number) => {
+    const d = new Date(tempEndDate);
+    d.setDate(d.getDate() + days);
+    if (d >= new Date()) setTempEndDate(d);
+  };
+  const adjustEndMonth = (months: number) => {
+    const d = new Date(tempEndDate);
+    d.setMonth(d.getMonth() + months);
+    if (d >= new Date()) setTempEndDate(d);
+  };
+
+  // ── Confirm helpers ─────────────────────────────────────────────────────
   const confirmDate = () => {
-    const newDate = new Date(tempDate);
-    newDate.setHours(tempTime.hours);
-    newDate.setMinutes(tempTime.minutes);
-    newDate.setSeconds(0);
-    newDate.setMilliseconds(0);
-    setStartTime(newDate);
+    const d = new Date(tempDate);
+    d.setHours(tempTime.hours, tempTime.minutes, 0, 0);
+    setStartTime(d);
     setShowDatePicker(false);
   };
-
   const confirmTime = () => {
-    if (startTime) {
-      const newDate = new Date(startTime);
-      newDate.setHours(tempTime.hours);
-      newDate.setMinutes(tempTime.minutes);
-      newDate.setSeconds(0);
-      newDate.setMilliseconds(0);
-      setStartTime(newDate);
-    } else {
-      const newDate = new Date();
-      newDate.setHours(tempTime.hours);
-      newDate.setMinutes(tempTime.minutes);
-      newDate.setSeconds(0);
-      newDate.setMilliseconds(0);
-      setStartTime(newDate);
-    }
+    const base = startTime ? new Date(startTime) : new Date();
+    base.setHours(tempTime.hours, tempTime.minutes, 0, 0);
+    setStartTime(base);
     setShowTimePicker(false);
   };
-
   const confirmEndDate = () => {
-    const newDate = new Date(tempEndDate);
-    newDate.setHours(tempEndTime.hours);
-    newDate.setMinutes(tempEndTime.minutes);
-    newDate.setSeconds(0);
-    newDate.setMilliseconds(0);
-    setEndTime(newDate);
+    const d = new Date(tempEndDate);
+    d.setHours(tempEndTime.hours, tempEndTime.minutes, 0, 0);
+    setEndTime(d);
     setShowEndDatePicker(false);
   };
-
   const confirmEndTime = () => {
-    if (endTime) {
-      const newDate = new Date(endTime);
-      newDate.setHours(tempEndTime.hours);
-      newDate.setMinutes(tempEndTime.minutes);
-      newDate.setSeconds(0);
-      newDate.setMilliseconds(0);
-      setEndTime(newDate);
-    } else {
-      const newDate = new Date();
-      newDate.setHours(tempEndTime.hours);
-      newDate.setMinutes(tempEndTime.minutes);
-      newDate.setSeconds(0);
-      newDate.setMilliseconds(0);
-      setEndTime(newDate);
-    }
+    const base = endTime ? new Date(endTime) : new Date();
+    base.setHours(tempEndTime.hours, tempEndTime.minutes, 0, 0);
+    setEndTime(base);
     setShowEndTimePicker(false);
   };
 
-  const adjustDate = (days: number) => {
-    const newDate = new Date(tempDate);
-    newDate.setDate(newDate.getDate() + days);
-    if (newDate >= new Date()) {
-      setTempDate(newDate);
-    }
-  };
-
-  const adjustMonth = (months: number) => {
-    const newDate = new Date(tempDate);
-    newDate.setMonth(newDate.getMonth() + months);
-    if (newDate >= new Date()) {
-      setTempDate(newDate);
-    }
-  };
-
-  const adjustHour = (hours: number) => {
-    setTempTime((prev) => {
-      let newHours = prev.hours + hours;
-      if (newHours < 0) newHours = 23;
-      if (newHours > 23) newHours = 0;
-      return { ...prev, hours: newHours };
-    });
-  };
-
-  const adjustMinute = (minutes: number) => {
-    setTempTime((prev) => {
-      let newMinutes = prev.minutes + minutes;
-      if (newMinutes < 0) {
-        newMinutes = 59;
-        adjustHour(-1);
-      }
-      if (newMinutes > 59) {
-        newMinutes = 0;
-        adjustHour(1);
-      }
-      return { ...prev, minutes: newMinutes };
-    });
-  };
-
+  // ── Display helpers ─────────────────────────────────────────────────────
   const formatDateDisplay = (date: Date | null) => {
     if (!date) return '';
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
-
   const formatTimeDisplay = (date: Date | null) => {
     if (!date) return '';
-    return date.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   };
+  const getCategoryLabel = (cat: EventCategory) =>
+    EVENT_CATEGORIES.find(c => c.key === cat)?.label ?? '';
+  const getCategoryEmoji = (cat: EventCategory) =>
+    EVENT_CATEGORIES.find(c => c.key === cat)?.emoji ?? '';
 
+  // ── Submit ──────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!title.trim()) {
-      showError('El nombre del evento es requerido');
-      return;
-    }
-    if (!description.trim()) {
-      showError('La descripción es requerida');
-      return;
-    }
-    if (!startTime) {
-      showError('La fecha de inicio es requerida');
-      return;
-    }
-    if (!location.trim()) {
-      showError('La ubicación es requerida');
-      return;
-    }
+    if (!title.trim())       { showError('El nombre del evento es requerido'); return; }
+    if (!description.trim()) { showError('La descripción es requerida'); return; }
+    if (!startTime)          { showError('La fecha de inicio es requerida'); return; }
+    if (!location.trim())    { showError('La ubicación es requerida'); return; }
     if (endTime && endTime <= startTime) {
       showError('La fecha de fin debe ser posterior a la fecha de inicio');
       return;
     }
-
     try {
       setLoading(true);
-
       const success = await createEvent({
         title: title.trim(),
         description: description.trim(),
-        category: category,
+        category,
         startTime: startTime.toISOString(),
         endTime: endTime?.toISOString() || null,
         location: location.trim(),
         price: price ? parseFloat(price) : 0,
-        image: image,
+        image,
       });
-
       if (success) {
         setShowSuccessModal(true);
       } else {
         showError('No se pudo crear el evento. Intenta nuevamente.');
       }
-    } catch (error: any) {
+    } catch {
       showError('Ocurrió un error inesperado.');
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Reusable picker column renderers ────────────────────────────────────
+  const renderDateColumns = (
+    date: Date,
+    onAdjustDay: (d: number) => void,
+    onAdjustMonth: (m: number) => void,
+  ) => (
+    <View style={styles.pickerRow}>
+      {[
+        { label: 'Día',  value: String(date.getDate()), up: () => onAdjustDay(1),    down: () => onAdjustDay(-1) },
+        { label: 'Mes',  value: date.toLocaleDateString('es-ES', { month: 'short' }), up: () => onAdjustMonth(1), down: () => onAdjustMonth(-1) },
+        { label: 'Año',  value: String(date.getFullYear()), up: () => onAdjustMonth(12), down: () => onAdjustMonth(-12) },
+      ].map(col => (
+        <View key={col.label} style={styles.pickerColumn}>
+          <Text style={styles.pickerLabel}>{col.label}</Text>
+          <View style={styles.pickerControls}>
+            <TouchableOpacity style={styles.pickerButton} onPress={col.up}>
+              <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.pickerValue}>{col.value}</Text>
+            <TouchableOpacity style={styles.pickerButton} onPress={col.down}>
+              <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderTimeColumns = (
+    time: { hours: number; minutes: number },
+    onHour: (d: number) => void,
+    onMinute: (d: number) => void,
+  ) => (
+    <View style={styles.pickerRow}>
+      {[
+        { label: 'Hora',    value: time.hours.toString().padStart(2, '0'),   up: () => onHour(1),    down: () => onHour(-1) },
+        { label: 'Minutos', value: time.minutes.toString().padStart(2, '0'), up: () => onMinute(15), down: () => onMinute(-15) },
+      ].map(col => (
+        <View key={col.label} style={styles.pickerColumn}>
+          <Text style={styles.pickerLabel}>{col.label}</Text>
+          <View style={styles.pickerControls}>
+            <TouchableOpacity style={styles.pickerButton} onPress={col.up}>
+              <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.pickerValue}>{col.value}</Text>
+            <TouchableOpacity style={styles.pickerButton} onPress={col.down}>
+              <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color={colors.black} />
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}>
+          <MaterialCommunityIcons name="arrow-left" size={22} color={colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Crear Nuevo Evento</Text>
-        <View style={styles.headerButton} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 100 },
-        ]}
-        showsVerticalScrollIndicator={false}>
-        {/* Image Uploader */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Imagen o Banner</Text>
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
+
+        {/* Image upload */}
+        <View style={styles.fieldSpacing}>
+          <Text style={styles.fieldLabel}>Imagen o Banner</Text>
           <TouchableOpacity
             style={styles.imageUploadContainer}
             onPress={handleImagePick}
             activeOpacity={0.8}>
             {image ? (
-              <View style={styles.imagePreviewContainer}>
+              <>
                 <Image source={{ uri: image.uri }} style={styles.previewImage} />
                 <TouchableOpacity
                   style={styles.removeImageButton}
                   onPress={() => setImage(null)}>
                   <MaterialCommunityIcons name="close" size={20} color={colors.white} />
                 </TouchableOpacity>
-              </View>
+              </>
             ) : (
               <View style={styles.imagePlaceholder}>
-                <MaterialCommunityIcons
-                  name="image-plus"
-                  size={48}
-                  color="#A0A0A0"
-                />
-                <Text style={styles.placeholderText}>Toca para subir una imagen</Text>
+                <MaterialCommunityIcons name="image-plus" size={48} color={`${colors.primary}66`} />
+                <Text style={styles.imagePlaceholderText}>Toca para subir una imagen</Text>
               </View>
             )}
           </TouchableOpacity>
         </View>
 
         {/* Title */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Nombre del Evento</Text>
-          <TextInput
-            mode="outlined"
-            placeholder="Ej: Conferencia de IA"
-            value={title}
-            onChangeText={setTitle}
-            style={styles.input}
-            outlineColor="#E0E0E0"
-            activeOutlineColor={colors.primary}
-          />
-        </View>
+        <FormInput
+          label="Nombre del Evento"
+          placeholder="Ej: Conferencia de IA"
+          value={title}
+          onChangeText={setTitle}
+          containerStyle={styles.fieldSpacing}
+        />
 
         {/* Category */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Categoría</Text>
+        <View style={styles.fieldSpacing}>
+          <Text style={styles.fieldLabel}>Categoría</Text>
           <TouchableOpacity
-            style={styles.selectContainer}
-            onPress={() => setShowCategoryModal(true)}>
-            <Text
-              style={[
-                styles.selectText,
-                !category && styles.selectPlaceholder,
-              ]}>
-              {categories.find((c) => c.key === category)?.label || 'Seleccionar categoría...'}
+            style={styles.selectButton}
+            onPress={() => setShowCategorySheet(true)}
+            activeOpacity={0.7}>
+            <Text style={[styles.selectText, !category && styles.selectPlaceholder]}>
+              {category
+                ? `${getCategoryEmoji(category)} ${getCategoryLabel(category)}`
+                : 'Selecciona una categoría'}
             </Text>
-            <MaterialCommunityIcons name="chevron-down" size={24} color="#666" />
+            <MaterialCommunityIcons name="chevron-down" size={22} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
-        {/* Date & Time - Start */}
-        <View style={styles.rowContainer}>
-          <View style={[styles.section, styles.halfWidth]}>
-            <Text style={styles.label}>Fecha Inicio</Text>
-            <TouchableOpacity style={styles.dateTimeInput} onPress={openDatePicker}>
-              <MaterialCommunityIcons name="calendar-month" size={24} color="#666" />
-              <Text style={[styles.dateTimeText, !startTime && styles.placeholderText]}>
+        {/* Description */}
+        <FormTextArea
+          label="Descripción detallada"
+          placeholder="Añade todos los detalles importantes sobre el evento aquí..."
+          value={description}
+          onChangeText={setDescription}
+          numberOfLines={4}
+          containerStyle={styles.fieldSpacing}
+        />
+
+        {/* Start date & time */}
+        <View style={[styles.rowContainer, styles.fieldSpacing]}>
+          <View style={styles.halfWidth}>
+            <Text style={styles.fieldLabel}>Fecha Inicio</Text>
+            <TouchableOpacity style={styles.dateTimeButton} onPress={openDatePicker}>
+              <MaterialCommunityIcons name="calendar-month" size={20} color="#6B7280" />
+              <Text style={[styles.dateTimeText, !startTime && styles.selectPlaceholder]}>
                 {startTime ? formatDateDisplay(startTime) : 'DD/MM/AAAA'}
               </Text>
             </TouchableOpacity>
           </View>
-
-          <View style={[styles.section, styles.halfWidth]}>
-            <Text style={styles.label}>Hora Inicio</Text>
-            <TouchableOpacity style={styles.dateTimeInput} onPress={openTimePicker}>
-              <MaterialCommunityIcons name="clock-outline" size={24} color="#666" />
-              <Text style={[styles.dateTimeText, !startTime && styles.placeholderText]}>
+          <View style={styles.halfWidth}>
+            <Text style={styles.fieldLabel}>Hora Inicio</Text>
+            <TouchableOpacity style={styles.dateTimeButton} onPress={openTimePicker}>
+              <MaterialCommunityIcons name="clock-outline" size={20} color="#6B7280" />
+              <Text style={[styles.dateTimeText, !startTime && styles.selectPlaceholder]}>
                 {startTime ? formatTimeDisplay(startTime) : 'HH:MM'}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Date & Time - End (Optional) */}
-        <View style={styles.rowContainer}>
-          <View style={[styles.section, styles.halfWidth]}>
-            <Text style={styles.label}>Fecha Fin (Opcional)</Text>
-            <TouchableOpacity style={styles.dateTimeInput} onPress={openEndDatePicker}>
-              <MaterialCommunityIcons name="calendar-month" size={24} color="#666" />
-              <Text style={[styles.dateTimeText, !endTime && styles.placeholderText]}>
+        {/* End date & time */}
+        <View style={[styles.rowContainer, styles.fieldSpacing]}>
+          <View style={styles.halfWidth}>
+            <Text style={styles.fieldLabel}>Fecha Fin (Opc.)</Text>
+            <TouchableOpacity style={styles.dateTimeButton} onPress={openEndDatePicker}>
+              <MaterialCommunityIcons name="calendar-month" size={20} color="#6B7280" />
+              <Text style={[styles.dateTimeText, !endTime && styles.selectPlaceholder]}>
                 {endTime ? formatDateDisplay(endTime) : 'DD/MM/AAAA'}
               </Text>
             </TouchableOpacity>
           </View>
-
-          <View style={[styles.section, styles.halfWidth]}>
-            <Text style={styles.label}>Hora Fin (Opcional)</Text>
-            <TouchableOpacity style={styles.dateTimeInput} onPress={openEndTimePicker}>
-              <MaterialCommunityIcons name="clock-outline" size={24} color="#666" />
-              <Text style={[styles.dateTimeText, !endTime && styles.placeholderText]}>
+          <View style={styles.halfWidth}>
+            <Text style={styles.fieldLabel}>Hora Fin (Opc.)</Text>
+            <TouchableOpacity style={styles.dateTimeButton} onPress={openEndTimePicker}>
+              <MaterialCommunityIcons name="clock-outline" size={20} color="#6B7280" />
+              <Text style={[styles.dateTimeText, !endTime && styles.selectPlaceholder]}>
                 {endTime ? formatTimeDisplay(endTime) : 'HH:MM'}
               </Text>
             </TouchableOpacity>
@@ -441,604 +403,356 @@ export const CreateEventScreen = () => {
         </View>
 
         {/* Location */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Ubicación</Text>
-          <View style={styles.locationInputWrapper}>
-            <View style={styles.locationInputContainer}>
-              <MaterialCommunityIcons name="map-marker" size={24} color="#666" />
-              <RNTextInput
-                style={styles.locationInput}
-                placeholder="Ej: Auditorio Principal"
-                placeholderTextColor="#A0A0A0"
-                value={location}
-                onChangeText={setLocation}
-              />
-            </View>
-            <TouchableOpacity style={styles.mapButton}>
-              <MaterialCommunityIcons name="map" size={24} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <FormInput
+          label="Ubicación"
+          placeholder="Ej: Auditorio Principal"
+          value={location}
+          onChangeText={setLocation}
+          leftIcon="map-marker"
+          containerStyle={styles.fieldSpacing}
+        />
 
         {/* Price */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Precio (Opcional)</Text>
-          <TextInput
-            mode="outlined"
-            placeholder="0.00"
-            value={price}
-            onChangeText={setPrice}
-            keyboardType="decimal-pad"
-            style={styles.input}
-            outlineColor="#E0E0E0"
-            activeOutlineColor={colors.primary}
-            left={<TextInput.Icon icon="currency-usd" />}
-          />
+        <View style={styles.fieldSpacing}>
+          <Text style={styles.fieldLabel}>Precio (Opcional)</Text>
+          <View style={styles.priceContainer}>
+            <View style={styles.currencyBadge}>
+              <Text style={styles.currencyText}>USD</Text>
+            </View>
+            <View style={styles.priceInputWrapper}>
+              <Text style={styles.pricePrefix}>$</Text>
+              <TextInput
+                style={styles.priceInput}
+                placeholder="0.00"
+                placeholderTextColor="#9CA3AF"
+                value={price}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9.]/g, '');
+                  const parts = cleaned.split('.');
+                  if (parts.length > 2) return;
+                  if (parts[1] && parts[1].length > 2) return;
+                  setPrice(cleaned);
+                }}
+                keyboardType="decimal-pad"
+              />
+            </View>
+          </View>
         </View>
 
-        {/* Description */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Descripción detallada</Text>
-          <TextInput
-            mode="outlined"
-            placeholder="Añade todos los detalles importantes sobre el evento aquí..."
-            value={description}
-            onChangeText={setDescription}
-            style={styles.textArea}
-            multiline
-            numberOfLines={6}
-            outlineColor="#E0E0E0"
-            activeOutlineColor={colors.primary}
-          />
-        </View>
       </ScrollView>
 
-      {/* Bottom CTA Button */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <Button
-          mode="contained"
+      {/* Bottom CTA */}
+      <View style={[styles.bottomCta, { paddingBottom: insets.bottom + 16 }]}>
+        <TouchableOpacity
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          loading={loading}
           disabled={loading}
-          style={styles.submitButton}
-          contentStyle={styles.submitButtonContent}
-          labelStyle={styles.submitButtonLabel}>
-          Publicar Evento
-        </Button>
+          activeOpacity={0.9}>
+          <Text style={styles.submitButtonText}>
+            {loading ? 'Publicando...' : 'Publicar Evento'}
+          </Text>
+          {!loading && (
+            <MaterialCommunityIcons name="rocket-launch" size={22} color={colors.primary} />
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* Date Picker Modal */}
-      <Modal
-        visible={showDatePicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowDatePicker(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Seleccionar Fecha</Text>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker(false)}
-                style={styles.modalCloseButton}>
-                <Text style={styles.modalCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.pickerContainer}>
-              <View style={styles.pickerRow}>
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Día</Text>
-                  <View style={styles.pickerControls}>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => adjustDate(-1)}>
-                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.pickerValue}>{tempDate.getDate()}</Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => adjustDate(1)}>
-                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Mes</Text>
-                  <View style={styles.pickerControls}>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => adjustMonth(-1)}>
-                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.pickerValue}>
-                      {tempDate.toLocaleDateString('es-ES', { month: 'short' })}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => adjustMonth(1)}>
-                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Año</Text>
-                  <View style={styles.pickerControls}>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => adjustMonth(-12)}>
-                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.pickerValue}>{tempDate.getFullYear()}</Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => adjustMonth(12)}>
-                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.selectedDatePreview}>
-                <Text style={styles.selectedDateText}>
-                  {tempDate.toLocaleDateString('es-ES', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </Text>
-              </View>
-              <Button mode="contained" onPress={confirmDate} style={styles.confirmButton}>
-                Confirmar Fecha
-              </Button>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Time Picker Modal */}
-      <Modal
-        visible={showTimePicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowTimePicker(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Seleccionar Hora</Text>
-              <TouchableOpacity
-                onPress={() => setShowTimePicker(false)}
-                style={styles.modalCloseButton}>
-                <Text style={styles.modalCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.pickerContainer}>
-              <View style={styles.pickerRow}>
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Hora</Text>
-                  <View style={styles.pickerControls}>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => adjustHour(1)}>
-                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.pickerValue}>
-                      {tempTime.hours.toString().padStart(2, '0')}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => adjustHour(-1)}>
-                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Minutos</Text>
-                  <View style={styles.pickerControls}>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => adjustMinute(15)}>
-                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.pickerValue}>
-                      {tempTime.minutes.toString().padStart(2, '0')}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => adjustMinute(-15)}>
-                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.selectedDatePreview}>
-                <Text style={styles.selectedDateText}>
-                  {tempTime.hours.toString().padStart(2, '0')}:
-                  {tempTime.minutes.toString().padStart(2, '0')}
-                </Text>
-              </View>
-              <Button mode="contained" onPress={confirmTime} style={styles.confirmButton}>
-                Confirmar Hora
-              </Button>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* End Date Picker Modal */}
-      <Modal
-        visible={showEndDatePicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowEndDatePicker(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Seleccionar Fecha Fin</Text>
-              <TouchableOpacity
-                onPress={() => setShowEndDatePicker(false)}
-                style={styles.modalCloseButton}>
-                <Text style={styles.modalCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.pickerContainer}>
-              <View style={styles.pickerRow}>
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Día</Text>
-                  <View style={styles.pickerControls}>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => {
-                        const newDate = new Date(tempEndDate);
-                        newDate.setDate(newDate.getDate() - 1);
-                        if (newDate >= new Date()) {
-                          setTempEndDate(newDate);
-                        }
-                      }}>
-                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.pickerValue}>{tempEndDate.getDate()}</Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => {
-                        const newDate = new Date(tempEndDate);
-                        newDate.setDate(newDate.getDate() + 1);
-                        setTempEndDate(newDate);
-                      }}>
-                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Mes</Text>
-                  <View style={styles.pickerControls}>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => {
-                        const newDate = new Date(tempEndDate);
-                        newDate.setMonth(newDate.getMonth() - 1);
-                        if (newDate >= new Date()) {
-                          setTempEndDate(newDate);
-                        }
-                      }}>
-                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.pickerValue}>
-                      {tempEndDate.toLocaleDateString('es-ES', { month: 'short' })}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => {
-                        const newDate = new Date(tempEndDate);
-                        newDate.setMonth(newDate.getMonth() + 1);
-                        setTempEndDate(newDate);
-                      }}>
-                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Año</Text>
-                  <View style={styles.pickerControls}>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => {
-                        const newDate = new Date(tempEndDate);
-                        newDate.setMonth(newDate.getMonth() - 12);
-                        if (newDate >= new Date()) {
-                          setTempEndDate(newDate);
-                        }
-                      }}>
-                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.pickerValue}>{tempEndDate.getFullYear()}</Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => {
-                        const newDate = new Date(tempEndDate);
-                        newDate.setMonth(newDate.getMonth() + 12);
-                        setTempEndDate(newDate);
-                      }}>
-                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.selectedDatePreview}>
-                <Text style={styles.selectedDateText}>
-                  {tempEndDate.toLocaleDateString('es-ES', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </Text>
-              </View>
-              <Button mode="contained" onPress={confirmEndDate} style={styles.confirmButton}>
-                Confirmar Fecha
-              </Button>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* End Time Picker Modal */}
-      <Modal
-        visible={showEndTimePicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowEndTimePicker(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Seleccionar Hora Fin</Text>
-              <TouchableOpacity
-                onPress={() => setShowEndTimePicker(false)}
-                style={styles.modalCloseButton}>
-                <Text style={styles.modalCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.pickerContainer}>
-              <View style={styles.pickerRow}>
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Hora</Text>
-                  <View style={styles.pickerControls}>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => {
-                        setTempEndTime((prev) => {
-                          let newHours = prev.hours + 1;
-                          if (newHours > 23) newHours = 0;
-                          return { ...prev, hours: newHours };
-                        });
-                      }}>
-                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.pickerValue}>
-                      {tempEndTime.hours.toString().padStart(2, '0')}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => {
-                        setTempEndTime((prev) => {
-                          let newHours = prev.hours - 1;
-                          if (newHours < 0) newHours = 23;
-                          return { ...prev, hours: newHours };
-                        });
-                      }}>
-                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={styles.pickerColumn}>
-                  <Text style={styles.pickerLabel}>Minutos</Text>
-                  <View style={styles.pickerControls}>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => {
-                        setTempEndTime((prev) => {
-                          let newMinutes = prev.minutes + 15;
-                          if (newMinutes > 59) {
-                            newMinutes = 0;
-                            setTempEndTime((prev) => ({ ...prev, hours: (prev.hours + 1) % 24 }));
-                          }
-                          return { ...prev, minutes: newMinutes };
-                        });
-                      }}>
-                      <MaterialCommunityIcons name="chevron-up" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.pickerValue}>
-                      {tempEndTime.minutes.toString().padStart(2, '0')}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => {
-                        setTempEndTime((prev) => {
-                          let newMinutes = prev.minutes - 15;
-                          if (newMinutes < 0) {
-                            newMinutes = 45;
-                            setTempEndTime((prev) => ({ ...prev, hours: prev.hours === 0 ? 23 : prev.hours - 1 }));
-                          }
-                          return { ...prev, minutes: newMinutes };
-                        });
-                      }}>
-                      <MaterialCommunityIcons name="chevron-down" size={24} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.selectedDatePreview}>
-                <Text style={styles.selectedDateText}>
-                  {tempEndTime.hours.toString().padStart(2, '0')}:
-                  {tempEndTime.minutes.toString().padStart(2, '0')}
-                </Text>
-              </View>
-              <Button mode="contained" onPress={confirmEndTime} style={styles.confirmButton}>
-                Confirmar Hora
-              </Button>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Category Modal */}
-      <Modal
-        visible={showCategoryModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowCategoryModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Seleccionar Categoría</Text>
-              <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+      {/* Category sheet */}
+      {showCategorySheet && (
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowCategorySheet(false)}>
+          <TouchableOpacity style={styles.sheetContent} activeOpacity={1}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Categoría</Text>
+              <TouchableOpacity onPress={() => setShowCategorySheet(false)}>
                 <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
               </TouchableOpacity>
             </View>
-            {categories.map((cat) => (
+            {EVENT_CATEGORIES.map((cat) => (
               <TouchableOpacity
                 key={cat.key}
-                style={styles.modalOption}
-                onPress={() => {
-                  setCategory(cat.key);
-                  setShowCategoryModal(false);
-                }}>
-                <Text style={styles.modalOptionText}>{cat.label}</Text>
+                style={styles.sheetOption}
+                onPress={() => { setCategory(cat.key); setShowCategorySheet(false); }}>
+                <Text style={styles.sheetOptionText}>{cat.emoji}{'  '}{cat.label}</Text>
                 {category === cat.key && (
-                  <MaterialCommunityIcons name="check" size={24} color={colors.primary} />
+                  <MaterialCommunityIcons name="check-circle" size={22} color={colors.primary} />
                 )}
               </TouchableOpacity>
             ))}
-          </View>
-        </View>
-      </Modal>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
+      {/* Start date sheet */}
+      {showDatePicker && (
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowDatePicker(false)}>
+          <TouchableOpacity style={styles.sheetContent} activeOpacity={1}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Seleccionar Fecha</Text>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pickerContainer}>
+              {renderDateColumns(tempDate, adjustDate, adjustMonth)}
+              <View style={styles.selectedPreview}>
+                <Text style={styles.selectedPreviewText}>
+                  {tempDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.confirmPickerButton} onPress={confirmDate}>
+                <Text style={styles.confirmPickerButtonText}>Confirmar Fecha</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
+      {/* Start time sheet */}
+      {showTimePicker && (
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowTimePicker(false)}>
+          <TouchableOpacity style={styles.sheetContent} activeOpacity={1}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Seleccionar Hora</Text>
+              <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pickerContainer}>
+              {renderTimeColumns(tempTime, adjustHour, adjustMinute)}
+              <View style={styles.selectedPreview}>
+                <Text style={styles.selectedPreviewText}>
+                  {tempTime.hours.toString().padStart(2, '0')}:{tempTime.minutes.toString().padStart(2, '0')}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.confirmPickerButton} onPress={confirmTime}>
+                <Text style={styles.confirmPickerButtonText}>Confirmar Hora</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
+      {/* End date sheet */}
+      {showEndDatePicker && (
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowEndDatePicker(false)}>
+          <TouchableOpacity style={styles.sheetContent} activeOpacity={1}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Seleccionar Fecha Fin</Text>
+              <TouchableOpacity onPress={() => setShowEndDatePicker(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pickerContainer}>
+              {renderDateColumns(tempEndDate, adjustEndDate, adjustEndMonth)}
+              <View style={styles.selectedPreview}>
+                <Text style={styles.selectedPreviewText}>
+                  {tempEndDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.confirmPickerButton} onPress={confirmEndDate}>
+                <Text style={styles.confirmPickerButtonText}>Confirmar Fecha</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
+      {/* End time sheet */}
+      {showEndTimePicker && (
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowEndTimePicker(false)}>
+          <TouchableOpacity style={styles.sheetContent} activeOpacity={1}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Seleccionar Hora Fin</Text>
+              <TouchableOpacity onPress={() => setShowEndTimePicker(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.pickerContainer}>
+              {renderTimeColumns(
+                tempEndTime,
+                (delta) => setTempEndTime(prev => {
+                  let h = prev.hours + delta;
+                  if (h < 0) h = 23;
+                  if (h > 23) h = 0;
+                  return { ...prev, hours: h };
+                }),
+                (delta) => setTempEndTime(prev => {
+                  let m = prev.minutes + delta;
+                  if (m < 0) m = 45;
+                  if (m > 59) m = 0;
+                  return { ...prev, minutes: m };
+                }),
+              )}
+              <View style={styles.selectedPreview}>
+                <Text style={styles.selectedPreviewText}>
+                  {tempEndTime.hours.toString().padStart(2, '0')}:{tempEndTime.minutes.toString().padStart(2, '0')}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.confirmPickerButton} onPress={confirmEndTime}>
+                <Text style={styles.confirmPickerButtonText}>Confirmar Hora</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
+      <ErrorModal
+        visible={errorModal.visible}
+        message={errorModal.message}
+        onClose={() => setErrorModal({ visible: false, message: '' })}
+      />
 
       <SuccessModal
         visible={showSuccessModal}
         title="¡Evento creado!"
         message="Tu evento fue publicado exitosamente."
         buttonText="Ver eventos"
+        icon="calendar-check"
         onClose={() => {
           setShowSuccessModal(false);
           navigation.goBack();
         }}
       />
 
-      <ErrorModal
-        visible={showErrorModal}
-        title="Error"
-        message={errorMessage}
-        onClose={() => setShowErrorModal(false)}
-      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    paddingTop: globalStyles.screenHeight * 0.06,
+    backgroundColor: BACKGROUND_COLOR,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    backgroundColor: `${BACKGROUND_COLOR}F2`,
   },
-  headerButton: {
+  backButton: {
     width: 40,
     height: 40,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 90, 57, 0.1)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+      },
+      android: { elevation: 2 },
+    }),
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.black,
+    fontSize: 18,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
     flex: 1,
     textAlign: 'center',
   },
+  headerSpacer: {
+    width: 40,
+  },
+
+  // Scroll
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingTop: 8,
   },
-  section: {
-    marginBottom: 20,
+
+  // Fields
+  fieldSpacing: {
+    marginBottom: 24,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.black,
+  fieldLabel: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    paddingHorizontal: 8,
     marginBottom: 8,
   },
+
+  // Image upload
   imageUploadContainer: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#E0E0E0',
+    borderColor: 'rgba(16, 90, 57, 0.15)',
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
-    minHeight: 160,
+    minHeight: 180,
   },
   imagePlaceholder: {
-    padding: 40,
-    alignItems: 'center',
+    flex: 1,
+    minHeight: 180,
     justifyContent: 'center',
-    gap: 8,
+    alignItems: 'center',
+    gap: 10,
   },
-  placeholderText: {
-    fontSize: 14,
-    color: '#A0A0A0',
-  },
-  imagePreviewContainer: {
-    position: 'relative',
-    width: '100%',
-    aspectRatio: 16 / 9,
+  imagePlaceholderText: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.MEDIUM,
+    color: `${colors.primary}66`,
   },
   previewImage: {
     width: '100%',
-    height: '100%',
+    height: 200,
     resizeMode: 'cover',
   },
   removeImageButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 10,
+    right: 10,
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  input: {
-    backgroundColor: '#FFFFFF',
-    height: 56,
-  },
-  selectContainer: {
+
+  // Select buttons
+  selectButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    height: 56,
-    paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(16, 90, 57, 0.2)',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   selectText: {
-    fontSize: 16,
-    color: colors.black,
+    fontSize: 15,
+    fontFamily: FONT_FAMILY.REGULAR,
+    color: '#1F2937',
     flex: 1,
   },
   selectPlaceholder: {
-    color: '#A0A0A0',
+    color: '#9CA3AF',
   },
+
+  // Date & time row
   rowContainer: {
     flexDirection: 'row',
     gap: 16,
@@ -1046,125 +760,158 @@ const styles = StyleSheet.create({
   halfWidth: {
     flex: 1,
   },
-  dateTimeInput: {
+  dateTimeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    height: 56,
+    borderWidth: 2,
+    borderColor: 'rgba(16, 90, 57, 0.2)',
+    borderRadius: 16,
     paddingHorizontal: 16,
-    gap: 12,
+    paddingVertical: 16,
+    gap: 10,
   },
   dateTimeText: {
-    fontSize: 16,
-    color: colors.black,
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.REGULAR,
+    color: '#1F2937',
     flex: 1,
   },
-  locationInputWrapper: {
+
+  // Price
+  priceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  locationInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    paddingLeft: 16,
-    paddingRight: 12,
-    height: 56,
+    borderWidth: 2,
+    borderColor: 'rgba(16, 90, 57, 0.2)',
+    borderRadius: 16,
+    overflow: 'hidden',
   },
-  locationInput: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.black,
-    height: '100%',
-  },
-  mapButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: `${colors.primary}20`,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  textArea: {
-    backgroundColor: '#FFFFFF',
-    minHeight: 144,
-  },
-  footer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+  currencyBadge: {
     paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderRightWidth: 2,
+    borderRightColor: 'rgba(16, 90, 57, 0.1)',
+    backgroundColor: 'rgba(16, 90, 57, 0.04)',
+  },
+  currencyText: {
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
+  },
+  priceInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 12,
+  },
+  pricePrefix: {
+    fontSize: 16,
+    fontFamily: FONT_FAMILY.MEDIUM,
+    color: '#9CA3AF',
+  },
+  priceInput: {
+    flex: 1,
+    fontFamily: FONT_FAMILY.REGULAR,
+    fontSize: 15,
+    color: '#1F2937',
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+  },
+
+  // Bottom CTA
+  bottomCta: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
     paddingTop: 16,
+    backgroundColor: 'transparent',
   },
   submitButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    height: 56,
+    backgroundColor: colors.accent,
+    borderRadius: 16,
+    paddingVertical: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.accent,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+      },
+      android: { elevation: 8 },
+    }),
   },
-  submitButtonContent: {
-    height: 56,
+  submitButtonDisabled: {
+    opacity: 0.7,
   },
-  submitButtonLabel: {
+  submitButtonText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+
+  // Bottom sheet (shared by all sheets)
+  sheetOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
+  sheetContent: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 20,
-    maxHeight: '50%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 32,
   },
-  modalHeader: {
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E0E0E0',
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.black,
-  },
-  modalCloseButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  modalCancelText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
-  },
-  modalOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
     paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
+    borderBottomColor: '#F3F4F6',
   },
-  modalOptionText: {
-    fontSize: 16,
-    fontWeight: '400',
+  sheetTitle: {
+    fontSize: 18,
+    fontFamily: FONT_FAMILY.BOLD,
     color: colors.primaryDark,
   },
+  sheetOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+  },
+  sheetOptionText: {
+    fontSize: 16,
+    fontFamily: FONT_FAMILY.REGULAR,
+    color: '#1F2937',
+  },
+
+  // Picker columns (inside date/time sheets)
   pickerContainer: {
     padding: 20,
   },
@@ -1178,11 +925,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pickerLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.MEDIUM,
+    color: '#6B7280',
     marginBottom: 12,
-    fontWeight: '500',
     textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   pickerControls: {
     alignItems: 'center',
@@ -1193,30 +941,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pickerValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.black,
+    fontSize: 28,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primaryDark,
     marginVertical: 8,
-    minHeight: 48,
+    minHeight: 40,
     textAlign: 'center',
-    lineHeight: 48,
+    lineHeight: 40,
   },
-  selectedDatePreview: {
+  selectedPreview: {
     backgroundColor: '#F5F5F5',
-    padding: 16,
+    padding: 14,
     borderRadius: 12,
     marginBottom: 20,
     alignItems: 'center',
   },
-  selectedDateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.black,
+  selectedPreviewText: {
+    fontSize: 16,
+    fontFamily: FONT_FAMILY.SEMI_BOLD,
+    color: colors.primaryDark,
     textTransform: 'capitalize',
   },
-  confirmButton: {
+  confirmPickerButton: {
     backgroundColor: colors.primary,
-    paddingVertical: 4,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  confirmPickerButtonText: {
+    fontSize: 16,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: '#FFFFFF',
   },
 });
-

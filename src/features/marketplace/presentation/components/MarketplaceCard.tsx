@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, Image, View, Text, Dimensions } from 'react-native';
+import { StyleSheet, TouchableOpacity, Image, View, Text, Dimensions, Linking } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Product } from '../../domain/entities/product.entity';
 import { colors } from '../../../../config/colors';
@@ -76,7 +76,10 @@ export const MarketplaceCard = ({ product, onPress }: MarketplaceCardProps) => {
             style={styles.contactButton}
             onPress={(e) => {
               e.stopPropagation();
-              // Handle contact action
+              if (product.contact) {
+                const digits = product.contact.replace(/\D/g, '');
+                Linking.openURL(`tel:${digits}`);
+              }
             }}>
             <Text style={styles.contactButtonText}>Contactar</Text>
           </TouchableOpacity>

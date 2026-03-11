@@ -32,6 +32,7 @@ export interface Establishment {
   website?: string;
   instagram?: string;
   tiktok?: string;
+  type?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

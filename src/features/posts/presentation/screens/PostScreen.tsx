@@ -10,20 +10,17 @@ import {
   TextInput,
   SafeAreaView,
   ScrollView,
+  StatusBar,
 } from 'react-native';
-// import LinearGradient from 'react-native-linear-gradient';
-import { Appbar, Chip } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { PostStackParamList } from '../../../../navigation/types';
 import { PostType } from '../../domain/entities/post.entity';
-import { PostCard } from '../components/PostCard';
 import { MarketplaceCard } from '../../../marketplace/presentation/components/MarketplaceCard';
 import { ProductCategory } from '../../../marketplace/domain/entities/product.entity';
 import { usePostStore, useMarketplaceStore, useAuthStore } from '../../../../store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { globalStyles } from '../../../../config/globalStyles';
 import { colors } from '../../../../config/colors';
 
 type PostScreenNavigationProp = NativeStackNavigationProp<PostStackParamList, 'Feed'>;
@@ -92,15 +89,6 @@ export const PostScreen = () => {
     navigation.navigate('CreatePost');
   };
 
-  const renderPostItem = ({ item }: { item: any }) => {
-    return (
-      <PostCard
-        post={item}
-        onPress={() => navigation.navigate('PostDetails', { postData: item })}
-      />
-    );
-  };
-
   const renderMarketplaceGrid = () => {
     if (loading && products.length === 0) {
       return (
@@ -146,41 +134,6 @@ export const PostScreen = () => {
     );
   };
 
-  const renderPostTypeChips = () => (
-    <View style={styles.chipContainer}>
-      <Chip
-        selected={selectedType === 'CONFESSION'}
-        onPress={() => setSelectedType('CONFESSION')}
-        style={styles.chip}
-        icon={({ size, color }) => (
-          <MaterialCommunityIcons name="message-text" size={size} color={color} />
-        )}
-      >
-        Confessions
-      </Chip>
-      <Chip
-        selected={selectedType === 'MARKETPLACE'}
-        onPress={() => setSelectedType('MARKETPLACE')}
-        style={styles.chip}
-        icon={({ size, color }) => (
-          <MaterialCommunityIcons name="account-group" size={size} color={color} />
-        )}
-      >
-        Social
-      </Chip>
-      <Chip
-        selected={selectedType === 'LOST_AND_FOUND'}
-        onPress={() => setSelectedType('LOST_AND_FOUND')}
-        style={styles.chip}
-        icon={({ size, color }) => (
-          <MaterialCommunityIcons name="school" size={size} color={color} />
-        )}
-      >
-        Academic
-      </Chip>
-    </View>
-  );
-
   const categories = [
     { label: 'Todo', icon: 'view-grid' },
     { label: 'Libros', icon: 'book-open-variant' },
@@ -190,14 +143,29 @@ export const PostScreen = () => {
     { label: 'Otros', icon: 'dots-horizontal' },
   ];
 
-  if (selectedType === 'MARKETPLACE') {
-    return (
-      <SafeAreaView style={styles.container}>
-        {/* Header */}
-        <View style={styles.marketplaceHeader}>
-          <View style={styles.headerTop}>
-            <Text style={styles.headerTitle}>Marketplace</Text>
-          </View>
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f6f8f7" />
+
+      {/* Standardized Header */}
+      <View style={[styles.standardHeader, { paddingTop: insets.top }]}>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerSubtitle}>CAMPLUS</Text>
+          <Text style={styles.headerTitle}>
+            {selectedType === 'MARKETPLACE' ? 'Marketplace' : 'Posts'}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.headerAddButton}
+          onPress={handleCreatePost}
+        >
+          <MaterialCommunityIcons name="plus" size={24} color={colors.primaryDark} />
+        </TouchableOpacity>
+      </View>
+
+      {selectedType === 'MARKETPLACE' && (
+        <View style={styles.marketplaceSearchSection}>
           <View style={styles.searchContainer}>
             <View style={styles.searchInputContainer}>
               <MaterialCommunityIcons
@@ -216,8 +184,9 @@ export const PostScreen = () => {
             </View>
           </View>
         </View>
+      )}
 
-        {/* Category Chips */}
+      {selectedType === 'MARKETPLACE' && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -250,72 +219,68 @@ export const PostScreen = () => {
             );
           })}
         </ScrollView>
-        {/* Grid Content */}
-        {renderMarketplaceGrid()}
-
-        {/* Floating Action Button */}
-        <TouchableOpacity
-          style={[styles.fab, { bottom: insets.bottom + 74 }]}
-          onPress={handleCreatePost}
-          activeOpacity={0.8}>
-          <MaterialCommunityIcons name="plus" size={32} color={colors.white} />
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      <Appbar.Header style={styles.header}>
-        <Appbar.Content title="Posts" titleStyle={{ color: colors.black }} />
-        <Appbar.Action icon="plus" onPress={handleCreatePost} iconColor={colors.black} />
-      </Appbar.Header>
-
-      {renderPostTypeChips()}
-
-      {loading && posts.length === 0 ? (
-        <ActivityIndicator size="large" style={styles.loader} color={colors.primary} />
-      ) : (
-        <FlatList
-          data={posts}
-          renderItem={renderPostItem}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={handleRefresh}
-              colors={[colors.primary]}
-              tintColor={colors.primary}
-            />
-          }
-          contentContainerStyle={{
-            paddingBottom: globalStyles.getBottomSafeArea(insets) + 20,
-          }}
-        />
       )}
-    </View>
+
+      {renderMarketplaceGrid()}
+
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#f6f8f7',
   },
-  header: {
+  standardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: 'rgba(246, 248, 247, 0.8)',
+    justifyContent: 'flex-end',
+  },
+  headerTitleContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 10,
+    fontFamily: 'LeagueSpartan-Black',
+    color: `${colors.primary}99`,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'LeagueSpartan-Bold',
+    color: colors.primaryDark,
+  },
+  headerAddButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 2,
   },
-  marketplaceHeader: {
+  marketplaceSearchSection: {
     backgroundColor: colors.white,
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingVertical: 12,
     gap: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
+    marginHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 8,
   },
   headerTop: {
     flexDirection: 'row',
@@ -324,13 +289,6 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.black,
-    flex: 1,
-    textAlign: 'center',
   },
   headerRight: {
     flexDirection: 'row',

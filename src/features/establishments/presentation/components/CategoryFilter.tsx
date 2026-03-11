@@ -1,5 +1,5 @@
-import React from 'react';
-import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { FlatList, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../../config/colors';
 
@@ -16,47 +16,75 @@ interface CategoryFilterProps {
 }
 
 export const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedId, onSelect }) => {
+    const flatListRef = useRef<FlatList>(null);
+
+    useEffect(() => {
+        if (categories.length > 0) {
+            const index = categories.findIndex(c => c.id === selectedId);
+            if (index !== -1) {
+                flatListRef.current?.scrollToIndex({
+                    index,
+                    animated: true,
+                    viewPosition: 0.5 // Centers the item
+                });
+            }
+        }
+    }, [selectedId, categories]);
+
+    const renderItem = ({ item: category }: { item: Category }) => {
+        const isSelected = selectedId === category.id;
+        return (
+            <TouchableOpacity
+                key={category.id}
+                style={[
+                    styles.pill,
+                    isSelected ? styles.pillSelected : styles.pillUnselected
+                ]}
+                onPress={() => onSelect(category.id)}
+                activeOpacity={0.7}
+            >
+                {category.id !== 'Todos' && (
+                    <MaterialCommunityIcons
+                        name={category.icon}
+                        size={18}
+                        color={isSelected ? colors.white : colors.primary}
+                    />
+                )}
+                <Text style={[
+                    styles.pillText,
+                    isSelected ? styles.pillTextSelected : styles.pillTextUnselected
+                ]}>
+                    {category.name}
+                </Text>
+            </TouchableOpacity>
+        );
+    };
+
     return (
-        <View>
-            <ScrollView
+        <View style={styles.outerContainer}>
+            <FlatList
+                ref={flatListRef}
+                data={categories}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.container}
-            >
-                {categories.map((category) => {
-                    const isSelected = selectedId === category.id;
-                    return (
-                        <TouchableOpacity
-                            key={category.id}
-                            style={[
-                                styles.pill,
-                                isSelected ? styles.pillSelected : styles.pillUnselected
-                            ]}
-                            onPress={() => onSelect(category.id)}
-                            activeOpacity={0.7}
-                        >
-                            {category.id !== 'Todos' && (
-                                <MaterialCommunityIcons
-                                    name={category.icon}
-                                    size={18}
-                                    color={isSelected ? colors.white : colors.primary}
-                                />
-                            )}
-                            <Text style={[
-                                styles.pillText,
-                                isSelected ? styles.pillTextSelected : styles.pillTextUnselected
-                            ]}>
-                                {category.name}
-                            </Text>
-                        </TouchableOpacity>
-                    );
-                })}
-            </ScrollView>
+                onScrollToIndexFailed={(info) => {
+                    // Fallback if the list isn't ready
+                    setTimeout(() => {
+                        flatListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 });
+                    }, 100);
+                }}
+            />
         </View>
     );
 };
 
 const styles = StyleSheet.create({
+    outerContainer: {
+        backgroundColor: 'transparent',
+    },
     container: {
         paddingHorizontal: 20,
         paddingVertical: 16,
@@ -69,6 +97,7 @@ const styles = StyleSheet.create({
         height: 44,
         borderRadius: 22,
         gap: 8,
+        marginRight: 12, // Gap replacement for FlatList if legacy RN
     },
     pillSelected: {
         backgroundColor: colors.primary,

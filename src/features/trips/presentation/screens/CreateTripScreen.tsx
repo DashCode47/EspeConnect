@@ -219,15 +219,6 @@ export const CreateTripScreen = () => {
           <MaterialCommunityIcons name="chevron-left" size={24} color="#666" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Crear viaje</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.notificationButton}>
-            <MaterialCommunityIcons name="bell" size={20} color={colors.white} />
-            <View style={styles.notificationDot} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bookmarkButton}>
-            <MaterialCommunityIcons name="bookmark" size={20} color={colors.white} />
-          </TouchableOpacity>
-        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -821,6 +812,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
     fontWeight: '700',
     color: colors.primary,
   },

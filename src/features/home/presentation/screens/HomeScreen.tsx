@@ -15,12 +15,13 @@ import type { HomeStackParamList } from '../../../../navigation/types';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../../config/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { globalStyles } from '../../../../config/globalStyles';
+import { globalStyles, FONT_FAMILY } from '../../../../config/globalStyles';
 import { navigationRef } from '../../../../navigation/RootNavigator';
 import { BENEFIT_DETAILS, BENEFIT_STACK } from '../../../../config/constants';
 import { HorizontalIcon } from '../../../../assets/svg/HorizontalIcon';
 import useHome from '../hooks/useHome';
-import { EstablishmentCard } from '../../../establishments/presentation/components/EstablishmentCard';
+import { EstablishmentCategories } from '../../../establishments/presentation/components/EstablishmentCategories';
+import { BenefitCard } from '../../../establishments/presentation/components/BenefitCard';
 import EstablishmentModal from '../../../establishments/presentation/components/EstablishmentModal';
 import { HomeSkeletonLoader } from '../components/HomeSkeletonLoader';
 import { Establishment, Promotion } from '../../../establishments/domain/entities/establishment.entity';
@@ -47,19 +48,22 @@ export const HomeScreen: React.FC = () => {
   const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null);
 
   useEffect(() => {
-    fetchEstablishments();
+    fetchEstablishments({ limit: 100 });
     getClosestEvent();
     fetchActiveBanners();
   }, []);
 
   useEffect(() => {
+    console.log('Total Establishments:', establishments.length);
     if (establishments.length > 0) {
       const promotionsData: Array<{ promotion: Promotion; establishment: Establishment }> = [];
       establishments.forEach(establishment => {
+        console.log(`Establishment ${establishment.name} has ${establishment.promotions?.length} promos`);
         (establishment.promotions || []).filter(p => p.isActive).forEach(promotion => {
           promotionsData.push({ promotion, establishment });
         });
       });
+      console.log('Total valid promotions found:', promotionsData.length);
       setPromotionsWithEstablishments(promotionsData.slice(0, 10));
     }
   }, [establishments]);
@@ -93,7 +97,7 @@ export const HomeScreen: React.FC = () => {
             />
           ) : (
             <View style={styles.profileAvatarPlaceholder}>
-              <MaterialCommunityIcons name="account" size={24} color={colors.primary} />
+              <MaterialCommunityIcons name="account" size={26} color={colors.primary} />
             </View>
           )}
         </TouchableOpacity>
@@ -102,10 +106,10 @@ export const HomeScreen: React.FC = () => {
           <HorizontalIcon width={120} height={20} />
         </View>
 
-        <TouchableOpacity style={styles.notificationButton}>
+        {/* <TouchableOpacity style={styles.notificationButton}>
           <MaterialCommunityIcons name="bell" size={24} color={colors.white} />
           <View style={styles.notificationDot} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       <ScrollView
@@ -167,76 +171,46 @@ export const HomeScreen: React.FC = () => {
           </View>
         )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Establecimientos</Text>
-        </View>
-        <View style={styles.establishmentsList}>
-          {establishments.length > 0 ? (
-            establishments.map((establishment) => (
-              <EstablishmentCard
-                key={establishment.id}
-                establishment={establishment}
-                onPress={() => {
-                  const firstPromotion = (establishment.promotions || []).find(p => p.isActive);
-                  if (firstPromotion) {
-                    navigationRef.current?.navigate(BENEFIT_STACK, {
-                      screen: BENEFIT_DETAILS,
-                      params: { data: { promotion: firstPromotion, establishment } },
-                    });
-                  } else {
-                    setSelectedEstablishment(establishment);
-                    setShowEstablishmentModal(true);
-                  }
-                }}
-              />
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="store-off" size={48} color="#ccc" />
-              <Text style={styles.emptyStateText}>No hay establecimientos disponibles</Text>
-            </View>
-          )}
-        </View>
+        <EstablishmentCategories establishments={establishments} />
 
-        {promotionsWithEstablishments.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Beneficios activos</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.promotionsChipsContainer}>
-              {promotionsWithEstablishments.map((item) => (
-                <TouchableOpacity
+        <View style={styles.benefitsSection}>
+          <View style={styles.benefitsHeader}>
+            <View style={styles.benefitsHeaderRow}>
+              <View>
+                <Text style={styles.benefitsTitle}>Beneficios estudiantiles</Text>
+                <Text style={styles.benefitsSubtitle}>Aprovecha los descuentos que tenemos para ti</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate(BENEFIT_STACK as any)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.seeAllText}>Ver todos</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.benefitsList}>
+            {promotionsWithEstablishments.length > 0 ? (
+              promotionsWithEstablishments.map((item) => (
+                <BenefitCard
                   key={`${item.establishment.id}-${item.promotion.id}`}
-                  style={styles.promotionChipContainer}
+                  promotion={item.promotion}
+                  establishment={item.establishment}
                   onPress={() =>
                     navigationRef.current?.navigate(BENEFIT_STACK, {
                       screen: BENEFIT_DETAILS,
                       params: { data: { promotion: item.promotion, establishment: item.establishment } },
                     })
                   }
-                  activeOpacity={0.7}>
-                  <View style={styles.promotionChipCircle}>
-                    {item.establishment.imageUrl ? (
-                      <Image
-                        source={{ uri: item.establishment.imageUrl }}
-                        style={styles.promotionChipImage}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View style={styles.promotionChipPlaceholder}>
-                        <MaterialCommunityIcons name="store" size={24} color={colors.primary} />
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.promotionChipText} numberOfLines={2}>
-                    {item.promotion.title || item.establishment.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                />
+              ))
+            ) : (
+              <View style={styles.emptyBenefitsContainer}>
+                <MaterialCommunityIcons name="ticket-percent-outline" size={40} color="#CBD5E1" />
+                <Text style={styles.emptyBenefitsText}>No hay beneficios activos en este momento</Text>
+              </View>
+            )}
           </View>
-        )}
+        </View>
       </ScrollView>
 
       {selectedEstablishment && (
@@ -257,7 +231,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f6f8f7',
-    paddingTop: 20,
+    paddingTop: 30,
   },
   bgBlobContainer: {
     position: 'absolute',
@@ -295,28 +269,36 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   profileButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
   },
   profileAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
   profileAvatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: `${colors.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderWidth: 2,
+    borderColor: `${colors.primary}40`,
   },
   logoContainer: {
-    flex: 1,
+    position: 'absolute',
+    left: 0,
+    right: 0,
     alignItems: 'center',
   },
   notificationButton: {
@@ -347,14 +329,14 @@ const styles = StyleSheet.create({
   },
   welcomeTitle: {
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.BOLD,
     color: colors.primaryDark,
     marginBottom: 4,
   },
   welcomeSubtitle: {
     fontSize: 16,
-    color: '#666',
-    fontWeight: '400',
+    fontFamily: FONT_FAMILY.REGULAR,
+    color: '#6B7280',
   },
   section: {
     paddingHorizontal: 20,
@@ -362,53 +344,72 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.BOLD,
     color: colors.primaryDark,
     marginBottom: 16,
   },
-  promotionsChipsContainer: {
+  benefitsSection: {
+    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  benefitsHeader: {
+    marginBottom: 16,
+  },
+  benefitsHeaderRow: {
     flexDirection: 'row',
-    gap: 16,
-    paddingRight: 20,
-  },
-  promotionChipContainer: {
+    justifyContent: 'space-between',
     alignItems: 'center',
-    width: 80,
   },
-  promotionChipCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: colors.primary,
+  seeAllButton: {
+    backgroundColor: `${colors.primary}15`,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  promotionChipImage: {
-    width: '100%',
-    height: '100%',
+  seeAllText: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.SEMI_BOLD,
+    color: `${colors.primary}99`,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  promotionChipPlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+  benefitsTitle: {
+    fontSize: 22,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primaryDark,
+  },
+  benefitsSubtitle: {
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.REGULAR,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  benefitsList: {
+    gap: 0, // Gaps handled by BenefitCard margin
   },
   promotionChipText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILY.SEMI_BOLD,
     color: colors.primaryDark,
     textAlign: 'center',
     lineHeight: 14,
   },
-  establishmentsList: {
-    paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 24,
+  emptyBenefitsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: `${colors.primary}0D`,
+    borderStyle: 'dashed',
+  },
+  emptyBenefitsText: {
+    marginTop: 12,
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.MEDIUM,
+    color: '#94A3B8',
   },
   emptyState: {
     alignItems: 'center',
@@ -418,7 +419,8 @@ const styles = StyleSheet.create({
   emptyStateText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#999',
+    fontFamily: FONT_FAMILY.REGULAR,
+    color: '#6B7280',
   },
   bannerSection: {
     marginBottom: 24,
@@ -464,13 +466,14 @@ const styles = StyleSheet.create({
   },
   bannerCardTitle: {
     fontSize: 21,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.BOLD,
     color: '#fff',
     marginBottom: 4,
     lineHeight: 26,
   },
   bannerCardDescription: {
     fontSize: 14,
+    fontFamily: FONT_FAMILY.REGULAR,
     color: 'rgba(255,255,255,0.8)',
     lineHeight: 20,
   },

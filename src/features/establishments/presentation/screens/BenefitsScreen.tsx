@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
     View,
     Text,
@@ -10,6 +10,7 @@ import {
     Dimensions,
     Image,
     ActivityIndicator,
+    RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -119,20 +120,30 @@ export const BenefitsScreen = () => {
 
     const categories = ['Todos', 'Comida', 'Bebidas', 'Entretenimiento', 'Otros'];
 
+    const onRefresh = useCallback(() => {
+        fetchEstablishments({ limit: 100 });
+    }, [fetchEstablishments]);
+
     useEffect(() => {
-        fetchEstablishments();
+        fetchEstablishments({ limit: 100 });
     }, []);
 
     const promotionsWithEstablishments = useMemo(() => {
         const allPromotionsData: Array<{ promotion: Promotion; establishment: Establishment }> = [];
 
+        console.log(`BenefitsScreen: Processing ${establishments.length} establishments`);
         establishments.forEach(establishment => {
             const activePromotions = (establishment.promotions || []).filter(promo => promo.isActive);
+            if (activePromotions.length > 0) {
+                console.log(`BenefitsScreen: Found ${activePromotions.length} active promos for ${establishment.name}`);
+            }
 
             activePromotions.forEach(promotion => {
                 allPromotionsData.push({ promotion, establishment });
             });
         });
+
+        console.log(`BenefitsScreen: Total promotions found before filter: ${allPromotionsData.length}`);
 
         const categoryMap: { [key: string]: string } = {
             'Todos': 'ALL',
@@ -148,7 +159,9 @@ export const BenefitsScreen = () => {
             return allPromotionsData;
         }
 
-        return allPromotionsData.filter(item => item.promotion.category === categoryFilter);
+        const filtered = allPromotionsData.filter(item => item.promotion.category === categoryFilter);
+        console.log(`BenefitsScreen: Filtered to ${filtered.length} promos for category ${selectedCategory}`);
+        return filtered;
     }, [establishments, selectedCategory]);
 
     return (
@@ -156,13 +169,24 @@ export const BenefitsScreen = () => {
             <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
             <View style={[styles.header, { paddingTop: insets.top }]}>
-                <Text style={styles.headerTitle}>Beneficios</Text>
+                {navigation.canGoBack() && (
+                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                        <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primaryDark} />
+                    </TouchableOpacity>
+                )}
+                <View style={[styles.headerTitleContainer, !navigation.canGoBack() && { left: 20 }]}>
+                    <Text style={styles.headerSubtitle}>CAMPLUS</Text>
+                    <Text style={styles.headerTitle}>Beneficios</Text>
+                </View>
             </View>
 
             <ScrollView
                 style={styles.scrollView}
                 contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
-                showsVerticalScrollIndicator={false}>
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={[colors.primary]} />
+                }>
 
                 <ScrollView
                     horizontal
@@ -250,16 +274,43 @@ const styles = StyleSheet.create({
         backgroundColor: colors.white,
     },
     header: {
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
         paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingBottom: 16,
+        backgroundColor: 'rgba(246, 248, 247, 0.8)',
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         backgroundColor: colors.white,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+        zIndex: 10,
+    },
+    headerTitleContainer: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+    },
+    headerSubtitle: {
+        fontSize: 10,
+        fontFamily: 'LeagueSpartan-Black',
+        color: `${colors.primary}99`,
+        letterSpacing: 2,
+        textTransform: 'uppercase',
     },
     headerTitle: {
         fontSize: 20,
-        fontWeight: '700',
-        color: '#131413',
+        fontFamily: 'LeagueSpartan-Bold',
+        color: colors.primaryDark,
     },
     scrollView: {
         flex: 1,

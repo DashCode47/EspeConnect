@@ -78,10 +78,6 @@ export const EventDetailScreen = () => {
     }
   };
 
-  const handleShare = () => {
-    console.log('Share event');
-  };
-
   const handleMapPress = () => {
     if (event?.location) {
       const encodedLocation = encodeURIComponent(event.location);
@@ -160,11 +156,6 @@ export const EventDetailScreen = () => {
               style={styles.heroButton}
               onPress={() => navigation.goBack()}>
               <MaterialCommunityIcons name="arrow-left" size={22} color={colors.white} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.heroButton}
-              onPress={handleShare}>
-              <MaterialCommunityIcons name="share-variant" size={20} color={colors.white} />
             </TouchableOpacity>
           </View>
         </View>

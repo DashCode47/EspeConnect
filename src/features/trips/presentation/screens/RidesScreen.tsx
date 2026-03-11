@@ -304,18 +304,14 @@ export const RidesScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        {/* <TouchableOpacity
-          style={styles.headerBackButton}
-          onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
-        </TouchableOpacity> */}
-        <View style={styles.headerTitleRow}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerSubtitle}>CAMPLUS</Text>
           <Text style={styles.headerTitle}>Viajes Compartidos</Text>
-          <TouchableOpacity onPress={() => setInfoModalVisible(true)} style={styles.infoButton}>
-            <MaterialCommunityIcons name="shield-check" size={20} color={colors.primary} />
-          </TouchableOpacity>
         </View>
+        <TouchableOpacity onPress={() => setInfoModalVisible(true)} style={styles.infoButton}>
+          <MaterialCommunityIcons name="shield-check" size={20} color={colors.primary} />
+        </TouchableOpacity>
         <View style={styles.headerSpacer} />
 
         <Modal
@@ -378,6 +374,21 @@ export const RidesScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* My Trips Quick Access */}
+        <TouchableOpacity
+          style={styles.myTripsCard}
+          onPress={handleMyTrips}
+          activeOpacity={0.8}>
+          <View style={styles.myTripsContent}>
+            <MaterialCommunityIcons name="history" size={24} color={colors.primary} />
+            <View style={styles.myTripsTextContainer}>
+              <Text style={styles.myTripsTitle}>Mis Viajes</Text>
+              <Text style={styles.myTripsSubtitle}>Ver viajes creados y reservados</Text>
+            </View>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={24} color={colors.primary} />
+        </TouchableOpacity>
 
         {travelMode === 'search' ? (
           <>
@@ -459,21 +470,6 @@ export const RidesScreen = () => {
                 {filteredTrips.map((trip: Trip, index: number) => renderTripCard(trip, index))}
               </View>
             )}
-
-            {/* My Trips Quick Access */}
-            <TouchableOpacity
-              style={styles.myTripsCard}
-              onPress={handleMyTrips}
-              activeOpacity={0.8}>
-              <View style={styles.myTripsContent}>
-                <MaterialCommunityIcons name="history" size={24} color={colors.primary} />
-                <View style={styles.myTripsTextContainer}>
-                  <Text style={styles.myTripsTitle}>Mis Viajes</Text>
-                  <Text style={styles.myTripsSubtitle}>Ver viajes creados y reservados</Text>
-                </View>
-              </View>
-              <MaterialCommunityIcons name="chevron-right" size={24} color={colors.primary} />
-            </TouchableOpacity>
           </>
         ) : (
           /* OFFER TAB CONTENT */
@@ -677,12 +673,31 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: 'rgba(246, 248, 247, 0.8)',
+    justifyContent: 'flex-end',
   },
-  headerBackButton: {
+  headerTitleContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 10,
+    fontFamily: FONT_FAMILY.BLACK,
+    color: `${colors.primary}99`,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primaryDark,
+    textAlign: 'center',
+  },
+  infoButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -691,25 +706,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-  },
-  headerTitleRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: FONT_FAMILY.BOLD,
-    color: colors.primary,
-    textAlign: 'center',
-  },
-  infoButton: {
-    padding: 2,
+    zIndex: 10,
   },
   headerSpacer: {
     width: 40,
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
   // Toggle
   toggleContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 16,
     alignItems: 'center',
   },
   toggleWrapper: {
@@ -1220,7 +1220,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: colors.white,
     marginHorizontal: 16,
-    marginTop: 24,
+    marginTop: 12,
     padding: 16,
     borderRadius: 16,
     borderWidth: 2,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -7,10 +7,9 @@ import {
     TouchableOpacity,
     SafeAreaView,
     StatusBar,
-    Image,
-    TextInput,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { MainTabParamList } from '../../../../navigation/types';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../../config/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,31 +21,51 @@ import EstablishmentModal from '../components/EstablishmentModal';
 
 export const EstablishmentsScreen: React.FC = () => {
     const navigation = useNavigation();
+    const route = useRoute<RouteProp<MainTabParamList, 'establishments'>>();
     const insets = useSafeAreaInsets();
     const { establishments, fetchEstablishments, establishmentsLoading } = useHome();
     const [selectedCategory, setSelectedCategory] = useState('Todos');
-    const [searchQuery, setSearchQuery] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null);
+
+    useEffect(() => {
+        if (route.params?.categoryId) {
+            setSelectedCategory(route.params.categoryId);
+        } else {
+            setSelectedCategory('Todos');
+        }
+    }, [route.params?.categoryId]);
 
     useEffect(() => {
         fetchEstablishments({ limit: 100 });
     }, []);
 
-    const categories = [
-        { id: 'Todos', name: 'Todos', icon: 'apps' },
-        { id: 'Cafeterías', name: 'Cafeterías', icon: 'coffee' },
-        { id: 'Bibliotecas', name: 'Bibliotecas', icon: 'book-open-variant' },
-        { id: 'Gimnasios', name: 'Gimnasios', icon: 'dumbbell' },
-        { id: 'Librerías', name: 'Librerías', icon: 'library' },
-    ];
+    const categories = useMemo(() => {
+        const uniqueTypes = [...new Set(establishments.map(e => e.type))].filter(Boolean) as string[];
+        const getIconForType = (type: string) => {
+            const lowerType = type.toLowerCase();
+            if (lowerType.includes('caf')) return 'coffee';
+            if (lowerType.includes('rest')) return 'silverware-fork-knife';
+            if (lowerType.includes('comercio')) return 'store';
+            if (lowerType.includes('entrete')) return 'controller-classic';
+            if (lowerType.includes('estéti')) return 'content-cut';
+            if (lowerType.includes('moda')) return 'tshirt-crew';
+            if (lowerType.includes('tecno')) return 'laptop';
+            return 'store';
+        };
+
+        const mapped = uniqueTypes.map(type => ({
+            id: type,
+            name: type,
+            icon: getIconForType(type)
+        }));
+
+        return [{ id: 'Todos', name: 'Todos', icon: 'apps' }, ...mapped];
+    }, [establishments]);
 
     const filteredEstablishments = establishments.filter(est => {
-        // Since establishment doesn't have category directly, we check if any promotion matches or just use the name for now
-        // For the mock purpose, we can use a hardcoded category if needed or just skip the category filter check
-        const matchesCategory = selectedCategory === 'Todos'; // Simplified for now
-        const matchesSearch = est.name.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
+        const matchesCategory = selectedCategory === 'Todos' || est.type === selectedCategory;
+        return matchesCategory;
     });
 
     const handleEstablishmentPress = (establishment: Establishment) => {
@@ -59,17 +78,11 @@ export const EstablishmentsScreen: React.FC = () => {
             <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
             {/* Header */}
-            <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
-                </TouchableOpacity>
+            <View style={[styles.header, { paddingTop: 60 }]}>
                 <View style={styles.headerTitleContainer}>
                     <Text style={styles.headerSubtitle}>CAMPLUS</Text>
                     <Text style={styles.headerTitle}>Establecimientos</Text>
                 </View>
-                <TouchableOpacity style={styles.headerButton}>
-                    <MaterialCommunityIcons name="magnify" size={24} color={colors.primary} />
-                </TouchableOpacity>
             </View>
 
             {/* Categories */}
@@ -115,11 +128,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f6f8f7',
+        paddingTop: 20,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingBottom: 16,
         backgroundColor: 'rgba(246, 248, 247, 0.8)',
@@ -138,6 +151,9 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     headerTitleContainer: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
         alignItems: 'center',
     },
     headerSubtitle: {

@@ -175,20 +175,6 @@ export const PostDetailsScreen = () => {
           onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="chevron-left" size={24} color={colors.black} />
         </TouchableOpacity>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.notificationButton}>
-            <MaterialCommunityIcons name="share-variant" size={20} color={colors.white} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.bookmarkButton}
-            onPress={() => setIsBookmarked(!isBookmarked)}>
-            <MaterialCommunityIcons
-              name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-              size={20}
-              color={colors.white}
-            />
-          </TouchableOpacity>
-        </View>
       </View>
 
       <ScrollView
@@ -239,15 +225,6 @@ export const PostDetailsScreen = () => {
           {/* Title */}
           <View style={styles.titleSection}>
             <Text style={styles.productTitle}>{displayData.title}</Text>
-            <TouchableOpacity
-              style={styles.titleBookmark}
-              onPress={() => setIsBookmarked(!isBookmarked)}>
-              <MaterialCommunityIcons
-                name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-                size={24}
-                color="#999"
-              />
-            </TouchableOpacity>
           </View>
 
           {/* Price */}

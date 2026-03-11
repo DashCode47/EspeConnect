@@ -16,7 +16,7 @@ export type MainTabParamList = {
   home: undefined;
   profile: undefined;
   carreers: undefined;
-  establishments: undefined;
+  establishments: { categoryId?: string } | undefined;
   posts: undefined;
   benefits: undefined;
   rides: undefined;

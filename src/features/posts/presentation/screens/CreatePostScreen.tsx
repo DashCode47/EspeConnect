@@ -5,10 +5,9 @@ import {
   TouchableOpacity,
   Image,
   Text,
+  TextInput,
   ScrollView,
   SafeAreaView,
-  TextInput,
-  Modal,
   Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -19,35 +18,60 @@ import { ProductCategory } from '../../../marketplace/domain/entities/product.en
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'react-native-image-picker';
 import { colors } from '../../../../config/colors';
+import { FONT_FAMILY } from '../../../../config/globalStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHideNavbar } from '../../../../hooks/useHideNavbar';
+import { FormInput } from '../../../../components/forms/FormInput';
+import { FormTextArea } from '../../../../components/forms/FormTextArea';
+import { SuccessModal } from '../../../../components/modals/SuccessModal';
+import { ErrorModal } from '../../../../components/modals/ErrorModal';
 
 type CreatePostScreenNavigationProp = NativeStackNavigationProp<PostStackParamList, 'CreatePost'>;
+
+const BACKGROUND_COLOR = '#F6F8F7';
+
+const paymentMethods = ['Todas', 'Efectivo', 'Transferencia', 'Tarjeta'];
+const categories = ['Tecnología', 'Comida', 'Libros', 'Servicios', 'Otros'];
+
+const categoryMap: Record<string, ProductCategory> = {
+  'Tecnología': 'TECHNOLOGY',
+  'Libros': 'BOOKS',
+  'Ropa': 'UNIFORMS',
+  'Servicios': 'OTHER',
+  'Otros': 'OTHER',
+};
+
+const categoryEmoji: Record<string, string> = {
+  'Tecnología': '💻',
+  'Comida': '🍔',
+  'Libros': '📚',
+  'Servicios': '🛠️',
+  'Otros': '📦',
+};
 
 export const CreatePostScreen = () => {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
   const [price, setPrice] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency] = useState('USD');
   const [paymentMethod, setPaymentMethod] = useState('Todas');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<{ uri: string; base64?: string; type: string; name: string }[]>([]);
-  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorModal, setErrorModal] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
+
   const navigation = useNavigation<CreatePostScreenNavigationProp>();
   const { user } = useAuthStore();
-
   const { createProduct } = useMarketplaceStore();
 
   useHideNavbar(true);
+
+  const showError = (message: string) => setErrorModal({ visible: true, message });
 
   const handleImagePick = async () => {
     try {
@@ -58,9 +82,7 @@ export const CreatePostScreen = () => {
         includeBase64: true,
       });
 
-      if (result.didCancel) {
-        return;
-      }
+      if (result.didCancel) return;
 
       if (result.errorCode) {
         showError('No se pudo acceder a las imágenes. Verifica los permisos de la aplicación.');
@@ -84,7 +106,6 @@ export const CreatePostScreen = () => {
       }
     } catch (error: any) {
       showError('Ocurrió un error al seleccionar las imágenes. Intenta nuevamente.');
-      console.error('Error selecting images:', error);
     }
   };
 
@@ -92,27 +113,19 @@ export const CreatePostScreen = () => {
     setImages(images.filter((_, i) => i !== index));
   };
 
-  const showError = (message: string) => {
-    setErrorMessage(message);
-    setShowErrorModal(true);
-  };
-
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim() || !category.trim()) {
       showError('Por favor completa todos los campos requeridos');
       return;
     }
-
     if (!price.trim()) {
       showError('El precio es requerido');
       return;
     }
-
     if (!phoneNumber.trim()) {
       showError('El número de contacto es requerido');
       return;
     }
-
     if (images.length === 0) {
       showError('Por favor selecciona al menos una imagen');
       return;
@@ -143,102 +156,118 @@ export const CreatePostScreen = () => {
     }
   };
 
-  const categoryMap: Record<string, ProductCategory> = {
-    'Tecnología': 'TECHNOLOGY',
-    'Libros': 'BOOKS',
-    'Ropa': 'UNIFORMS',
-    'Servicios': 'OTHER',
-    'Otros': 'OTHER',
-  };
-
-  const paymentMethods = ['Todas', 'Efectivo', 'Transferencia', 'Tarjeta'];
-  const categories = ['Tecnología', 'Libros', 'Ropa', 'Servicios', 'Otros'];
-
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="chevron-left" size={24} color={colors.black} />
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}>
+          <MaterialCommunityIcons name="arrow-left" size={22} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Crear publicación</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.notificationButton}>
-            <MaterialCommunityIcons name="bell" size={20} color={colors.white} />
-            <View style={styles.notificationDot} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bookmarkButton}>
-            <MaterialCommunityIcons name="bookmark" size={20} color={colors.white} />
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.headerTitle}>Crear Publicación</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
 
-        {/* Título Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Título</Text>
-          <TextInput
-            style={styles.titleInput}
-            placeholder="Ej: Vendo calculadora Casio"
-            placeholderTextColor="#B6B6B6"
-            value={title}
-            onChangeText={setTitle}
-          />
-        </View>
+        {/* Images */}
+        <View style={styles.fieldSpacing}>
+          <Text style={styles.fieldLabel}>Fotos del producto</Text>
+          <View style={styles.imageGrid}>
+            {/* Main image */}
+            <TouchableOpacity
+              style={styles.mainImageContainer}
+              onPress={handleImagePick}
+              activeOpacity={0.8}>
+              {images[0] ? (
+                <>
+                  <Image source={{ uri: images[0].uri }} style={styles.mainImage} />
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={() => handleRemoveImage(0)}>
+                    <MaterialCommunityIcons name="close-circle" size={22} color={colors.white} />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <MaterialCommunityIcons name="image-plus" size={36} color={`${colors.primary}66`} />
+                  <Text style={styles.imagePlaceholderText}>Principal</Text>
+                </View>
+              )}
+            </TouchableOpacity>
 
-        {/* Image Section */}
-        <View style={styles.imageSection}>
-          <TouchableOpacity
-            style={styles.mainImageContainer}
-            onPress={handleImagePick}
-            activeOpacity={0.8}>
-            {images[0] ? (
-              <Image source={{ uri: images[0].uri }} style={styles.mainImage} />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <MaterialCommunityIcons name="image-multiple" size={48} color="#D9D9D9" />
-              </View>
-            )}
-          </TouchableOpacity>
-          <View style={styles.sideImagesContainer}>
-            {[1, 2, 3].map((index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.sideImageContainer}
-                onPress={handleImagePick}
-                activeOpacity={0.8}>
-                {images[index] ? (
-                  <Image source={{ uri: images[index].uri }} style={styles.sideImage} />
-                ) : (
-                  <View style={styles.sideImagePlaceholder}>
-                    <MaterialCommunityIcons name="image-multiple" size={24} color="#D9D9D9" />
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
+            {/* Side images */}
+            <View style={styles.sideImagesContainer}>
+              {[1, 2, 3].map((index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.sideImageContainer}
+                  onPress={handleImagePick}
+                  activeOpacity={0.8}>
+                  {images[index] ? (
+                    <>
+                      <Image source={{ uri: images[index].uri }} style={styles.sideImage} />
+                      <TouchableOpacity
+                        style={styles.removeImageBtnSmall}
+                        onPress={() => handleRemoveImage(index)}>
+                        <MaterialCommunityIcons name="close-circle" size={16} color={colors.white} />
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <View style={styles.sideImagePlaceholder}>
+                      <MaterialCommunityIcons name="plus" size={20} color={`${colors.primary}66`} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
 
-        {/* Objetivo Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Objetivo</Text>
-          <TouchableOpacity style={styles.saleButton}>
-            <Text style={styles.saleButtonText}>Venta</Text>
+        {/* Title */}
+        <FormInput
+          label="Título"
+          placeholder="Ej: Vendo calculadora Casio fx-991"
+          value={title}
+          onChangeText={setTitle}
+          containerStyle={styles.fieldSpacing}
+        />
+
+        {/* Category */}
+        <View style={styles.fieldSpacing}>
+          <Text style={styles.fieldLabel}>Categoría</Text>
+          <TouchableOpacity
+            style={styles.selectButton}
+            onPress={() => setShowCategoryModal(true)}
+            activeOpacity={0.7}>
+            <Text style={[styles.selectText, !category && styles.selectPlaceholder]}>
+              {category ? `${categoryEmoji[category]} ${category}` : 'Selecciona una categoría'}
+            </Text>
+            <MaterialCommunityIcons name="chevron-down" size={22} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
-        {/* Precio Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Precio</Text>
+        {/* Description */}
+        <FormTextArea
+          label="Descripción"
+          placeholder="Describe el producto: estado, características, motivo de venta..."
+          value={description}
+          onChangeText={setDescription}
+          numberOfLines={4}
+          containerStyle={styles.fieldSpacing}
+        />
+
+        {/* Price */}
+        <View style={styles.fieldSpacing}>
+          <Text style={styles.fieldLabel}>Precio</Text>
           <View style={styles.priceContainer}>
-            <View
-              style={styles.currencySelector}>
+            <View style={styles.currencyBadge}>
               <Text style={styles.currencyText}>{currency}</Text>
             </View>
             <View style={styles.priceInputWrapper}>
@@ -246,7 +275,7 @@ export const CreatePostScreen = () => {
               <TextInput
                 style={styles.priceInput}
                 placeholder="0.00"
-                placeholderTextColor="#B6B6B6"
+                placeholderTextColor="#9CA3AF"
                 value={price}
                 onChangeText={(text) => {
                   const cleaned = text.replace(/[^0-9.]/g, '');
@@ -261,284 +290,212 @@ export const CreatePostScreen = () => {
           </View>
         </View>
 
-        {/* Métodos de pago Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Métodos de pago permitidos</Text>
+        {/* Payment method */}
+        <View style={styles.fieldSpacing}>
+          <Text style={styles.fieldLabel}>Métodos de pago</Text>
           <TouchableOpacity
-            style={styles.paymentSelector}
-            onPress={() => setShowPaymentModal(true)}>
-            <View style={styles.paymentSelectorLeft}>
-              <View style={styles.paymentIcon}>
-                <Text style={styles.paymentIconText}>$</Text>
-              </View>
-              <View style={styles.paymentTextContainer}>
-                <Text style={styles.paymentLabel}>Seleccione como desea recibir el pago</Text>
-                <Text style={styles.paymentValue}>{paymentMethod}</Text>
-              </View>
-            </View>
-            <MaterialCommunityIcons name="chevron-down" size={24} color="#131413" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Categoría Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categoría</Text>
-          <TouchableOpacity
-            style={styles.categoryInput}
-            onPress={() => setShowCategoryModal(true)}>
-            <Text style={[styles.categoryInputText, !category && styles.categoryPlaceholder]}>
-              {category || 'Seleccione una categoría'}
+            style={styles.selectButton}
+            onPress={() => setShowPaymentModal(true)}
+            activeOpacity={0.7}>
+            <MaterialCommunityIcons name="cash-multiple" size={20} color="#6B7280" />
+            <Text style={[styles.selectText, { marginLeft: 10, flex: 1 }]}>
+              {paymentMethod}
             </Text>
-            <MaterialCommunityIcons name="chevron-down" size={24} color="#131413" />
+            <MaterialCommunityIcons name="chevron-down" size={22} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
-        {/* Descripción Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Descripción</Text>
-          <TextInput
-            style={styles.descriptionInput}
-            placeholder="Escriba una descripción del producto..."
-            placeholderTextColor="#B6B6B6"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={6}
-            textAlignVertical="top"
-          />
-        </View>
-
-        {/* Contacto Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contacto</Text>
-          <TextInput
-            style={styles.contactInput}
-            placeholder="000 000 0000"
-            placeholderTextColor="#B6B6B6"
-            value={phoneNumber}
-            onChangeText={(text) => {
-              const cleaned = text.replace(/[^0-9\s]/g, '');
-              setPhoneNumber(cleaned);
-            }}
-            keyboardType="phone-pad"
-          />
-        </View>
+        {/* Contact */}
+        <FormInput
+          label="Contacto"
+          placeholder="000 000 0000"
+          value={phoneNumber}
+          onChangeText={(text) => setPhoneNumber(text.replace(/[^0-9\s]/g, ''))}
+          keyboardType="phone-pad"
+          leftIcon="phone-outline"
+          containerStyle={styles.fieldSpacing}
+        />
       </ScrollView>
 
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
+      {/* Bottom CTA */}
+      <View style={[styles.bottomCta, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => navigation.goBack()}
-          disabled={loading}>
-          <Text style={styles.cancelButtonText}>Cancelar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.publishButton}
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={loading}>
-          <Text style={styles.publishButtonText}>
+          disabled={loading}
+          activeOpacity={0.9}>
+          <Text style={styles.submitButtonText}>
             {loading ? 'Publicando...' : 'Publicar'}
           </Text>
+          {!loading && (
+            <MaterialCommunityIcons name="tag-plus" size={22} color={colors.primary} />
+          )}
         </TouchableOpacity>
       </View>
 
-      {/* Payment Method Modal */}
-      <Modal
-        visible={showPaymentModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowPaymentModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Métodos de Pago</Text>
+      {/* Payment Method Bottom Sheet */}
+      {showPaymentModal && (
+        <TouchableOpacity
+          style={styles.sheetOverlay}
+          activeOpacity={1}
+          onPress={() => setShowPaymentModal(false)}>
+          <TouchableOpacity style={styles.sheetContent} activeOpacity={1}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Métodos de pago</Text>
               <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#131413" />
+                <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
               </TouchableOpacity>
             </View>
             {paymentMethods.map((method) => (
               <TouchableOpacity
                 key={method}
-                style={styles.modalOption}
-                onPress={() => {
-                  setPaymentMethod(method);
-                  setShowPaymentModal(false);
-                }}>
-                <Text style={styles.modalOptionText}>{method}</Text>
+                style={styles.sheetOption}
+                onPress={() => { setPaymentMethod(method); setShowPaymentModal(false); }}>
+                <Text style={styles.sheetOptionText}>{method}</Text>
                 {paymentMethod === method && (
-                  <MaterialCommunityIcons name="check" size={24} color={colors.primary} />
+                  <MaterialCommunityIcons name="check-circle" size={22} color={colors.primary} />
                 )}
               </TouchableOpacity>
             ))}
-          </View>
-        </View>
-      </Modal>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
 
-      {/* Category Modal */}
-      <Modal
-        visible={showCategoryModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowCategoryModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Seleccionar Categoría</Text>
+      {/* Category Bottom Sheet */}
+      {showCategoryModal && (
+        <TouchableOpacity
+          style={styles.sheetOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCategoryModal(false)}>
+          <TouchableOpacity style={styles.sheetContent} activeOpacity={1}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Categoría</Text>
               <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#131413" />
+                <MaterialCommunityIcons name="close" size={24} color={colors.primaryDark} />
               </TouchableOpacity>
             </View>
             {categories.map((cat) => (
               <TouchableOpacity
                 key={cat}
-                style={styles.modalOption}
-                onPress={() => {
-                  setCategory(cat);
-                  setShowCategoryModal(false);
-                }}>
-                <Text style={styles.modalOptionText}>{cat}</Text>
+                style={styles.sheetOption}
+                onPress={() => { setCategory(cat); setShowCategoryModal(false); }}>
+                <Text style={styles.sheetOptionText}>
+                  {categoryEmoji[cat]}{'  '}{cat}
+                </Text>
                 {category === cat && (
-                  <MaterialCommunityIcons name="check" size={24} color={colors.primary} />
+                  <MaterialCommunityIcons name="check-circle" size={22} color={colors.primary} />
                 )}
               </TouchableOpacity>
             ))}
-          </View>
-        </View>
-      </Modal>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
 
-      {/* Error Modal */}
-      <Modal
-        visible={showErrorModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowErrorModal(false)}>
-        <View style={styles.successModalOverlay}>
-          <View style={styles.successModalContent}>
-            <View style={styles.successIconContainer}>
-              <MaterialCommunityIcons name="alert-circle" size={64} color={colors.error} />
-            </View>
-            <Text style={styles.successTitle}>Error</Text>
-            <Text style={styles.successMessage}>{errorMessage}</Text>
-            <TouchableOpacity
-              style={[styles.successButton, { backgroundColor: colors.error }]}
-              onPress={() => setShowErrorModal(false)}
-              activeOpacity={0.8}>
-              <Text style={styles.successButtonText}>Entendido</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <ErrorModal
+        visible={errorModal.visible}
+        message={errorModal.message}
+        onClose={() => setErrorModal({ visible: false, message: '' })}
+      />
 
-      {/* Success Modal */}
-      <Modal
+      <SuccessModal
         visible={showSuccessModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
+        title="¡Publicación creada!"
+        message="Tu producto ya está disponible en el marketplace para que otros estudiantes lo vean."
+        buttonText="Ver marketplace"
+        icon="tag-check"
+        onClose={() => {
           setShowSuccessModal(false);
           navigation.goBack();
-        }}>
-        <View style={styles.successModalOverlay}>
-          <View style={styles.successModalContent}>
-            <View style={styles.successIconContainer}>
-              <MaterialCommunityIcons name="check-circle" size={64} color={colors.success} />
-            </View>
-            <Text style={styles.successTitle}>¡Publicación Creada!</Text>
-            <Text style={styles.successMessage}>
-              Tu publicación ha sido creada exitosamente y ya está disponible en el marketplace.
-            </Text>
-            <TouchableOpacity
-              style={styles.successButton}
-              onPress={() => {
-                setShowSuccessModal(false);
-                navigation.goBack();
-              }}
-              activeOpacity={0.8}>
-              <Text style={styles.successButtonText}>Continuar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
+        }}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: BACKGROUND_COLOR,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.white,
+    paddingBottom: 12,
+    backgroundColor: `${BACKGROUND_COLOR}F2`,
   },
   backButton: {
     width: 40,
     height: 40,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 90, 57, 0.1)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+      },
+      android: { elevation: 2 },
+    }),
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#131413',
+    fontSize: 18,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
+    flex: 1,
+    textAlign: 'center',
   },
-  headerRight: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  notificationButton: {
+  headerSpacer: {
     width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
   },
-  notificationDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.accent,
-  },
-  bookmarkButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
+  // Scroll
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
+    paddingHorizontal: 20,
+    paddingTop: 8,
   },
-  imageSection: {
-    flexDirection: 'row',
-    gap: 12,
+
+  // Fields
+  fieldSpacing: {
     marginBottom: 24,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    paddingHorizontal: 8,
+    marginBottom: 8,
+  },
+
+  // Images
+  imageGrid: {
+    flexDirection: 'row',
+    gap: 10,
   },
   mainImageContainer: {
     flex: 1,
     height: 200,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(16, 90, 57, 0.15)',
+    borderStyle: 'dashed',
   },
   mainImage: {
     width: '100%',
@@ -546,21 +503,33 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   imagePlaceholder: {
-    width: '100%',
-    height: '100%',
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    gap: 8,
+  },
+  imagePlaceholderText: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.MEDIUM,
+    color: `${colors.primary}66`,
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
   },
   sideImagesContainer: {
     gap: 8,
   },
   sideImageContainer: {
-    width: 80,
+    width: 88,
     height: 60,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(16, 90, 57, 0.1)',
+    borderStyle: 'dashed',
   },
   sideImage: {
     width: '100%',
@@ -568,270 +537,168 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   sideImagePlaceholder: {
-    width: '100%',
-    height: '100%',
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
   },
-  section: {
-    marginBottom: 24,
+  removeImageBtnSmall: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#131413',
-    marginBottom: 12,
-  },
-  titleInput: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#131413',
-  },
-  saleButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    alignSelf: 'flex-start',
-  },
-  saleButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    overflow: 'hidden',
-  },
-  currencySelector: {
+
+  // Category / Payment selects
+  selectButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'rgba(16, 90, 57, 0.2)',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  selectText: {
+    fontSize: 15,
+    fontFamily: FONT_FAMILY.REGULAR,
+    color: '#1F2937',
+    flex: 1,
+  },
+  selectPlaceholder: {
+    color: '#9CA3AF',
+  },
+
+  // Price
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'rgba(16, 90, 57, 0.2)',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  currencyBadge: {
     paddingHorizontal: 16,
     paddingVertical: 16,
-    borderRightWidth: 1,
-    borderRightColor: '#E0E0E0',
-    gap: 8,
+    borderRightWidth: 2,
+    borderRightColor: 'rgba(16, 90, 57, 0.1)',
+    backgroundColor: 'rgba(16, 90, 57, 0.04)',
   },
   currencyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#131413',
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
   },
   priceInputWrapper: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingLeft: 12,
   },
   pricePrefix: {
     fontSize: 16,
-    color: '#B6B6B6',
-    marginRight: 4,
+    fontFamily: FONT_FAMILY.MEDIUM,
+    color: '#9CA3AF',
   },
   priceInput: {
     flex: 1,
-    fontSize: 16,
-    color: '#131413',
+    fontFamily: FONT_FAMILY.REGULAR,
+    fontSize: 15,
+    color: '#1F2937',
+    paddingHorizontal: 12,
+    paddingVertical: 16,
   },
-  paymentSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    padding: 16,
-  },
-  paymentSelectorLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 12,
-  },
-  paymentIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  paymentIconText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#131413',
-  },
-  paymentTextContainer: {
-    flex: 1,
-  },
-  paymentLabel: {
-    fontSize: 12,
-    color: '#B6B6B6',
-    marginBottom: 4,
-  },
-  paymentValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#383938',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+
+  // Bottom sheet
+  sheetOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 40,
+  sheetContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 32,
   },
-  modalHeader: {
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E0E0E0',
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#131413',
-  },
-  modalOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
+    borderBottomColor: '#F3F4F6',
   },
-  modalOptionText: {
-    fontSize: 16,
-    color: '#131413',
-  },
-  categoryInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-  },
-  categoryInputText: {
-    fontSize: 16,
-    color: '#131413',
-    flex: 1,
-  },
-  categoryPlaceholder: {
-    color: '#B6B6B6',
-  },
-  descriptionInput: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-    minHeight: 120,
-    fontSize: 16,
-    color: '#131413',
-  },
-  contactInput: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#131413',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButtonText: {
+  sheetTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  publishButton: {
-    flex: 1,
-    backgroundColor: '#131413',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  publishButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  successModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  successModalContent: {
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    padding: 32,
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 340,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  successIconContainer: {
-    marginBottom: 20,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.BOLD,
     color: colors.primaryDark,
-    marginBottom: 12,
-    textAlign: 'center',
   },
-  successMessage: {
+  sheetOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+  },
+  sheetOptionText: {
     fontSize: 16,
-    fontWeight: '400',
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 24,
+    fontFamily: FONT_FAMILY.REGULAR,
+    color: '#1F2937',
   },
-  successButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    width: '100%',
+
+  // Bottom CTA
+  bottomCta: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    backgroundColor: 'transparent',
+  },
+  submitButton: {
+    backgroundColor: colors.accent,
+    borderRadius: 16,
+    paddingVertical: 20,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.accent,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+      },
+      android: { elevation: 8 },
+    }),
   },
-  successButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.white,
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
+  submitButtonText: {
+    fontSize: 18,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
   },
 });
