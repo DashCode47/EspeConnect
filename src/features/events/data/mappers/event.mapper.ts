@@ -22,6 +22,7 @@ export class EventMapper {
       updatedAt: row.updated_at,
       attendeesCount,
       isAttending,
+      isAccepted: row.is_acepted ?? false,
       creator: {
         id: row.creado_por,
         name: row.profiles?.full_name ?? '',

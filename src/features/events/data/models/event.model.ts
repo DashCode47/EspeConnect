@@ -18,6 +18,7 @@ export interface EventRow {
   imagen: string | null;
   created_at: string;
   updated_at: string;
+  is_acepted: boolean;
   profiles?: ProfileRow | null;
 }
 

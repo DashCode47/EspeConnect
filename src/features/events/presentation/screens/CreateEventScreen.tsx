@@ -609,10 +609,10 @@ export const CreateEventScreen = () => {
 
       <SuccessModal
         visible={showSuccessModal}
-        title="¡Evento creado!"
-        message="Tu evento fue publicado exitosamente."
-        buttonText="Ver eventos"
-        icon="calendar-check"
+        title="¡Solicitud enviada!"
+        message="Tu evento ha sido enviado correctamente. Un administrador revisará y aprobará su publicación en breve."
+        buttonText="Entendido"
+        icon="clock-check-outline"
         onClose={() => {
           setShowSuccessModal(false);
           navigation.goBack();

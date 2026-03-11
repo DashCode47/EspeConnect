@@ -273,7 +273,7 @@ export const EventDetailScreen = () => {
                 color={event.isAttending ? colors.white : colors.primaryDark}
               />
               <Text style={[styles.attendButtonText, event.isAttending && styles.attendButtonTextActive]}>
-                {event.isAttending ? 'Asistencia Confirmada' : 'Asistir'}
+                {event.isAttending ? 'Te interesa' : 'Me interesa'}
               </Text>
             </>
           )}

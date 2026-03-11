@@ -141,10 +141,24 @@ export const RidesScreen = () => {
   const loading = tripsLoading;
   const loadingMyTrips = myTripsLoading;
 
-  const filteredTrips = trips.filter(trip =>
-    trip.origin.toLowerCase().includes(origin.toLowerCase()) &&
-    trip.destination.toLowerCase().includes(destination.toLowerCase())
-  );
+  const filteredTrips = trips.filter(trip => {
+    const tripDate = new Date(trip.departureTime);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return (
+      tripDate >= today &&
+      trip.origin.toLowerCase().includes(origin.toLowerCase()) &&
+      trip.destination.toLowerCase().includes(destination.toLowerCase())
+    );
+  });
+
+  const filteredMyTrips = myTrips.filter(trip => {
+    const tripDate = new Date(trip.departureTime);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return tripDate >= today;
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -209,11 +223,11 @@ export const RidesScreen = () => {
             </View>
 
             {/* Trip Cards List */}
-            {loading && trips.length === 0 ? (
+            {loading && filteredTrips.length === 0 ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
               </View>
-            ) : trips.length === 0 ? (
+            ) : filteredTrips.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <MaterialCommunityIcons name="car-off" size={64} color="#D1D5DB" />
                 <Text style={styles.emptyTitle}>No hay viajes disponibles</Text>
@@ -256,11 +270,11 @@ export const RidesScreen = () => {
             </View>
 
             {/* Active Routes List */}
-            {loadingMyTrips ? (
+            {loadingMyTrips && filteredMyTrips.length === 0 ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
               </View>
-            ) : myTrips.length === 0 ? (
+            ) : filteredMyTrips.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <MaterialCommunityIcons name="map-marker-off" size={64} color="#D1D5DB" />
                 <Text style={styles.emptyTitle}>No tienes rutas activas</Text>
@@ -268,7 +282,7 @@ export const RidesScreen = () => {
               </View>
             ) : (
               <View style={styles.activeRoutesList}>
-                {myTrips.map((trip: Trip) => (
+                {filteredMyTrips.map((trip: Trip) => (
                   <ActiveTripCard
                     key={trip.id}
                     trip={trip}

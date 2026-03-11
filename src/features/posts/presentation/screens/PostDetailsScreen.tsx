@@ -40,11 +40,11 @@ const formatPrice = (price: number) => {
 // Helper to get category label
 const getCategoryLabel = (category: string) => {
   const categoryMap: { [key: string]: string } = {
-    'BOOKS': 'Libros',
-    'UNIFORMS': 'Uniformes',
-    'TECHNOLOGY': 'Tecnología',
-    'HOME': 'Hogar',
-    'OTHER': 'Otros',
+    'TECNOLOGIA': 'Tecnología',
+    'COMIDA': 'Comida',
+    'LIBROS': 'Libros',
+    'SERVICIOS': 'Servicios',
+    'OTROS': 'Otros',
   };
   return categoryMap[category] || category;
 };
@@ -185,19 +185,21 @@ export const PostDetailsScreen = () => {
         {/* Image Section */}
         <View style={styles.imageSection}>
           {images.length > 0 ? (
-            <Carousel
-              ref={carouselRef}
-              loop={false}
-              width={SCREEN_WIDTH}
-              height={320}
-              data={images}
-              renderItem={({ item }) => (
-                <Image source={{ uri: item }} style={styles.productImage} resizeMode="cover" />
-              )}
-              onSnapToItem={handleSnapToItem}
-              enabled={images.length > 1}
-              defaultIndex={0}
-            />
+              <Carousel
+                ref={carouselRef}
+                loop={false}
+                width={SCREEN_WIDTH}
+                height={400}
+                data={images}
+                renderItem={({ item }) => (
+                  <View style={styles.imageItemContainer}>
+                    <Image source={{ uri: item }} style={styles.productImage} resizeMode="contain" />
+                  </View>
+                )}
+                onSnapToItem={handleSnapToItem}
+                enabled={images.length > 1}
+                defaultIndex={0}
+              />
           ) : (
             <View style={styles.imagePlaceholder}>
               <MaterialCommunityIcons name="image-off" size={64} color="#999" />
@@ -358,8 +360,16 @@ const styles = StyleSheet.create({
   },
   imageSection: {
     position: 'relative',
-    height: 320,
+    height: 400,
     width: '100%',
+    backgroundColor: '#F8F9FA',
+  },
+  imageItemContainer: {
+    flex: 1,
+    width: SCREEN_WIDTH,
+    height: 400,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   productImage: {
     width: '100%',

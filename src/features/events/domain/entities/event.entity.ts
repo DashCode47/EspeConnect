@@ -30,6 +30,7 @@ export interface Event {
   updatedAt: string;
   attendeesCount: number;
   isAttending: boolean;
+  isAccepted: boolean;
   creator: EventCreator;
 }
 

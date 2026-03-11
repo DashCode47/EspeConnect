@@ -34,11 +34,11 @@ const paymentMethods = ['Todas', 'Efectivo', 'Transferencia', 'Tarjeta'];
 const categories = ['Tecnología', 'Comida', 'Libros', 'Servicios', 'Otros'];
 
 const categoryMap: Record<string, ProductCategory> = {
-  'Tecnología': 'TECHNOLOGY',
-  'Libros': 'BOOKS',
-  'Ropa': 'UNIFORMS',
-  'Servicios': 'OTHER',
-  'Otros': 'OTHER',
+  'Tecnología': 'TECNOLOGIA',
+  'Comida': 'COMIDA',
+  'Libros': 'LIBROS',
+  'Servicios': 'SERVICIOS',
+  'Otros': 'OTROS',
 };
 
 const categoryEmoji: Record<string, string> = {

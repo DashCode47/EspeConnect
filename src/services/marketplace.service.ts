@@ -58,7 +58,7 @@ export const marketplaceService = {
     const to = from + limit - 1;
 
     let query = supabase
-      .from('Product')
+      .from('products')
       .select('*', { count: 'exact' })
       .eq('isActive', true)
       .order('createdAt', { ascending: false })
@@ -107,7 +107,7 @@ export const marketplaceService = {
   // Get a single product by ID
   async getProductById(productId: string) {
     const { data, error } = await supabase
-      .from('Product')
+      .from('products')
       .select('*')
       .eq('id', productId)
       .single();
@@ -160,7 +160,7 @@ export const marketplaceService = {
     }
 
     const { data: product, error } = await supabase
-      .from('Product')
+      .from('products')
       .insert({
         title: data.title,
         description: data.description,
@@ -184,7 +184,7 @@ export const marketplaceService = {
   // Update a product
   async updateProduct(productId: string, data: UpdateProductData) {
     const { data: product, error } = await supabase
-      .from('Product')
+      .from('products')
       .update({
         ...data,
         updatedAt: new Date().toISOString(),
@@ -203,7 +203,7 @@ export const marketplaceService = {
   // Delete a product (soft delete by setting isActive to false)
   async deleteProduct(productId: string) {
     const { error } = await supabase
-      .from('Product')
+      .from('products')
       .update({ isActive: false })
       .eq('id', productId);
 

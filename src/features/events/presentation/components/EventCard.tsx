@@ -8,11 +8,11 @@ import { Event, EventCategory } from '../../domain/entities/event.entity';
 const getCategoryType = (category: EventCategory): string => {
   const types: Record<EventCategory, string> = {
     [EventCategory.ALL]: 'Evento',
-    [EventCategory.ACADEMIC]: 'Charla',
+    [EventCategory.ACADEMIC]: 'Académico',
     [EventCategory.SPORTS]: 'Deportes',
     [EventCategory.SOCIAL]: 'Social',
     [EventCategory.PRIVATE]: 'Privado',
-    [EventCategory.OTHER]: 'Taller',
+    [EventCategory.OTHER]: 'Otro',
   };
   return types[category] || 'Evento';
 };

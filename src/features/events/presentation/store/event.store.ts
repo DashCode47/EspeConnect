@@ -33,6 +33,7 @@ export const useEventStore = create<EventState>((set, get) => ({
   fetchEvents: async (params) => {
     set({ isLoading: true, error: null });
     const result = await repository.getEvents(params);
+    console.log("events", result);
     result.fold(
       (failure) => set({ error: failure.message, isLoading: false }),
       (events) => set({ events, isLoading: false })
@@ -67,10 +68,13 @@ export const useEventStore = create<EventState>((set, get) => ({
         return false;
       },
       (event) => {
-        set((state) => ({
-          events: [event, ...state.events],
-          isLoading: false,
-        }));
+        // Only add to list if it's already accepted (it won't be for new events)
+        if (event.isAccepted) {
+          set((state) => ({
+            events: [event, ...state.events],
+          }));
+        }
+        set({ isLoading: false });
         return true;
       }
     );

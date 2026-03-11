@@ -25,11 +25,11 @@ const formatPrice = (price: number) => {
 // Helper to get category label
 const getCategoryLabel = (category: string) => {
   const categoryMap: { [key: string]: string } = {
-    'BOOKS': 'Libros',
-    'UNIFORMS': 'Uniformes',
-    'TECHNOLOGY': 'Tecnología',
-    'HOME': 'Hogar',
-    'OTHER': 'Otros',
+    'TECNOLOGIA': 'Tecnología',
+    'COMIDA': 'Comida',
+    'LIBROS': 'Libros',
+    'SERVICIOS': 'Servicios',
+    'OTROS': 'Otros',
   };
   return categoryMap[category] || category;
 };
@@ -59,7 +59,9 @@ export const MarketplaceCard = ({ product, onPress }: MarketplaceCardProps) => {
         </Text>
 
         {/* Price */}
-        <Text style={styles.priceText}>{formatPrice(product.price)}</Text>
+        {product.price > 0 && (
+          <Text style={styles.priceText}>{formatPrice(product.price)}</Text>
+        )}
 
         {/* Profile Picture and Contact Button */}
         <View style={styles.footer}>

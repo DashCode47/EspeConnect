@@ -28,11 +28,11 @@ type PostScreenNavigationProp = NativeStackNavigationProp<PostStackParamList, 'F
 // Category mapping for filtering
 const categoryMapping: { [key: string]: ProductCategory | undefined } = {
   'Todo': undefined,
-  'Libros': 'BOOKS',
-  'Uniformes': 'UNIFORMS',
-  'Tecnología': 'TECHNOLOGY',
-  'Hogar': 'HOME',
-  'Otros': 'OTHER',
+  'Tecnología': 'TECNOLOGIA',
+  'Comida': 'COMIDA',
+  'Libros': 'LIBROS',
+  'Servicios': 'SERVICIOS',
+  'Otros': 'OTROS',
 };
 
 export const PostScreen = () => {
@@ -45,7 +45,7 @@ export const PostScreen = () => {
   const { user } = useAuthStore();
   const { posts, isLoading: postsLoading, fetchPosts } = usePostStore();
   const { products, isLoading: productsLoading, fetchProducts } = useMarketplaceStore();
-
+  console.log('=', products)
   const loading = postsLoading || productsLoading;
 
   useEffect(() => {
@@ -136,10 +136,10 @@ export const PostScreen = () => {
 
   const categories = [
     { label: 'Todo', icon: 'view-grid' },
-    { label: 'Libros', icon: 'book-open-variant' },
     { label: 'Tecnología', icon: 'laptop' },
-    { label: 'Uniformes', icon: 'tshirt-crew' },
-    { label: 'Hogar', icon: 'sofa' },
+    { label: 'Comida', icon: 'food-apple' },
+    { label: 'Libros', icon: 'book-open-variant' },
+    { label: 'Servicios', icon: 'hammer-wrench' },
     { label: 'Otros', icon: 'dots-horizontal' },
   ];
 

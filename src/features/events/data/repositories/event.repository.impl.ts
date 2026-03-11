@@ -12,6 +12,7 @@ export class EventRepositoryImpl implements IEventRepository {
       let query = supabase
         .from('events')
         .select('*, profiles!creado_por(full_name, avatar_url, career)')
+        .eq('is_acepted', true)
         .order('fecha_inicio', { ascending: true });
 
       if (params?.category && params.category !== EventCategory.ALL) {

@@ -69,7 +69,7 @@ export const EventsScreen = () => {
   const featuredEvents = useMemo(() => {
     const now = new Date();
     return events
-      .filter(event => new Date(event.startTime) >= now)
+      .filter(event => event.isAccepted && new Date(event.startTime) >= now)
       .sort((a, b) => b.attendeesCount - a.attendeesCount)
       .slice(0, 5);
   }, [events]);
@@ -79,14 +79,16 @@ export const EventsScreen = () => {
     today.setHours(0, 0, 0, 0);
 
     const eventDatesMap = new Map<string, number>();
-    events.forEach(event => {
-      const eventDate = new Date(event.startTime);
-      eventDate.setHours(0, 0, 0, 0);
-      if (eventDate >= today) {
-        const dateKey = eventDate.toISOString().split('T')[0];
-        eventDatesMap.set(dateKey, (eventDatesMap.get(dateKey) || 0) + 1);
-      }
-    });
+    events
+      .filter(event => event.isAccepted)
+      .forEach(event => {
+        const eventDate = new Date(event.startTime);
+        eventDate.setHours(0, 0, 0, 0);
+        if (eventDate >= today) {
+          const dateKey = eventDate.toISOString().split('T')[0];
+          eventDatesMap.set(dateKey, (eventDatesMap.get(dateKey) || 0) + 1);
+        }
+      });
 
     const days: CalendarDay[] = [];
     const sortedDates = Array.from(eventDatesMap.keys()).sort();
@@ -121,6 +123,7 @@ export const EventsScreen = () => {
   const eventsForSelectedDate = useMemo(() => {
     const selectedDateStr = selectedDate.toISOString().split('T')[0];
     return events.filter(event => {
+      if (!event.isAccepted) return false;
       const eventDateStr = new Date(event.startTime).toISOString().split('T')[0];
       return eventDateStr === selectedDateStr;
     });

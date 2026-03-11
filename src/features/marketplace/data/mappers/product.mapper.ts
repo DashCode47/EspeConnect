@@ -18,8 +18,8 @@ export class ProductMapper {
       } : undefined,
       contact: model.contact,
       isActive: model.isActive,
-      createdAt: model.createdAt,
-      updatedAt: model.updatedAt,
+      createdAt: model.created_at,
+      updatedAt: model.updated_at,
     };
   }
 }

@@ -11,10 +11,10 @@ export class ProductRepositoryImpl implements IProductRepository {
     const to = from + limit - 1;
 
     let query = supabase
-      .from('Product')
-      .select('*, author:profiles!authorId(id, full_name, avatar_url)', { count: 'exact' })
+      .from('products')
+      .select('*, author:profiles!authorId(id, name:full_name, avatarUrl:avatar_url)', { count: 'exact' })
       .eq('isActive', true)
-      .order('createdAt', { ascending: false })
+      .order('created_at', { ascending: false })
       .range(from, to);
 
     if (params?.category) {
@@ -29,17 +29,7 @@ export class ProductRepositoryImpl implements IProductRepository {
 
     if (error) throw error;
 
-    const products = (data || []).map(item => {
-      const mappedItem = {
-        ...item,
-        author: item.author ? {
-          id: item.author.id,
-          name: item.author.full_name,
-          avatarUrl: item.author.avatar_url
-        } : undefined
-      };
-      return ProductMapper.toEntity(mappedItem);
-    });
+    const products = (data || []).map((item: any) => ProductMapper.toEntity(item));
 
     return {
       products,
@@ -49,29 +39,20 @@ export class ProductRepositoryImpl implements IProductRepository {
 
   async getProductById(id: string): Promise<Product | null> {
     const { data, error } = await supabase
-      .from('Product')
-      .select('*, author:profiles!authorId(id, full_name, avatar_url)')
+      .from('products')
+      .select('*, author:profiles!authorId(id, name:full_name, avatarUrl:avatar_url)')
       .eq('id', id)
       .single();
 
     if (error) return null;
 
-    const mappedItem = {
-      ...data,
-      author: data.author ? {
-        id: data.author.id,
-        name: data.author.full_name,
-        avatarUrl: data.author.avatar_url
-      } : undefined
-    };
-
-    return ProductMapper.toEntity(mappedItem);
+    return ProductMapper.toEntity(data);
   }
 
   async createProduct(data: { title: string; description: string; price: number; category: ProductCategory; imageUrls?: string[]; contact?: string; authorId: string }): Promise<Product> {
     const urls = data.imageUrls ?? [];
     const { data: product, error } = await supabase
-      .from('Product')
+      .from('products')
       .insert({
         title: data.title,
         description: data.description,
@@ -83,7 +64,7 @@ export class ProductRepositoryImpl implements IProductRepository {
         authorId: data.authorId,
         isActive: true,
       })
-      .select('*, author:profiles!authorId(id, full_name, avatar_url)')
+      .select('*, author:profiles!authorId(id, name:full_name, avatarUrl:avatar_url)')
       .single();
 
     if (error) throw error;
@@ -93,13 +74,13 @@ export class ProductRepositoryImpl implements IProductRepository {
 
   async updateProduct(id: string, data: Partial<Product>): Promise<Product> {
     const { data: product, error } = await supabase
-      .from('Product')
+      .from('products')
       .update({
         ...data,
-        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .eq('id', id)
-      .select('*, author:User(id, name, profiles(avatar_url))')
+      .select('*, author:profiles!authorId(id, name:full_name, avatarUrl:avatar_url)')
       .single();
 
     if (error) throw error;
@@ -109,7 +90,7 @@ export class ProductRepositoryImpl implements IProductRepository {
 
   async deleteProduct(id: string): Promise<void> {
     const { error } = await supabase
-      .from('Product')
+      .from('products')
       .update({ isActive: false })
       .eq('id', id);
 
