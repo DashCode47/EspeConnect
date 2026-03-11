@@ -1,50 +1,72 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Text } from 'react-native-paper';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../../config/colors';
+import { FONT_FAMILY } from '../../../../config/globalStyles';
 
 interface RidesHeaderProps {
-  title?: string;
-  onFilterPress?: () => void;
+  topInset: number;
+  onInfoPress: () => void;
 }
 
-export const RidesHeader = ({ title = 'Descubre Viajes', onFilterPress }: RidesHeaderProps) => {
+export const RidesHeader: React.FC<RidesHeaderProps> = ({ topInset, onInfoPress }) => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
-      <TouchableOpacity
-        style={styles.filterButton}
-        onPress={onFilterPress}
-      >
-        <MaterialCommunityIcons name="filter" size={24} color={colors.black} />
+    <View style={[styles.header, { paddingTop: topInset }]}>
+      <View style={styles.headerTitleContainer}>
+        <Text style={styles.headerSubtitle}>CAMPLUS</Text>
+        <Text style={styles.headerTitle}>Viajes Compartidos</Text>
+      </View>
+      <TouchableOpacity onPress={onInfoPress} style={styles.infoButton}>
+        <MaterialCommunityIcons name="shield-check" size={20} color={colors.primary} />
       </TouchableOpacity>
+      <View style={styles.headerSpacer} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    height: 64,
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: 'rgba(246, 248, 247, 0.8)',
+    justifyContent: 'flex-end',
   },
-  title: {
+  headerTitleContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 10,
+    fontFamily: FONT_FAMILY.BLACK,
+    color: `${colors.primary}99`,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.black,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primaryDark,
+    textAlign: 'center',
   },
-  filterButton: {
-    width: 48,
-    height: 48,
+  infoButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    zIndex: 10,
+  },
+  headerSpacer: {
+    width: 40,
   },
 });
-

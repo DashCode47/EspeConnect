@@ -110,7 +110,7 @@ export const AnimatedNavigator = ({ currentRoute, onNavigate }: AnimatedNavigato
 const styles = StyleSheet.create({
     wrapper: {
         position: 'absolute',
-        bottom: 24,
+        bottom: 5,
         left: 0,
         right: 0,
         alignItems: 'center',

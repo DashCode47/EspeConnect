@@ -25,6 +25,8 @@ import { PlanDetailSheet } from '../components/PlanDetailSheet';
 import { usePlanStore } from '../store/plan.store';
 import { EventsHeader } from '../components/EventsHeader';
 import { EventsTabs, TabType } from '../components/EventsTabs';
+import { track } from '../../../../analytics/track';
+import { AnalyticsEvents } from '../../../../analytics/events';
 import { FeaturedEventCard } from '../components/FeaturedEventCard';
 import { EventCard } from '../components/EventCard';
 import { CalendarStrip, CalendarDay } from '../components/CalendarStrip';
@@ -55,6 +57,7 @@ export const EventsScreen = () => {
 
   useEffect(() => {
     fetchEvents();
+    track(AnalyticsEvents.EVENTS_SCREEN_VIEWED);
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -130,11 +133,28 @@ export const EventsScreen = () => {
     }
   }, [calendarDays, loading]);
 
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    track(AnalyticsEvents.EVENTS_TAB_CHANGED, { tab });
+  };
+
   const handleEventPress = (eventId: string) => {
+    track(AnalyticsEvents.EVENTS_CARD_TAPPED, { eventId });
     navigation.navigate('EventDetail', { eventId });
   };
 
+  const handleFeaturedEventPress = (eventId: string) => {
+    track(AnalyticsEvents.EVENTS_FEATURED_TAPPED, { eventId });
+    navigation.navigate('EventDetail', { eventId });
+  };
+
+  const handleCalendarDaySelect = (date: Date) => {
+    setSelectedDate(date);
+    track(AnalyticsEvents.EVENTS_CALENDAR_DAY_SELECTED, { date: date.toISOString().split('T')[0] });
+  };
+
   const handleAttendEvent = async (eventId: string, isAttending: boolean) => {
+    track(AnalyticsEvents.EVENTS_ATTEND_TOGGLED, { eventId, action: isAttending ? 'cancel' : 'attend' });
     if (isAttending) {
       await cancelAttendance(eventId);
     } else {
@@ -143,15 +163,18 @@ export const EventsScreen = () => {
   };
 
   const handleCreateEvent = () => {
+    track(AnalyticsEvents.EVENTS_CREATE_TAPPED);
     navigation.navigate('CreateEvent');
   };
 
   const handlePlanPress = (planId: string) => {
+    track(AnalyticsEvents.PLANS_PLAN_TAPPED, { planId });
     setSelectedPlanId(planId);
     setPlanSheetVisible(true);
   };
 
   const handleCreatePlan = () => {
+    track(AnalyticsEvents.PLANS_CREATE_TAPPED);
     navigation.navigate('CreatePlan');
   };
 
@@ -175,7 +198,7 @@ export const EventsScreen = () => {
       <StatusBar barStyle="dark-content" backgroundColor="#F6F8F7" />
 
       <EventsHeader onCreatePress={activeTab === 'eventos' ? handleCreateEvent : handleCreatePlan} />
-      <EventsTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <EventsTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
       <ScrollView
         style={styles.scrollView}
@@ -197,7 +220,7 @@ export const EventsScreen = () => {
                   ref={featuredScrollRef}
                   data={featuredEvents}
                   renderItem={({ item, index }) => (
-                    <FeaturedEventCard item={item} index={index} onPress={handleEventPress} />
+                    <FeaturedEventCard item={item} index={index} onPress={handleFeaturedEventPress} />
                   )}
                   keyExtractor={(item) => item.id}
                   horizontal
@@ -213,7 +236,7 @@ export const EventsScreen = () => {
               <CalendarStrip
                 days={calendarDays}
                 selectedDate={selectedDate}
-                onDaySelect={setSelectedDate}
+                onDaySelect={handleCalendarDaySelect}
               />
             )}
 

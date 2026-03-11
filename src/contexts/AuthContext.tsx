@@ -3,6 +3,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../features/auth/presentation/store/auth.store';
 import { saveUserFCMToken } from '../services/notificationService';
+import { identifyUser, resetUser } from '../analytics/track';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -21,6 +22,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const fetchCurrentUser = useAuthStore(state => state.fetchCurrentUser);
   const storeUser = useAuthStore(state => state.user);
+
+  useEffect(() => {
+    if (storeUser) {
+      identifyUser({
+        id: storeUser.id,
+        name: storeUser.name,
+        email: storeUser.email,
+        career: storeUser.career,
+      });
+    }
+  }, [storeUser]);
 
   useEffect(() => {
     // Get initial session
@@ -58,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await useAuthStore.getState().logout();
+      resetUser();
     } catch (error) {
       console.error('Error during logout:', error);
     }

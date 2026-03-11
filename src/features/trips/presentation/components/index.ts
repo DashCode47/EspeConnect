@@ -7,4 +7,9 @@ export { RidesHeader } from './RidesHeader';
 export { TripBadge } from './TripBadge';
 export { TripSectionHeader } from './TripSectionHeader';
 export { MyTripItem } from './MyTripItem';
-
+export { TripCard } from './TripCard';
+export { ActiveTripCard } from './ActiveTripCard';
+export { TripSearchCard } from './TripSearchCard';
+export { OfferHeroCard } from './OfferHeroCard';
+export { RidesTabToggle } from './RidesTabToggle';
+export { RidesInfoModal } from './RidesInfoModal';

@@ -20,6 +20,8 @@ import { navigationRef } from '../../../../navigation/RootNavigator';
 import { BENEFIT_DETAILS, BENEFIT_STACK } from '../../../../config/constants';
 import { HorizontalIcon } from '../../../../assets/svg/HorizontalIcon';
 import useHome from '../hooks/useHome';
+import { track } from '../../../../analytics/track';
+import { AnalyticsEvents } from '../../../../analytics/events';
 import { EstablishmentCategories } from '../../../establishments/presentation/components/EstablishmentCategories';
 import { BenefitCard } from '../../../establishments/presentation/components/BenefitCard';
 import EstablishmentModal from '../../../establishments/presentation/components/EstablishmentModal';
@@ -51,6 +53,7 @@ export const HomeScreen: React.FC = () => {
     fetchEstablishments({ limit: 100 });
     getClosestEvent();
     fetchActiveBanners();
+    track(AnalyticsEvents.HOME_SCREEN_VIEWED);
   }, []);
 
   useEffect(() => {
@@ -89,7 +92,10 @@ export const HomeScreen: React.FC = () => {
       <View style={styles.topNavBar}>
         <TouchableOpacity
           style={styles.profileButton}
-          onPress={() => navigation.navigate('Profile')}>
+          onPress={() => {
+            track(AnalyticsEvents.HOME_PROFILE_TAPPED);
+            navigation.navigate('Profile');
+          }}>
           {profile?.avatarUrl ? (
             <Image
               source={{ uri: profile.avatarUrl }}
@@ -142,6 +148,7 @@ export const HomeScreen: React.FC = () => {
                   key={banner.id}
                   style={styles.bannerCard}
                   activeOpacity={0.9}
+                  onPress={() => track(AnalyticsEvents.HOME_BANNER_TAPPED, { bannerId: banner.id })}
                 >
                   {banner.imageUrl ? (
                     <Image
@@ -181,7 +188,10 @@ export const HomeScreen: React.FC = () => {
                 <Text style={styles.benefitsSubtitle}>Aprovecha los descuentos que tenemos para ti</Text>
               </View>
               <TouchableOpacity
-                onPress={() => navigation.navigate(BENEFIT_STACK as any)}
+                onPress={() => {
+                  track(AnalyticsEvents.HOME_BENEFITS_SEE_ALL);
+                  navigation.navigate(BENEFIT_STACK as any);
+                }}
                 activeOpacity={0.7}
               >
                 <Text style={styles.seeAllText}>Ver todos</Text>
@@ -195,12 +205,17 @@ export const HomeScreen: React.FC = () => {
                   key={`${item.establishment.id}-${item.promotion.id}`}
                   promotion={item.promotion}
                   establishment={item.establishment}
-                  onPress={() =>
+                  onPress={() => {
+                    track(AnalyticsEvents.HOME_BENEFIT_TAPPED, {
+                      promotionId: item.promotion.id,
+                      establishmentId: item.establishment.id,
+                      establishmentName: item.establishment.name,
+                    });
                     navigationRef.current?.navigate(BENEFIT_STACK, {
                       screen: BENEFIT_DETAILS,
                       params: { data: { promotion: item.promotion, establishment: item.establishment } },
-                    })
-                  }
+                    });
+                  }}
                 />
               ))
             ) : (

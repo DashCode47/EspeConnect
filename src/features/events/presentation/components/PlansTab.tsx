@@ -7,7 +7,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Modal,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ErrorModal } from '../../../../components/modals/ErrorModal';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -17,6 +19,8 @@ import { PlanCategory } from '../../domain/entities/plan.entity';
 import { usePlanStore } from '../store/plan.store';
 import { PlanCard } from './PlanCard';
 import { useState } from 'react';
+import { track } from '../../../../analytics/track';
+import { AnalyticsEvents } from '../../../../analytics/events';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 60) / 2; // 2 columns with padding
@@ -31,10 +35,20 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
   const { plans, isLoading: plansLoading, joinPlan, leavePlan, fetchPlans, subscribeToPlans } = usePlanStore();
   const [plansCategory, setPlansCategory] = useState<PlanCategory | 'ALL'>('ALL');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
 
   useEffect(() => {
     fetchPlans(plansCategory === 'ALL' ? undefined : { category: plansCategory });
   }, [plansCategory]);
+
+  useEffect(() => {
+    AsyncStorage.getItem('plans_disclaimer_seen').then(seen => {
+      if (!seen) {
+        setInfoModalVisible(true);
+        AsyncStorage.setItem('plans_disclaimer_seen', '1');
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const unsubscribe = subscribeToPlans();
@@ -52,13 +66,20 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
 
     try {
       if (plan.isParticipating) {
+        track(AnalyticsEvents.PLANS_JOIN_TOGGLED, { planId, action: 'leave' });
         await leavePlan(planId);
       } else {
+        track(AnalyticsEvents.PLANS_JOIN_TOGGLED, { planId, action: 'join' });
         await joinPlan(planId);
       }
     } catch (error: any) {
       setErrorMessage(error.message || 'No se pudo completar la acción. Intenta nuevamente.');
     }
+  };
+
+  const handleCategoryChange = (cat: PlanCategory | 'ALL') => {
+    track(AnalyticsEvents.PLANS_CATEGORY_CHANGED, { category: cat });
+    setPlansCategory(cat);
   };
 
   const categories = [
@@ -85,7 +106,7 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
               styles.categoryChip,
               plansCategory === cat.key && styles.categoryChipActive,
             ]}
-            onPress={() => setPlansCategory(cat.key as PlanCategory | 'ALL')}
+            onPress={() => handleCategoryChange(cat.key as PlanCategory | 'ALL')}
             activeOpacity={0.7}>
             <MaterialCommunityIcons
               name={cat.icon as any}
@@ -124,7 +145,7 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
           </Text>
           <TouchableOpacity
             style={styles.createButton}
-            onPress={onCreatePress}
+            onPress={() => { track(AnalyticsEvents.PLANS_CREATE_TAPPED); onCreatePress(); }}
             activeOpacity={0.8}>
             <MaterialCommunityIcons name="plus" size={20} color={colors.white} />
             <Text style={styles.createButtonText}>Crear Plan</Text>
@@ -159,14 +180,22 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
       <View style={styles.headerSection}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.sectionTitle}>Planes Sociales</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.sectionTitle}>Planes Sociales</Text>
+              <TouchableOpacity
+                style={styles.infoButton}
+                onPress={() => setInfoModalVisible(true)}
+                activeOpacity={0.7}>
+                <MaterialCommunityIcons name="shield-check" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
             <Text style={styles.sectionSubtitle}>
               Únete a planes o crea el tuyo
             </Text>
           </View>
           {onMyPlansPress && (
             <TouchableOpacity
-              onPress={onMyPlansPress}
+              onPress={() => { track(AnalyticsEvents.PLANS_MY_PLANS_TAPPED); onMyPlansPress?.(); }}
               activeOpacity={0.8}>
               <LinearGradient
                 colors={[colors.accent, '#f59e0b']}
@@ -186,6 +215,30 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
 
       {/* Plans Grid */}
       {renderPlansGrid()}
+
+      {/* Info Modal */}
+      <Modal
+        visible={infoModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setInfoModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setInfoModalVisible(false)}>
+          <View style={styles.modalCard}>
+            <MaterialCommunityIcons name="shield-check" size={32} color={colors.primary} style={{ marginBottom: 12 }} />
+            <Text style={styles.modalTitle}>Planes entre estudiantes</Text>
+            <Text style={styles.modalBody}>
+              En CamPlus, todos los planes son creados por y para estudiantes reales de la ESPE.{'\n\n'}
+              Conecta con otros alumnos, organiza grupos de estudio o salidas sociales en un entorno seguro y exclusivo para la comunidad universitaria.
+            </Text>
+            <TouchableOpacity style={styles.modalButton} onPress={() => setInfoModalVisible(false)}>
+              <Text style={styles.modalButtonText}>Entendido</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -205,6 +258,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  infoButton: {
+    padding: 2,
   },
   myPlansButton: {
     flexDirection: 'row',
@@ -333,6 +394,51 @@ const styles = StyleSheet.create({
   },
   createButtonText: {
     fontSize: 16,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.white,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  modalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalBody: {
+    fontSize: 14,
+    fontFamily: FONT_FAMILY.REGULAR,
+    color: '#444',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 32,
+  },
+  modalButtonText: {
+    fontSize: 14,
     fontFamily: FONT_FAMILY.BOLD,
     color: colors.white,
   },

@@ -54,11 +54,6 @@ export const FeaturedEventCard = ({ item, index, onPress }: FeaturedEventCardPro
           colors={['transparent', 'rgba(0,0,0,0.8)']}
           style={styles.featuredGradient}
         />
-        {index === 0 && (
-          <View style={styles.featuredBadge}>
-            <Text style={styles.featuredBadgeText}>DESTACADO</Text>
-          </View>
-        )}
         <View style={styles.featuredContent}>
           <Text style={styles.featuredCategory}>
             {getCategoryLabel(item.category).toUpperCase()}
