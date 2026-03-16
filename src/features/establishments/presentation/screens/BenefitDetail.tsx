@@ -86,12 +86,7 @@ const BenefitDetail = () => {
     }
   };
 
-  // Share handler
-  const handleShare = () => {
-    // TODO: Implement share functionality
-    console.log('Share promotion');
-  };
-
+  console.log(establishment);
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
@@ -104,24 +99,7 @@ const BenefitDetail = () => {
           activeOpacity={0.7}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primaryDark} />
         </TouchableOpacity>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => setIsFavorite(!isFavorite)}
-            activeOpacity={0.7}>
-            <MaterialCommunityIcons
-              name={isFavorite ? 'heart' : 'heart-outline'}
-              size={24}
-              color={colors.primaryDark}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleShare}
-            activeOpacity={0.7}>
-            <MaterialCommunityIcons name="share-variant" size={24} color={colors.primaryDark} />
-          </TouchableOpacity>
-        </View>
+        <View style={styles.headerRight} />
       </View>
 
       <ScrollView
@@ -174,23 +152,23 @@ const BenefitDetail = () => {
 
           {/* Category and Expiration Chips */}
           <View style={styles.chipsContainer}>
-            {promotion?.category && (
+            {establishment?.type && (
               <View style={styles.categoryChip}>
                 <MaterialCommunityIcons
-                  name={getCategoryIcon(promotion.category)}
+                  name={getCategoryIcon(establishment?.type)}
                   size={18}
                   color={colors.primary}
                 />
-                <Text style={styles.categoryChipText}>{getCategoryName(promotion.category)}</Text>
+                <Text style={styles.categoryChipText}>{getCategoryName(establishment?.type)}</Text>
               </View>
             )}
 
-            {promotion?.endDate && (
+            {/* {promotion?.endDate && (
               <View style={styles.expirationChip}>
                 <MaterialCommunityIcons name="clock-outline" size={18} color="#64748B" />
                 <Text style={styles.expirationChipText}>Vence el: {formatDate(promotion.endDate)}</Text>
               </View>
-            )}
+            )} */}
           </View>
         </View>
 
@@ -247,22 +225,11 @@ const BenefitDetail = () => {
           <View style={styles.termsContent}>
             <MaterialCommunityIcons name="information-outline" size={16} color="#94A3B8" />
             <Text style={styles.termsText}>
-              Válido solo para productos seleccionados. No acumulable con otras promociones.
+              Aplican términos y condiciones. Beneficio sujeto a disponibilidad y políticas del establecimiento.
             </Text>
           </View>
         </View>
       </ScrollView>
-
-      {/* Sticky Bottom CTA */}
-      {/* <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity
-          style={styles.ctaButton}
-          activeOpacity={0.9}>
-          <View style={styles.ctaAccent} />
-          <Text style={styles.ctaButtonText}>Canjear Beneficio</Text>
-          <MaterialCommunityIcons name="ticket-confirmation" size={24} color={colors.accent} />
-        </TouchableOpacity>
-      </View> */}
 
       {/* Establishment Modal */}
       <EstablishmentModal
