@@ -121,19 +121,8 @@ export const LoginScreen = () => {
 
                     {/* Remember Password & Forgot Password */}
                     <View style={styles.optionsRow}>
-                        <TouchableOpacity
-                            style={styles.checkboxContainer}
-                            onPress={() => setRememberPassword(!rememberPassword)}
-                            activeOpacity={0.7}>
-                            <View style={[styles.checkbox, rememberPassword && styles.checkboxChecked]}>
-                                {rememberPassword && (
-                                    <MaterialCommunityIcons name="check" size={16} color={colors.white} />
-                                )}
-                            </View>
-                            <Text style={styles.checkboxLabel}>Guardar contraseña</Text>
-                        </TouchableOpacity>
 
-                        <TouchableOpacity activeOpacity={0.7}>
+                        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} activeOpacity={0.7}>
                             <Text style={styles.forgotPassword}>¿Olvidaste la contraseña?</Text>
                         </TouchableOpacity>
                     </View>
@@ -224,7 +213,7 @@ const styles = StyleSheet.create({
     },
     optionsRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-end',
         alignItems: 'center',
         marginBottom: 32,
     },

@@ -17,18 +17,17 @@ interface PlanCardProps {
   onJoin: () => void;
 }
 
-// Map category to icon and color
 const getCategoryConfig = (category: PlanCategory) => {
-  const configs: Record<PlanCategory, { icon: string; color: string; emoji: string }> = {
-    [PlanCategory.CAFE]: { icon: 'coffee', color: '#FEF3C7', emoji: '☕' },
-    [PlanCategory.FIESTA]: { icon: 'party-popper', color: '#FCE7F3', emoji: '🎉' },
-    [PlanCategory.ESTUDIO]: { icon: 'book-open-variant', color: '#DBEAFE', emoji: '📚' },
-    [PlanCategory.DEPORTE]: { icon: 'basketball', color: '#D1FAE5', emoji: '⚽' },
-    [PlanCategory.CINE]: { icon: 'movie', color: '#E0E7FF', emoji: '🎬' },
-    [PlanCategory.MUSICA]: { icon: 'music', color: '#FAE8FF', emoji: '🎵' },
-    [PlanCategory.VIAJE]: { icon: 'airplane', color: '#FED7AA', emoji: '✈️' },
-    [PlanCategory.COMIDA]: { icon: 'food', color: '#FEE2E2', emoji: '🍕' },
-    [PlanCategory.OTRO]: { icon: 'star', color: '#E5E7EB', emoji: '⭐' },
+  const configs: Record<PlanCategory, { color: string; emoji: string; accent: string }> = {
+    [PlanCategory.CAFE]:    { color: '#FFF3D4', emoji: '☕', accent: '#F59E0B' },
+    [PlanCategory.FIESTA]:  { color: '#FFE4F3', emoji: '🎉', accent: '#EC4899' },
+    [PlanCategory.ESTUDIO]: { color: '#DBEAFE', emoji: '📚', accent: '#3B82F6' },
+    [PlanCategory.DEPORTE]: { color: '#DCFCE7', emoji: '⚽', accent: '#22C55E' },
+    [PlanCategory.CINE]:    { color: '#EDE9FE', emoji: '🎬', accent: '#8B5CF6' },
+    [PlanCategory.MUSICA]:  { color: '#F3E8FF', emoji: '🎵', accent: '#A855F7' },
+    [PlanCategory.VIAJE]:   { color: '#FFEDD5', emoji: '✈️', accent: '#F97316' },
+    [PlanCategory.COMIDA]:  { color: '#FEE2E2', emoji: '🍕', accent: '#EF4444' },
+    [PlanCategory.OTRO]:    { color: '#F1F5F9', emoji: '⭐', accent: '#94A3B8' },
   };
   return configs[category] || configs[PlanCategory.OTRO];
 };
@@ -49,121 +48,129 @@ const getCategoryLabel = (category: PlanCategory): string => {
 };
 
 export const PlanCard: React.FC<PlanCardProps> = ({ plan, onPress, onJoin }) => {
-  const categoryConfig = getCategoryConfig(plan.category);
+  const cat = getCategoryConfig(plan.category);
   const activeParticipants = (plan.participants as PlanParticipant[])?.filter(p => p.leftAt === null) || [];
   const participantAvatars = activeParticipants.slice(0, 3);
   const additionalCount = Math.max((plan.participantsCount || 0) - 3, 0);
   const hasParticipants = (plan.participantsCount || 0) > 0;
 
-  // Format time
-  const formatTime = (time: string) => {
-    return time.slice(0, 5); // "HH:MM:SS" -> "HH:MM"
-  };
-
+  const formatTime = (t: string) => t.slice(0, 5);
   const timeDisplay = plan.endTime
-    ? `${formatTime(plan.startTime)} - ${formatTime(plan.endTime)}`
+    ? `${formatTime(plan.startTime)} – ${formatTime(plan.endTime)}`
     : formatTime(plan.startTime);
 
-  return (
-    <TouchableOpacity
-      style={[styles.card, { backgroundColor: categoryConfig.color }]}
-      onPress={onPress}
-      activeOpacity={0.9}>
+  const formatDate = (d: string) => {
+    const date = new Date(d + 'T00:00:00');
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    if (date.toDateString() === today.toDateString()) return 'Hoy';
+    if (date.toDateString() === tomorrow.toDateString()) return 'Mañana';
+    return date.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+  };
 
-      {/* Top Badges */}
-      <View style={styles.topBadgesContainer}>
-        <View style={[styles.badge, plan.isFull && styles.fullBadge]}>
+  return (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.92}>
+
+      {/* ── Colored top block ── */}
+      <View style={[styles.top, { backgroundColor: cat.color }]}>
+        <Text style={styles.emoji}>{cat.emoji}</Text>
+
+        {/* Participant badge — top right corner */}
+        <View style={[styles.countBadge, plan.isFull && styles.countBadgeFull]}>
           <MaterialCommunityIcons
-            name={plan.isFull ? "fire" : "account-group"}
-            size={14}
+            name={plan.isFull ? 'fire' : 'account-group'}
+            size={11}
             color={plan.isFull ? colors.white : colors.primary}
           />
-          <Text style={[styles.badgeText, plan.isFull && styles.fullBadgeText]}>
+          <Text style={[styles.countText, plan.isFull && styles.countTextFull]}>
             {plan.participantsCount}{plan.maxParticipants ? `/${plan.maxParticipants}` : ''}
           </Text>
         </View>
       </View>
 
-      {/* Content */}
-      <View style={styles.content}>
-        {/* Icon */}
-        <View style={styles.iconContainer}>
-          <Text style={styles.emoji}>{categoryConfig.emoji}</Text>
+      {/* ── Body ── */}
+      <View style={styles.body}>
+        {/* Category + time row */}
+        <View style={styles.metaTop}>
+          <View style={[styles.catChip, { backgroundColor: cat.accent + '20' }]}>
+            <Text style={[styles.catLabel, { color: cat.accent }]}>
+              {getCategoryLabel(plan.category)}
+            </Text>
+          </View>
+          <Text style={styles.time}>{formatDate(plan.date)} · {timeDisplay}</Text>
         </View>
 
-        {/* Title and subtitle */}
-        <Text style={styles.title} numberOfLines={2}>
+        {/* Title */}
+        <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
           {plan.title}
         </Text>
-        <View style={styles.subtitleRow}>
-          <Text style={styles.subtitle}>{getCategoryLabel(plan.category)}</Text>
-          <Text style={styles.dot}>•</Text>
-          <Text style={styles.subtitle}>{timeDisplay}</Text>
-        </View>
 
-        {/* Location if available */}
+        {/* Location */}
         {plan.locationName && (
           <View style={styles.locationRow}>
-            <MaterialCommunityIcons name="map-marker" size={14} color="#6B7280" />
-            <Text style={styles.locationText} numberOfLines={1}>
-              {plan.locationName}
-            </Text>
+            <MaterialCommunityIcons name="map-marker-outline" size={11} color="#9CA3AF" />
+            <Text style={styles.locationText} numberOfLines={1}>{plan.locationName}</Text>
           </View>
         )}
       </View>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <View style={styles.footer}>
-        {/* Participants avatars */}
-        <View style={styles.avatarsContainer}>
+        {/* Avatars */}
+        <View style={styles.avatarsRow}>
           {hasParticipants ? (
             <>
-              {participantAvatars.map((p: PlanParticipant, index: number) => (
+              {participantAvatars.map((p: PlanParticipant, index: number) =>
                 p.user?.avatarUrl ? (
                   <Image
                     key={p.id}
                     source={{ uri: p.user.avatarUrl }}
-                    style={[styles.avatar, { marginLeft: index > 0 ? -8 : 0 }]}
+                    style={[styles.avatar, index > 0 && styles.avatarOverlap]}
                   />
                 ) : (
                   <View
                     key={p.id}
-                    style={[styles.avatar, styles.avatarPlaceholder, { marginLeft: index > 0 ? -8 : 0 }]}>
-                    <MaterialCommunityIcons name="account" size={14} color="#9CA3AF" />
+                    style={[styles.avatar, styles.avatarEmpty, index > 0 && styles.avatarOverlap]}>
+                    <MaterialCommunityIcons name="account" size={12} color="#CBD5E1" />
                   </View>
                 )
-              ))}
+              )}
               {additionalCount > 0 && (
-                <Text style={styles.additionalCount}>+{additionalCount}</Text>
+                <Text style={styles.moreCount}>+{additionalCount}</Text>
               )}
             </>
           ) : (
-            <Text style={styles.noParticipants}>Sé el primero</Text>
+            <Text style={styles.beFirst}>Sé el primero</Text>
           )}
         </View>
 
         {/* Join button */}
         {plan.isCreator ? (
-          <View style={[styles.joinButton, styles.joinButtonCreator]}>
-            <Text style={[styles.joinButtonText, styles.joinButtonTextCreator]}>Tu Plan</Text>
+          <View style={[styles.btn, styles.btnCreator]}>
+            <Text style={[styles.btnText, styles.btnTextCreator]}>Tu Plan</Text>
           </View>
         ) : (
           <TouchableOpacity
             style={[
-              styles.joinButton,
-              plan.isParticipating && styles.joinButtonActive,
-              plan.isRequested && styles.joinButtonRequested,
-              plan.isFull && !plan.isParticipating && !plan.isRequested && styles.joinButtonDisabled,
+              styles.btn,
+              plan.isParticipating && styles.btnJoined,
+              plan.isRequested  && styles.btnRequested,
+              plan.isFull && !plan.isParticipating && !plan.isRequested && styles.btnFull,
             ]}
             onPress={onJoin}
             disabled={plan.isFull && !plan.isParticipating && !plan.isRequested}
             activeOpacity={0.8}>
             <Text style={[
-              styles.joinButtonText,
-              plan.isParticipating && styles.joinButtonTextActive,
-              plan.isRequested && styles.joinButtonTextRequested,
+              styles.btnText,
+              plan.isParticipating && styles.btnTextJoined,
+              plan.isRequested  && styles.btnTextRequested,
+              plan.isFull && !plan.isParticipating && !plan.isRequested && styles.btnTextFull,
             ]}>
-              {plan.isParticipating ? '✓ Unido' : plan.isRequested ? '⏳ Solicitado' : plan.isFull ? 'Lleno' : '¡Me uno!'}
+              {plan.isParticipating ? '✓ Unido'
+                : plan.isRequested  ? '⏳ Pedido'
+                : plan.isFull       ? 'Lleno'
+                : '¡Me uno!'}
             </Text>
           </TouchableOpacity>
         )}
@@ -174,192 +181,178 @@ export const PlanCard: React.FC<PlanCardProps> = ({ plan, onPress, onJoin }) => 
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 24,
-    padding: 20,
-    minHeight: 220,
-    justifyContent: 'space-between',
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
-  topBadgesContainer: {
+
+  // ── Top colored block ──────────────────
+  top: {
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emoji: {
+    fontSize: 36,
+  },
+  countBadge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    flexDirection: 'row',
-    gap: 6,
-  },
-  badge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
+    top: 8,
+    right: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    gap: 3,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
-  fullBadge: {
+  countBadgeFull: {
     backgroundColor: '#EF4444',
-    borderColor: '#EF4444',
   },
-  badgeText: {
+  countText: {
     fontSize: 11,
     fontFamily: FONT_FAMILY.BOLD,
     color: colors.primary,
   },
-  fullBadgeText: {
+  countTextFull: {
     color: colors.white,
   },
-  content: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  emoji: {
-    fontSize: 32,
-  },
-  title: {
-    fontSize: 16,
-    fontFamily: FONT_FAMILY.BOLD,
-    color: colors.primaryDark,
-    textAlign: 'center',
-    marginBottom: 2,
-    lineHeight: 20,
-  },
-  subtitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+
+  // ── Body ──────────────────────────────
+  body: {
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 6,
     gap: 4,
   },
-  subtitle: {
-    fontSize: 12,
-    fontFamily: FONT_FAMILY.MEDIUM,
-    color: '#6B7280',
+  metaTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
   },
-  dot: {
-    fontSize: 12,
-    color: '#6B7280',
+  catChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  catLabel: {
+    fontSize: 10,
+    fontFamily: FONT_FAMILY.SEMI_BOLD,
+    letterSpacing: 0.2,
+  },
+  time: {
+    fontSize: 10,
+    fontFamily: FONT_FAMILY.MEDIUM,
+    color: '#9CA3AF',
+  },
+  title: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.primaryDark,
+    lineHeight: 17,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    borderRadius: 10,
-    maxWidth: '100%',
+    gap: 3,
   },
   locationText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: FONT_FAMILY.MEDIUM,
-    color: '#6B7280',
+    color: '#9CA3AF',
     flex: 1,
   },
+
+  // ── Footer ────────────────────────────
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.3)',
-    paddingTop: 12,
+    borderTopColor: '#F1F5F9',
+    gap: 6,
   },
-  avatarsContainer: {
+  avatarsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexShrink: 1,
+    flex: 1,
   },
   avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: colors.white,
   },
-  avatarPlaceholder: {
-    backgroundColor: '#F3F4F6',
+  avatarOverlap: {
+    marginLeft: -7,
+  },
+  avatarEmpty: {
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  additionalCount: {
+  moreCount: {
     marginLeft: 4,
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: FONT_FAMILY.SEMI_BOLD,
-    color: '#6B7280',
+    color: '#94A3B8',
   },
-  noParticipants: {
-    fontSize: 11,
-    fontFamily: FONT_FAMILY.SEMI_BOLD,
-    color: '#9CA3AF',
+  beFirst: {
+    fontSize: 10,
+    fontFamily: FONT_FAMILY.MEDIUM,
+    color: '#CBD5E1',
+    fontStyle: 'italic',
   },
-  joinButton: {
+
+  // ── Join button ───────────────────────
+  btn: {
     backgroundColor: colors.accent,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
     shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 4,
     elevation: 2,
-    flexShrink: 0,
   },
-  joinButtonCreator: {
+  btnCreator: {
+    backgroundColor: `${colors.primary}12`,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  btnJoined: {
     backgroundColor: `${colors.primary}15`,
     shadowOpacity: 0,
     elevation: 0,
   },
-  joinButtonActive: {
-    backgroundColor: `${colors.primary}20`,
-  },
-  joinButtonRequested: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+  btnRequested: {
+    backgroundColor: 'rgba(245,158,11,0.12)',
     shadowOpacity: 0,
     elevation: 0,
   },
-  joinButtonDisabled: {
-    backgroundColor: '#E5E7EB',
+  btnFull: {
+    backgroundColor: '#F1F5F9',
+    shadowOpacity: 0,
+    elevation: 0,
   },
-  joinButtonText: {
-    fontSize: 14,
+  btnText: {
+    fontSize: 12,
     fontFamily: FONT_FAMILY.BOLD,
     color: colors.primaryDark,
   },
-  joinButtonTextCreator: {
-    color: colors.primary,
-  },
-  joinButtonTextActive: {
-    color: colors.primary,
-  },
-  joinButtonTextRequested: {
-    color: '#B45309',
-  },
+  btnTextCreator: { color: colors.primary },
+  btnTextJoined:  { color: colors.primary },
+  btnTextRequested: { color: '#B45309' },
+  btnTextFull:    { color: '#94A3B8' },
 });

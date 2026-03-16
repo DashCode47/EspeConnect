@@ -8,6 +8,9 @@ import { LogoutUseCase } from '../../domain/usecases/logout.usecase';
 import { GetCurrentUserUseCase } from '../../domain/usecases/get_current_user.usecase';
 import { UpdateProfileUseCase } from '../../domain/usecases/update_profile.usecase';
 import { UpdateAvatarUseCase } from '../../domain/usecases/update_avatar.usecase';
+import { ForgotPasswordUseCase } from '../../domain/usecases/forgot_password.usecase';
+import { VerifyOtpUseCase } from '../../domain/usecases/verify_otp.usecase';
+import { ResetPasswordUseCase } from '../../domain/usecases/reset_password.usecase';
 import { NoParams } from '../../../../core/usecase/usecase';
 
 const repository = new AuthRepositoryImpl();
@@ -17,6 +20,9 @@ const logoutUseCase = new LogoutUseCase(repository);
 const getCurrentUserUseCase = new GetCurrentUserUseCase(repository);
 const updateProfileUseCase = new UpdateProfileUseCase(repository);
 const updateAvatarUseCase = new UpdateAvatarUseCase(repository);
+const forgotPasswordUseCase = new ForgotPasswordUseCase(repository);
+const verifyOtpUseCase = new VerifyOtpUseCase(repository);
+const resetPasswordUseCase = new ResetPasswordUseCase(repository);
 
 interface AuthStore {
   user: AuthUser | null;
@@ -29,6 +35,9 @@ interface AuthStore {
   fetchCurrentUser: () => Promise<void>;
   updateProfile: (data: Partial<AuthUser>) => Promise<void>;
   updateAvatar: (params: { base64: string; fileExt: string }) => Promise<string>;
+  forgotPassword: (email: string) => Promise<void>;
+  verifyOtp: (email: string, token: string) => Promise<void>;
+  resetPassword: (newPassword: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -101,6 +110,36 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return result.value;
     } else {
       set({ error: result.value.message, isLoading: false });
+      throw new Error(result.value.message);
+    }
+  },
+
+  forgotPassword: async (email: string) => {
+    set({ isLoading: true, error: null });
+    const result = await forgotPasswordUseCase.execute(email);
+    set({ isLoading: false });
+    if (result.isLeft()) {
+      set({ error: result.value.message });
+      throw new Error(result.value.message);
+    }
+  },
+
+  verifyOtp: async (email: string, token: string) => {
+    set({ isLoading: true, error: null });
+    const result = await verifyOtpUseCase.execute({ email, token });
+    set({ isLoading: false });
+    if (result.isLeft()) {
+      set({ error: result.value.message });
+      throw new Error(result.value.message);
+    }
+  },
+
+  resetPassword: async (newPassword: string) => {
+    set({ isLoading: true, error: null });
+    const result = await resetPasswordUseCase.execute(newPassword);
+    set({ isLoading: false });
+    if (result.isLeft()) {
+      set({ error: result.value.message });
       throw new Error(result.value.message);
     }
   },

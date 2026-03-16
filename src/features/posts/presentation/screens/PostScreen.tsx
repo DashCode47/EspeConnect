@@ -4,7 +4,6 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
-  ActivityIndicator,
   Text,
   TouchableOpacity,
   TextInput,
@@ -19,6 +18,7 @@ import { PostType } from '../../domain/entities/post.entity';
 import { MarketplaceCard } from '../../../marketplace/presentation/components/MarketplaceCard';
 import { ProductCategory } from '../../../marketplace/domain/entities/product.entity';
 import { usePostStore, useMarketplaceStore, useAuthStore } from '../../../../store';
+import { PostsSkeletonLoader } from '../components/PostsSkeletonLoader';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../../../config/colors';
@@ -91,11 +91,7 @@ export const PostScreen = () => {
 
   const renderMarketplaceGrid = () => {
     if (loading && products.length === 0) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      );
+      return <PostsSkeletonLoader />;
     }
 
     if (products.length === 0) {

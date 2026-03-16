@@ -150,6 +150,36 @@ export class AuthRepositoryImpl implements IAuthRepository {
     }
   }
 
+  async forgotPassword(email: string): Promise<Either<Failure, void>> {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) return left({ message: error.message });
+      return right(undefined);
+    } catch (error: any) {
+      return left({ message: error.message || 'Error al enviar el correo' });
+    }
+  }
+
+  async verifyOtp(email: string, token: string): Promise<Either<Failure, void>> {
+    try {
+      const { error } = await supabase.auth.verifyOtp({ email, token, type: 'recovery' });
+      if (error) return left({ message: error.message });
+      return right(undefined);
+    } catch (error: any) {
+      return left({ message: error.message || 'Código inválido' });
+    }
+  }
+
+  async resetPassword(newPassword: string): Promise<Either<Failure, void>> {
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return left({ message: error.message });
+      return right(undefined);
+    } catch (error: any) {
+      return left({ message: error.message || 'Error al cambiar la contraseña' });
+    }
+  }
+
   async updateAvatar({ base64, fileExt }: { base64: string; fileExt: string }): Promise<Either<Failure, string>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();

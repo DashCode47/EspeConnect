@@ -9,7 +9,6 @@ import {
     StatusBar,
     Dimensions,
     Image,
-    ActivityIndicator,
     RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -21,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Promotion, Establishment } from '../../domain/entities/establishment.entity';
 import { BENEFIT_DETAILS } from '../../../../config/constants';
 import { useEstablishmentStore } from '../store/establishment.store';
+import { BenefitsSkeletonLoader } from '../components/BenefitsSkeletonLoader';
 
 type BenefitsScreenNavigationProp = NativeStackNavigationProp<BenefitsStackParamList>;
 
@@ -214,9 +214,7 @@ export const BenefitsScreen = () => {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Todos los beneficios</Text>
                     {loading ? (
-                        <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color={colors.primary} />
-                        </View>
+                        <BenefitsSkeletonLoader />
                     ) : promotionsWithEstablishments && promotionsWithEstablishments.length > 0 ? (
                         <View style={styles.masonryContainer}>
                             <View style={styles.masonryColumn}>

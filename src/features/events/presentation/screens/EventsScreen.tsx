@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  ActivityIndicator,
   Text,
   RefreshControl,
   FlatList,
@@ -21,6 +20,7 @@ import { globalStyles, FONT_FAMILY } from '../../../../config/globalStyles';
 import { useEventStore } from '../store/event.store';
 import { EventStackParamList } from '../../../../navigation/types';
 import { PlansTab } from '../components/PlansTab';
+import { EventsSkeletonLoader } from '../components/EventsSkeletonLoader';
 import { PlanDetailSheet } from '../components/PlanDetailSheet';
 import { usePlanStore } from '../store/plan.store';
 import { EventsHeader } from '../components/EventsHeader';
@@ -245,10 +245,7 @@ export const EventsScreen = () => {
 
             <View style={styles.eventsSection}>
               {loading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={colors.primary} />
-                  <Text style={styles.loadingText}>Cargando eventos...</Text>
-                </View>
+                <EventsSkeletonLoader />
               ) : eventsForSelectedDate.length === 0 ? (
                 <View style={styles.emptyContainer}>
                   <MaterialCommunityIcons name="calendar-blank" size={64} color="#D1D5DB" />

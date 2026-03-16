@@ -24,4 +24,7 @@ export interface IAuthRepository {
   isAuthenticated(): Promise<Either<Failure, boolean>>;
   updateProfile(profileData: Partial<AuthUser>): Promise<Either<Failure, AuthUser>>;
   updateAvatar(params: { base64: string; fileExt: string }): Promise<Either<Failure, string>>;
+  forgotPassword(email: string): Promise<Either<Failure, void>>;
+  verifyOtp(email: string, token: string): Promise<Either<Failure, void>>;
+  resetPassword(newPassword: string): Promise<Either<Failure, void>>;
 }

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   ScrollView,
   TouchableOpacity,
   Dimensions,
@@ -18,6 +17,7 @@ import { FONT_FAMILY } from '../../../../config/globalStyles';
 import { PlanCategory } from '../../domain/entities/plan.entity';
 import { usePlanStore } from '../store/plan.store';
 import { PlanCard } from './PlanCard';
+import { PlansSkeletonLoader } from './PlansSkeletonLoader';
 import { useState } from 'react';
 import { track } from '../../../../analytics/track';
 import { AnalyticsEvents } from '../../../../analytics/events';
@@ -127,12 +127,7 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
 
   const renderPlansGrid = () => {
     if (plansLoading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Cargando planes...</Text>
-        </View>
-      );
+      return <PlansSkeletonLoader />;
     }
 
     if (plans.length === 0) {

@@ -7,7 +7,6 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Text,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,6 +31,7 @@ import {
   RidesHeader,
   type TravelMode
 } from '../components';
+import { RidesSkeletonLoader } from '../components/RidesSkeletonLoader';
 
 type RidesScreenNavigationProp = NativeStackNavigationProp<RideStackParamList, 'RidesList'>;
 
@@ -224,9 +224,7 @@ export const RidesScreen = () => {
 
             {/* Trip Cards List */}
             {loading && filteredTrips.length === 0 ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
-              </View>
+              <RidesSkeletonLoader />
             ) : filteredTrips.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <MaterialCommunityIcons name="car-off" size={64} color="#D1D5DB" />
@@ -271,9 +269,7 @@ export const RidesScreen = () => {
 
             {/* Active Routes List */}
             {loadingMyTrips && filteredMyTrips.length === 0 ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
-              </View>
+              <RidesSkeletonLoader />
             ) : filteredMyTrips.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <MaterialCommunityIcons name="map-marker-off" size={64} color="#D1D5DB" />

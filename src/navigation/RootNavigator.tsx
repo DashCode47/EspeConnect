@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect, useRef } from 'react';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { AppState, AppStateStatus } from 'react-native';
 import { RootStackParamList } from './types';
 import { AuthNavigator } from './AuthNavigator';
 import { MainTabNavigator } from './MainTabNavigator';
@@ -12,61 +11,27 @@ import { useOnboardingStore } from '../features/onboarding/presentation/store/on
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export const navigationRef: any = React.createRef()
+export const navigationRef = React.createRef<NavigationContainerRef<RootStackParamList>>();
 
 export const RootNavigator = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const {
-    isCompleted: onboardingCompleted,
-    isLoading: onboardingLoading,
-    checkOnboardingStatus
-  } = useOnboardingStore();
+  const { isCompleted: onboardingCompleted, checkOnboardingStatus } = useOnboardingStore();
+  const navigatorReady = useRef(false);
 
   useEffect(() => {
-    // Check on mount
     checkOnboardingStatus();
-
-    // Listen for app state changes (when app comes to foreground)
-    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'active') {
-        checkOnboardingStatus();
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
   }, [checkOnboardingStatus]);
 
-  // Navigate when authentication state changes
+  // Navigate when authentication or onboarding state changes after the navigator is ready
   useEffect(() => {
-    if (!authLoading && onboardingCompleted !== null && navigationRef.current) {
-      // Small delay to ensure state is fully propagated
-      const timeoutId = setTimeout(() => {
-        if (!navigationRef.current) return;
-
-        if (isAuthenticated) {
-          // If authenticated, navigate to Main
-          navigationRef.current.reset({
-            index: 0,
-            routes: [{ name: 'Main' }],
-          });
-        } else if (!onboardingCompleted) {
-          // If onboarding not completed, navigate to Onboarding
-          navigationRef.current.reset({
-            index: 0,
-            routes: [{ name: 'Onboarding' }],
-          });
-        } else {
-          // If not authenticated, navigate to Auth
-          navigationRef.current.reset({
-            index: 0,
-            routes: [{ name: 'Auth' }],
-          });
-        }
-      }, 50);
-
-      return () => clearTimeout(timeoutId);
+    if (!authLoading && onboardingCompleted !== null && navigatorReady.current) {
+      if (isAuthenticated) {
+        navigationRef.current?.reset({ index: 0, routes: [{ name: 'Main' }] });
+      } else if (!onboardingCompleted) {
+        navigationRef.current?.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
+      } else {
+        navigationRef.current?.reset({ index: 0, routes: [{ name: 'Auth' }] });
+      }
     }
   }, [isAuthenticated, authLoading, onboardingCompleted]);
 
@@ -74,19 +39,16 @@ export const RootNavigator = () => {
     return <SplashScreen />;
   }
 
-  // Determine initial route based on onboarding and auth status
   const getInitialRouteName = (): keyof RootStackParamList => {
-    if (isAuthenticated) {
-      return 'Main';
-    }
-    if (!onboardingCompleted) {
-      return 'Onboarding';
-    }
+    if (isAuthenticated) return 'Main';
+    if (!onboardingCompleted) return 'Onboarding';
     return 'Auth';
   };
 
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => { navigatorReady.current = true; }}>
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
         initialRouteName={getInitialRouteName()}>
