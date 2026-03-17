@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../features/auth/presentation/store/auth.store';
 import { saveUserFCMToken } from '../services/notificationService';
 import { identifyUser, resetUser } from '../analytics/track';
+import * as Sentry from '@sentry/react-native';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -30,6 +31,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name: storeUser.name,
         email: storeUser.email,
         career: storeUser.career,
+      });
+      Sentry.setUser({
+        id: storeUser.id,
+        email: storeUser.email,
+        username: storeUser.name,
       });
     }
   }, [storeUser]);
@@ -76,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await useAuthStore.getState().logout();
       resetUser();
+      Sentry.setUser(null);
     } catch (error) {
       console.error('Error during logout:', error);
     }

@@ -16,8 +16,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { colors } from '../../../../config/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { globalStyles, FONT_FAMILY } from '../../../../config/globalStyles';
-import { navigationRef } from '../../../../navigation/RootNavigator';
-import { BENEFIT_DETAILS, BENEFIT_STACK } from '../../../../config/constants';
+import { BENEFIT_STACK } from '../../../../config/constants';
 import { HorizontalIcon } from '../../../../assets/svg/HorizontalIcon';
 import useHome from '../hooks/useHome';
 import { track } from '../../../../analytics/track';
@@ -57,16 +56,13 @@ export const HomeScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    console.log('Total Establishments:', establishments.length);
     if (establishments.length > 0) {
       const promotionsData: Array<{ promotion: Promotion; establishment: Establishment }> = [];
       establishments.forEach(establishment => {
-        console.log(`Establishment ${establishment.name} has ${establishment.promotions?.length} promos`);
         (establishment.promotions || []).filter(p => p.isActive).forEach(promotion => {
           promotionsData.push({ promotion, establishment });
         });
       });
-      console.log('Total valid promotions found:', promotionsData.length);
       setPromotionsWithEstablishments(promotionsData.slice(0, 10));
     }
   }, [establishments]);
@@ -190,7 +186,7 @@ export const HomeScreen: React.FC = () => {
               <TouchableOpacity
                 onPress={() => {
                   track(AnalyticsEvents.HOME_BENEFITS_SEE_ALL);
-                  navigation.navigate(BENEFIT_STACK as any);
+                  navigation.navigate(BENEFIT_STACK);
                 }}
                 activeOpacity={0.7}
               >
@@ -211,10 +207,7 @@ export const HomeScreen: React.FC = () => {
                       establishmentId: item.establishment.id,
                       establishmentName: item.establishment.name,
                     });
-                    navigationRef.current?.navigate(BENEFIT_STACK, {
-                      screen: BENEFIT_DETAILS,
-                      params: { data: { promotion: item.promotion, establishment: item.establishment } },
-                    });
+                    navigation.navigate(BENEFIT_STACK);
                   }}
                 />
               ))

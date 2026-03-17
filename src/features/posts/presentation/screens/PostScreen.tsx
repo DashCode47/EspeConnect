@@ -45,7 +45,6 @@ export const PostScreen = () => {
   const { user } = useAuthStore();
   const { posts, isLoading: postsLoading, fetchPosts } = usePostStore();
   const { products, isLoading: productsLoading, fetchProducts } = useMarketplaceStore();
-  console.log('=', products)
   const loading = postsLoading || productsLoading;
 
   useEffect(() => {

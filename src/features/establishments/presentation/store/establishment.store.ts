@@ -31,7 +31,6 @@ export const useEstablishmentStore = create<EstablishmentState>((set, get) => ({
   fetchEstablishments: async (params) => {
     set({ isLoading: true, error: null });
     const result = await repository.getEstablishments(params);
-    console.log(result);
     result.fold(
       (failure) => set({ error: failure.message, isLoading: false }),
       (data) => set({ 

@@ -16,6 +16,7 @@ import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {theme} from './src/config/theme';
 import {useNotifications} from './src/hooks/useNotifications';
 import {initMixpanel} from './src/config/mixpanel';
+import { MaintenanceModal } from './src/components/common/MaintenanceModal';
 import * as Sentry from '@sentry/react-native';
 
 Sentry.init({
@@ -29,8 +30,8 @@ Sentry.init({
   enableLogs: true,
   integrations: [Sentry.feedbackIntegration()],
 
-  // Tracing - set to 1.0 for testing, lower in production (e.g. 0.2)
-  tracesSampleRate: 1.0,
+  // Tracing - set to 1.0 for testing, lower in production to save performance
+  tracesSampleRate: __DEV__ ? 1.0 : 0.05,
 
   // uncomment the line below to enable Spotlight (https://spotlightjs.com)
   // spotlight: __DEV__,
@@ -50,6 +51,7 @@ const App = () => {
           <AuthProvider>
             <NavbarProvider>
               <RootNavigator />
+              <MaintenanceModal />
             </NavbarProvider>
           </AuthProvider>
         </PaperProvider>

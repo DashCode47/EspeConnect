@@ -37,6 +37,9 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+*.jks
+android/gradle.properties
+android/app/google-services.json
 
 # node.js
 #

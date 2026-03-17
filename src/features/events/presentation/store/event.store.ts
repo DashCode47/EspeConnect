@@ -33,7 +33,6 @@ export const useEventStore = create<EventState>((set, get) => ({
   fetchEvents: async (params) => {
     set({ isLoading: true, error: null });
     const result = await repository.getEvents(params);
-    console.log("events", result);
     result.fold(
       (failure) => set({ error: failure.message, isLoading: false }),
       (events) => set({ events, isLoading: false })

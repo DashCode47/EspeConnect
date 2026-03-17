@@ -25,7 +25,6 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const { products, total } = await productRepository.getProducts(params);
-      console.log('products', products)
       set({ products, totalProducts: total, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });

@@ -131,19 +131,15 @@ export const BenefitsScreen = () => {
     const promotionsWithEstablishments = useMemo(() => {
         const allPromotionsData: Array<{ promotion: Promotion; establishment: Establishment }> = [];
 
-        console.log(`BenefitsScreen: Processing ${establishments.length} establishments`);
         establishments.forEach(establishment => {
             const activePromotions = (establishment.promotions || []).filter(promo => promo.isActive);
             if (activePromotions.length > 0) {
-                console.log(`BenefitsScreen: Found ${activePromotions.length} active promos for ${establishment.name}`);
             }
 
             activePromotions.forEach(promotion => {
                 allPromotionsData.push({ promotion, establishment });
             });
         });
-
-        console.log(`BenefitsScreen: Total promotions found before filter: ${allPromotionsData.length}`);
 
         const categoryMap: { [key: string]: string } = {
             'Todos': 'ALL',
@@ -160,7 +156,6 @@ export const BenefitsScreen = () => {
         }
 
         const filtered = allPromotionsData.filter(item => item.promotion.category === categoryFilter);
-        console.log(`BenefitsScreen: Filtered to ${filtered.length} promos for category ${selectedCategory}`);
         return filtered;
     }, [establishments, selectedCategory]);
 

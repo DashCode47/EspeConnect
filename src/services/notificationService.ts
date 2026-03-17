@@ -1,4 +1,4 @@
-import messaging from '@react-native-firebase/messaging';
+import { getMessaging, requestPermission, getToken, onMessage, onNotificationOpenedApp, AuthorizationStatus } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
@@ -21,17 +21,17 @@ export async function sendPushToUser(
 
 // Solicitar permisos (iOS)
 export async function requestNotificationPermission(): Promise<boolean> {
-  const authStatus = await messaging().requestPermission();
+  const authStatus = await requestPermission(getMessaging());
   return (
-    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-    authStatus === messaging.AuthorizationStatus.PROVISIONAL
+    authStatus === AuthorizationStatus.AUTHORIZED ||
+    authStatus === AuthorizationStatus.PROVISIONAL
   );
 }
 
 // Obtener el FCM token del dispositivo
 export async function getFCMToken(): Promise<string | null> {
   try {
-    const token = await messaging().getToken();
+    const token = await getToken(getMessaging());
     return token;
   } catch (error) {
     console.error('Error getting FCM token:', error);
@@ -73,8 +73,10 @@ export async function displayLocalNotification(title: string, body: string) {
 
 // Registrar listeners de mensajes
 export function registerMessageHandlers() {
+  const m = getMessaging();
+
   // App en foreground
-  const unsubscribeForeground = messaging().onMessage(async remoteMessage => {
+  const unsubscribeForeground = onMessage(m, async remoteMessage => {
     const { title, body } = remoteMessage.notification ?? {};
     if (title && body) {
       await displayLocalNotification(title, body);
@@ -82,7 +84,7 @@ export function registerMessageHandlers() {
   });
 
   // App abierta desde una notif (background → foreground)
-  messaging().onNotificationOpenedApp(remoteMessage => {
+  onNotificationOpenedApp(m, remoteMessage => {
     console.log('Notification opened from background:', remoteMessage);
   });
 

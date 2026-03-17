@@ -86,7 +86,6 @@ const BenefitDetail = () => {
     }
   };
 
-  console.log(establishment);
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />

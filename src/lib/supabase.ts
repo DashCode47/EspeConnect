@@ -22,22 +22,12 @@ try {
   console.error('Error accessing Config - Native module might not be linked:', error);
 }
 
-// Validate that environment variables are set
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    '⚠️ Missing Supabase environment variables! Check your .env file.\n' +
-    'The app will likely fail when calling Supabase services.'
-  );
+  console.error('⚠️ [Supabase] Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env — using placeholders to prevent crash.');
+  supabaseUrl = supabaseUrl || 'https://placeholder.supabase.co';
+  supabaseAnonKey = supabaseAnonKey || 'placeholder-key';
 }
 
-/**
- * Supabase Client Instance
- *
- * This client is configured to work with React Native, including:
- * - AsyncStorage for session persistence
- * - Auto-refresh of authentication tokens
- * - Row Level Security (RLS) policies
- */
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     // Use AsyncStorage to persist the user session

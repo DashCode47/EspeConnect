@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { getAnalytics, logEvent } from '@react-native-firebase/analytics';
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
@@ -17,6 +18,7 @@ export const RootNavigator = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { isCompleted: onboardingCompleted, checkOnboardingStatus } = useOnboardingStore();
   const navigatorReady = useRef(false);
+  const routeNameRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     checkOnboardingStatus();
@@ -48,7 +50,23 @@ export const RootNavigator = () => {
   return (
     <NavigationContainer
       ref={navigationRef}
-      onReady={() => { navigatorReady.current = true; }}>
+      onReady={() => {
+        navigatorReady.current = true;
+        routeNameRef.current = navigationRef.current?.getCurrentRoute()?.name;
+      }}
+      onStateChange={async () => {
+        const previousRouteName = routeNameRef.current;
+        const currentRouteName = navigationRef.current?.getCurrentRoute()?.name;
+
+        if (previousRouteName !== currentRouteName && currentRouteName) {
+          await logEvent(getAnalytics(), 'screen_view', {
+            screen_name: currentRouteName || 'Unknown',
+            screen_class: currentRouteName || 'Unknown',
+          });
+        }
+        routeNameRef.current = currentRouteName;
+      }}
+    >
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
         initialRouteName={getInitialRouteName()}>
