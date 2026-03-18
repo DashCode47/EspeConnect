@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Linking, Platform } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, StyleSheet, Linking, Platform, AppState, AppStateStatus } from 'react-native';
 import { Text, Button, useTheme } from 'react-native-paper';
 import DeviceInfo from 'react-native-device-info';
 import { getAppConfig, initializeRemoteConfig, AppConfig } from '../../services/remoteConfigService';
+import { getRemoteConfig, setConfigSettings, fetchAndActivate } from '@react-native-firebase/remote-config';
 
 // Helper function to compare semver versions (e.g. 1.0.3 < 1.0.4)
 const isVersionLower = (current: string, required: string) => {
@@ -18,9 +19,17 @@ const isVersionLower = (current: string, required: string) => {
   return false;
 };
 
+const forceRefreshConfig = async () => {
+  const rc = getRemoteConfig();
+  await setConfigSettings(rc, { minimumFetchIntervalMillis: 0 });
+  await fetchAndActivate(rc);
+  await setConfigSettings(rc, { minimumFetchIntervalMillis: __DEV__ ? 0 : 3600000 });
+};
+
 export const MaintenanceModal = () => {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const theme = useTheme();
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -29,6 +38,30 @@ export const MaintenanceModal = () => {
     };
     fetchConfig();
   }, []);
+
+  // When modal is blocking (force update / maintenance), re-fetch every time
+  // the user comes back to the app (e.g. returning from the Play Store after updating)
+  useEffect(() => {
+    if (!config) return;
+
+    const currentVersion = DeviceInfo.getVersion();
+    const isBlocking =
+      config.status === 'maintenance' ||
+      config.status === 'force_update' ||
+      isVersionLower(currentVersion, config.minRequiredVersion);
+
+    if (!isBlocking) return;
+
+    const subscription = AppState.addEventListener('change', async (nextState: AppStateStatus) => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active') {
+        await forceRefreshConfig();
+        setConfig(getAppConfig());
+      }
+      appState.current = nextState;
+    });
+
+    return () => subscription.remove();
+  }, [config]);
 
   // If we haven't fetched yet, do nothing
   if (!config) {

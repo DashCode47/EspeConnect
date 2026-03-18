@@ -8,6 +8,7 @@ export interface AppConfig {
   updateUrlAndroid: string;
   updateUrlIos: string;
   minRequiredVersion: string;
+  allowedEmailDomains: string[];
 }
 
 const DEFAULT_CONFIG = {
@@ -46,5 +47,9 @@ export const getAppConfig = (): AppConfig => {
     updateUrlAndroid: getValue(rc, 'update_url_android').asString(),
     updateUrlIos: getValue(rc, 'update_url_ios').asString(),
     minRequiredVersion: getValue(rc, 'min_required_version').asString() || '1.0.0',
+    allowedEmailDomains: getValue(rc, 'allowed_email_domains').asString()
+      .split(',')
+      .map(d => d.trim())
+      .filter(Boolean),
   };
 };

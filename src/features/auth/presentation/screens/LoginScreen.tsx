@@ -5,11 +5,11 @@ import {
     StyleSheet,
     KeyboardAvoidingView,
     Platform,
-    Alert,
     TextInput,
     TouchableOpacity,
     ScrollView,
     SafeAreaView,
+    Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -28,12 +28,15 @@ export const LoginScreen = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [rememberPassword, setRememberPassword] = useState(false);
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
     const { login, isLoading } = useAuthStore();
     const navigation = useNavigation<LoginScreenNavigationProp>();
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Por favor completa todos los campos');
+            setErrorMessage('Por favor completa todos los campos');
+            setShowErrorModal(true);
             return;
         }
 
@@ -42,7 +45,8 @@ export const LoginScreen = () => {
             // Navigation will be handled automatically by AuthContext's onAuthStateChange
         } catch (error: any) {
             console.error('Login error:', error.message);
-            Alert.alert('Error', error.message || 'Error al iniciar sesión');
+            setErrorMessage(error.message || 'Error al iniciar sesión');
+            setShowErrorModal(true);
         }
     };
 
@@ -149,6 +153,29 @@ export const LoginScreen = () => {
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {/* Error Modal */}
+            <Modal
+                visible={showErrorModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowErrorModal(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalIconContainer}>
+                            <MaterialCommunityIcons name="lock-alert-outline" size={64} color={colors.error} />
+                        </View>
+                        <Text style={styles.modalTitle}>Credenciales incorrectas</Text>
+                        <Text style={styles.modalMessage}>{errorMessage}</Text>
+                        <TouchableOpacity
+                            style={styles.modalButton}
+                            onPress={() => setShowErrorModal(false)}
+                            activeOpacity={0.8}>
+                            <Text style={styles.modalButtonText}>Intentar de nuevo</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -280,5 +307,57 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: colors.primary,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        backgroundColor: colors.white,
+        borderRadius: 20,
+        padding: 32,
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: 340,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    modalIconContainer: {
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: colors.primaryDark,
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    modalMessage: {
+        fontSize: 16,
+        fontWeight: '400',
+        color: '#666',
+        textAlign: 'center',
+        lineHeight: 24,
+        marginBottom: 24,
+    },
+    modalButton: {
+        backgroundColor: colors.error,
+        borderRadius: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 32,
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    modalButtonText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: colors.white,
     },
 });

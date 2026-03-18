@@ -18,6 +18,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { useAuthStore } from '../store/auth.store';
 import { AuthStackParamList } from '../../../../navigation/types';
 import { colors } from '../../../../config/colors';
+import { getAppConfig } from '../../../../services/remoteConfigService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CAREER_LIST } from '../../../../types/career.types';
 
@@ -51,6 +52,8 @@ export const RegisterScreen = () => {
     const [showCareerModal, setShowCareerModal] = useState(false);
     const [careerSearch, setCareerSearch] = useState('');
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showDomainModal, setShowDomainModal] = useState(false);
+    const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
     const [acceptTerms, setAcceptTerms] = useState(false);
     const { register, isLoading } = useAuthStore();
     const navigation = useNavigation<RegisterScreenNavigationProp>();
@@ -74,6 +77,18 @@ export const RegisterScreen = () => {
         if (password !== confirmPassword) {
             Alert.alert('Error', 'Las contraseñas no coinciden');
             return;
+        }
+
+        const { allowedEmailDomains } = getAppConfig();
+        if (allowedEmailDomains.length > 0) {
+            const isAllowed = allowedEmailDomains.some(domain =>
+                email.toLowerCase().endsWith(domain.toLowerCase())
+            );
+            if (!isAllowed) {
+                setAllowedDomains(allowedEmailDomains);
+                setShowDomainModal(true);
+                return;
+            }
         }
 
         if (interests.length === 0) {
@@ -431,6 +446,32 @@ export const RegisterScreen = () => {
                                 )}
                             </TouchableOpacity>
                         ))}
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Domain Not Allowed Modal */}
+            <Modal
+                visible={showDomainModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowDomainModal(false)}>
+                <View style={styles.successModalOverlay}>
+                    <View style={styles.successModalContent}>
+                        <View style={styles.successIconContainer}>
+                            <MaterialCommunityIcons name="email-alert-outline" size={64} color={colors.error} />
+                        </View>
+                        <Text style={styles.successTitle}>Correo no permitido</Text>
+                        <Text style={styles.successMessage}>
+                            Solo puedes registrarte con los siguientes dominios:{'\n'}
+                            {allowedDomains.join('\n')}
+                        </Text>
+                        <TouchableOpacity
+                            style={[styles.successButton, { backgroundColor: colors.error }]}
+                            onPress={() => setShowDomainModal(false)}
+                            activeOpacity={0.8}>
+                            <Text style={styles.successButtonText}>Entendido</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
