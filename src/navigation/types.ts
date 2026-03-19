@@ -13,6 +13,7 @@ export type AuthStackParamList = {
   ForgotPassword: undefined;
   VerifyOtp: { email: string };
   ResetPassword: undefined;
+  WebViewScreen: { url: string; title: string };
 };
 
 export type MainTabParamList = {

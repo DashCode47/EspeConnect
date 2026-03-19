@@ -5,7 +5,6 @@ import {
     StyleSheet,
     KeyboardAvoidingView,
     Platform,
-    Alert,
     ScrollView,
     TextInput,
     TouchableOpacity,
@@ -55,8 +54,17 @@ export const RegisterScreen = () => {
     const [showDomainModal, setShowDomainModal] = useState(false);
     const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
     const [acceptTerms, setAcceptTerms] = useState(false);
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [errorTitle, setErrorTitle] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
     const { register, isLoading } = useAuthStore();
     const navigation = useNavigation<RegisterScreenNavigationProp>();
+
+    const showError = (title: string, message: string) => {
+        setErrorTitle(title);
+        setErrorMessage(message);
+        setShowErrorModal(true);
+    };
 
     const toggleInterest = (interest: string) => {
         if (interests.includes(interest)) {
@@ -64,18 +72,18 @@ export const RegisterScreen = () => {
         } else if (interests.length < 5) {
             setInterests([...interests, interest]);
         } else {
-            Alert.alert('Límite alcanzado', 'Puedes seleccionar hasta 5 intereses');
+            showError('Límite alcanzado', 'Puedes seleccionar hasta 5 intereses');
         }
     };
 
     const handleRegister = async () => {
         if (!name || !faculty || !email || !password || !confirmPassword || !gender) {
-            Alert.alert('Error', 'Por favor completa todos los campos');
+            showError('Campos incompletos', 'Por favor completa todos los campos');
             return;
         }
 
         if (password !== confirmPassword) {
-            Alert.alert('Error', 'Las contraseñas no coinciden');
+            showError('Contraseñas distintas', 'Las contraseñas no coinciden');
             return;
         }
 
@@ -92,12 +100,12 @@ export const RegisterScreen = () => {
         }
 
         if (interests.length === 0) {
-            Alert.alert('Error', 'Por favor selecciona al menos un interés');
+            showError('Sin intereses', 'Por favor selecciona al menos un interés');
             return;
         }
 
         if (!acceptTerms) {
-            Alert.alert('Error', 'Debes aceptar los términos y condiciones');
+            showError('Términos requeridos', 'Debes aceptar los términos y condiciones');
             return;
         }
 
@@ -112,7 +120,7 @@ export const RegisterScreen = () => {
             });
             setShowSuccessModal(true);
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Error al registrarse');
+            showError('Error al registrarse', error.message || 'Ocurrió un error inesperado');
         }
     };
 
@@ -310,26 +318,43 @@ export const RegisterScreen = () => {
                     </View>
 
                     {/* Terms and Conditions Checkbox */}
-                    <TouchableOpacity
-                        style={styles.checkboxContainer}
-                        onPress={() => setAcceptTerms(!acceptTerms)}
-                        activeOpacity={0.7}>
-                        <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
-                            {acceptTerms && (
-                                <MaterialCommunityIcons name="check" size={16} color={colors.white} />
-                            )}
-                        </View>
+                    <View style={styles.checkboxContainer}>
+                        <TouchableOpacity
+                            onPress={() => setAcceptTerms(!acceptTerms)}
+                            activeOpacity={0.7}>
+                            <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
+                                {acceptTerms && (
+                                    <MaterialCommunityIcons name="check" size={16} color={colors.white} />
+                                )}
+                            </View>
+                        </TouchableOpacity>
                         <Text style={styles.checkboxLabel}>
-                            Acepto{' '}
-                            <Text style={styles.termsLink}>términos y condiciones</Text>
+                            Acepto los{' '}
+                            <Text
+                                style={styles.termsLink}
+                                onPress={() => navigation.navigate('WebViewScreen', {
+                                    url: 'https://aypaifpbtykozsurpoyq.supabase.co/storage/v1/object/public/docs/terms-and-conditions.html',
+                                    title: 'Términos y Condiciones',
+                                })}>
+                                términos y condiciones
+                            </Text>
+                            {' '}y la{' '}
+                            <Text
+                                style={styles.termsLink}
+                                onPress={() => navigation.navigate('WebViewScreen', {
+                                    url: 'https://aypaifpbtykozsurpoyq.supabase.co/storage/v1/object/public/docs/privacy-policy.html',
+                                    title: 'Política de Privacidad',
+                                })}>
+                                política de privacidad
+                            </Text>
                         </Text>
-                    </TouchableOpacity>
+                    </View>
 
                     {/* Register Button */}
                     <TouchableOpacity
-                        style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
+                        style={[styles.registerButton, (isLoading || !acceptTerms) && styles.registerButtonDisabled]}
                         onPress={handleRegister}
-                        disabled={isLoading}
+                        disabled={isLoading || !acceptTerms}
                         activeOpacity={0.8}>
                         <Text style={styles.registerButtonText}>
                             {isLoading ? 'Registrando...' : 'Registrarse'}
@@ -496,6 +521,29 @@ export const RegisterScreen = () => {
                             onPress={handleSuccessModalClose}
                             activeOpacity={0.8}>
                             <Text style={styles.successButtonText}>Continuar</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Error Modal */}
+            <Modal
+                visible={showErrorModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowErrorModal(false)}>
+                <View style={styles.successModalOverlay}>
+                    <View style={styles.successModalContent}>
+                        <View style={styles.successIconContainer}>
+                            <MaterialCommunityIcons name="alert-circle-outline" size={64} color={colors.error} />
+                        </View>
+                        <Text style={styles.successTitle}>{errorTitle}</Text>
+                        <Text style={styles.successMessage}>{errorMessage}</Text>
+                        <TouchableOpacity
+                            style={[styles.successButton, { backgroundColor: colors.error }]}
+                            onPress={() => setShowErrorModal(false)}
+                            activeOpacity={0.8}>
+                            <Text style={styles.successButtonText}>Entendido</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

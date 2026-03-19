@@ -47,6 +47,7 @@ export const HomeScreen: React.FC = () => {
 
   const [showEstablishmentModal, setShowEstablishmentModal] = useState(false);
   const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   useEffect(() => {
     fetchEstablishments({ limit: 100 });
@@ -54,6 +55,12 @@ export const HomeScreen: React.FC = () => {
     fetchActiveBanners();
     track(AnalyticsEvents.HOME_SCREEN_VIEWED);
   }, []);
+
+  useEffect(() => {
+    if (!establishmentsLoading && !bannersLoading && !hasLoadedOnce) {
+      setHasLoadedOnce(true);
+    }
+  }, [establishmentsLoading, bannersLoading]);
 
   useEffect(() => {
     if (establishments.length > 0) {
@@ -67,7 +74,7 @@ export const HomeScreen: React.FC = () => {
     }
   }, [establishments]);
 
-  if (establishmentsLoading || bannersLoading) {
+  if (!hasLoadedOnce) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#f6f8f7" />

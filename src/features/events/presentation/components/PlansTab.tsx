@@ -149,9 +149,13 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
       );
     }
 
+    const sortedPlans = [...plans].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
     return (
       <View style={styles.plansGrid}>
-        {plans.map((plan) => (
+        {sortedPlans.map((plan) => (
           <View key={plan.id} style={styles.planCardWrapper}>
             <PlanCard
               plan={plan}

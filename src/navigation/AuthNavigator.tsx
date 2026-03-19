@@ -5,6 +5,7 @@ import { RegisterScreen } from '../features/auth/presentation/screens/RegisterSc
 import { ForgotPasswordScreen } from '../features/auth/presentation/screens/ForgotPasswordScreen';
 import { VerifyOtpScreen } from '../features/auth/presentation/screens/VerifyOtpScreen';
 import { ResetPasswordScreen } from '../features/auth/presentation/screens/ResetPasswordScreen';
+import { WebViewScreen } from '../features/auth/presentation/screens/WebViewScreen';
 import { AuthStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -21,6 +22,7 @@ export const AuthNavigator = () => {
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="VerifyOtp" component={VerifyOtpScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+      <Stack.Screen name="WebViewScreen" component={WebViewScreen} />
     </Stack.Navigator>
   );
 }; 
