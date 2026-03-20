@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   ScrollView,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -44,7 +45,7 @@ export const PostScreen = () => {
 
   const { user } = useAuthStore();
   const { posts, isLoading: postsLoading, fetchPosts } = usePostStore();
-  const { products, isLoading: productsLoading, fetchProducts } = useMarketplaceStore();
+  const { products, isLoading: productsLoading, isFetchingMore, hasMore, fetchProducts, fetchMoreProducts } = useMarketplaceStore();
   const loading = postsLoading || productsLoading;
 
   useEffect(() => {
@@ -102,6 +103,15 @@ export const PostScreen = () => {
       );
     }
 
+    const handleLoadMore = () => {
+      if (!isFetchingMore && hasMore) {
+        fetchMoreProducts({
+          category: categoryMapping[selectedCategory],
+          search: searchQuery || undefined,
+        });
+      }
+    };
+
     return (
       <FlatList
         data={products}
@@ -124,7 +134,15 @@ export const PostScreen = () => {
             tintColor={colors.primary}
           />
         }
-        ListFooterComponent={<View style={{ height: 100 }} />}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          isFetchingMore ? (
+            <ActivityIndicator size="small" color={colors.primary} style={styles.footerLoader} />
+          ) : (
+            <View style={{ height: 100 }} />
+          )
+        }
       />
     );
   };
@@ -406,6 +424,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.black,
     fontWeight: '600',
+  },
+  footerLoader: {
+    paddingVertical: 20,
   },
   fab: {
     position: 'absolute',

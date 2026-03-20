@@ -26,5 +26,6 @@ export interface IAuthRepository {
   updateAvatar(params: { base64: string; fileExt: string }): Promise<Either<Failure, string>>;
   forgotPassword(email: string): Promise<Either<Failure, void>>;
   verifyOtp(email: string, token: string): Promise<Either<Failure, void>>;
+  verifySignupOtp(email: string, token: string): Promise<Either<Failure, void>>;
   resetPassword(newPassword: string): Promise<Either<Failure, void>>;
 }

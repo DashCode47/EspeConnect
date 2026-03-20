@@ -19,27 +19,25 @@ import { AuthStackParamList } from '../../../../navigation/types';
 import { colors } from '../../../../config/colors';
 import { HorizontalIcon } from '../../../../assets/svg/HorizontalIcon';
 
-type NavProp = NativeStackNavigationProp<AuthStackParamList, 'VerifyOtp'>;
-type RouteProps = RouteProp<AuthStackParamList, 'VerifyOtp'>;
+type NavProp = NativeStackNavigationProp<AuthStackParamList, 'VerifySignup'>;
+type RouteProps = RouteProp<AuthStackParamList, 'VerifySignup'>;
 
 const OTP_LENGTH = 6;
 
-export const VerifyOtpScreen = () => {
+export const VerifySignupScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProps>();
   const { email } = route.params;
 
-  const { verifyOtp, forgotPassword, isLoading } = useAuthStore();
+  const { verifySignupOtp, isLoading } = useAuthStore();
 
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [error, setError] = useState<string | null>(null);
-  const [resending, setResending] = useState(false);
 
   const inputs = useRef<(TextInput | null)[]>([]);
 
   const handleChange = (value: string, index: number) => {
-    // Accept only digits
     const digit = value.replace(/[^0-9]/g, '').slice(-1);
     const next = [...digits];
     next[index] = digit;
@@ -68,25 +66,11 @@ export const VerifyOtpScreen = () => {
     }
     setError(null);
     try {
-      await verifyOtp(email, token);
-      navigation.navigate('ResetPassword');
+      await verifySignupOtp(email, token);
+      // AuthContext detects SIGNED_IN and navigates to Main automatically
     } catch (e: any) {
       setError(e.message || 'Código inválido. Intenta de nuevo.');
       setDigits(Array(OTP_LENGTH).fill(''));
-      inputs.current[0]?.focus();
-    }
-  };
-
-  const handleResend = async () => {
-    setResending(true);
-    setError(null);
-    setDigits(Array(OTP_LENGTH).fill(''));
-    try {
-      await forgotPassword(email);
-    } catch {
-      // silently ignore — the email may still be sent
-    } finally {
-      setResending(false);
       inputs.current[0]?.focus();
     }
   };
@@ -115,16 +99,15 @@ export const VerifyOtpScreen = () => {
           </View>
 
           <View style={styles.iconWrap}>
-            <MaterialCommunityIcons name="message-lock-outline" size={42} color={colors.primary} />
+            <MaterialCommunityIcons name="email-check-outline" size={42} color={colors.primary} />
           </View>
 
-          <Text style={styles.title}>Ingresa el código</Text>
+          <Text style={styles.title}>Confirma tu cuenta</Text>
           <Text style={styles.subtitle}>
             Enviamos un código de 6 dígitos a{'\n'}
             <Text style={styles.emailHighlight}>{email}</Text>
           </Text>
 
-          {/* OTP boxes */}
           <View style={styles.otpRow}>
             {digits.map((digit, i) => (
               <TextInput
@@ -163,12 +146,10 @@ export const VerifyOtpScreen = () => {
             </Text>
           </TouchableOpacity>
 
-          <View style={styles.resendRow}>
-            <Text style={styles.resendLabel}>¿No recibiste el código? </Text>
-            <TouchableOpacity onPress={handleResend} disabled={resending} activeOpacity={0.7}>
-              <Text style={[styles.resendLink, resending && styles.resendLinkDisabled]}>
-                {resending ? 'Enviando...' : 'Reenviar'}
-              </Text>
+          <View style={styles.loginRow}>
+            <Text style={styles.loginLabel}>¿Ya verificaste tu cuenta? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.7}>
+              <Text style={styles.loginLink}>Iniciar sesión</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -220,22 +201,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primaryDark,
   },
-
-  // OTP
   otpRow: {
     flexDirection: 'row',
-    gap: 7,
+    gap: 10,
     marginBottom: 12,
   },
   otpBox: {
-    width: 38,
-    height: 48,
+    width: 46,
+    height: 54,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: '#E0E0E0',
     backgroundColor: '#F5F5F5',
     textAlign: 'center',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.primaryDark,
   },
@@ -247,7 +226,6 @@ const styles = StyleSheet.create({
     borderColor: colors.error,
     backgroundColor: '#FFF5F5',
   },
-
   errorRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -274,12 +252,10 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.45 },
   buttonText: { fontSize: 16, fontWeight: '700', color: colors.white },
-
-  resendRow: {
+  loginRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  resendLabel: { fontSize: 14, color: '#666' },
-  resendLink: { fontSize: 14, fontWeight: '600', color: colors.primary },
-  resendLinkDisabled: { opacity: 0.5 },
+  loginLabel: { fontSize: 14, color: '#666' },
+  loginLink: { fontSize: 14, fontWeight: '600', color: colors.primary },
 });

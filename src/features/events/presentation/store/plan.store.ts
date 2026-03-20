@@ -9,15 +9,21 @@ const repository = new PlanRepositoryImpl();
 const joinPlanUseCase = new JoinPlanUseCase(repository);
 const leavePlanUseCase = new LeavePlanUseCase(repository);
 
+const PLANS_PAGE_LIMIT = 10;
+
 interface PlanState {
   plans: Plan[];
   myPlans: Plan[];
   currentPlan: Plan | null;
   isLoading: boolean;
+  isFetchingMorePlans: boolean;
+  hasMorePlans: boolean;
+  currentPlansOffset: number;
   error: string | null;
 
   // Actions
   fetchPlans: (params?: GetPlansParams) => Promise<void>;
+  fetchMorePlans: (params?: Omit<GetPlansParams, 'limit' | 'offset'>) => Promise<void>;
   fetchMyPlans: () => Promise<void>;
   fetchPlanById: (planId: string) => Promise<Plan | null>;
   createPlan: (planData: CreatePlanRequest) => Promise<Plan | null>;
@@ -41,14 +47,34 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   myPlans: [],
   currentPlan: null,
   isLoading: false,
+  isFetchingMorePlans: false,
+  hasMorePlans: true,
+  currentPlansOffset: 0,
   error: null,
 
   fetchPlans: async (params) => {
-    set({ isLoading: true, error: null });
-    const result = await repository.getPlans(params);
+    set({ isLoading: true, error: null, currentPlansOffset: 0 });
+    const result = await repository.getPlans({ ...params, limit: PLANS_PAGE_LIMIT, offset: 0 });
     result.fold(
       (failure) => set({ error: failure.message, isLoading: false }),
-      (plans) => set({ plans, isLoading: false })
+      (plans) => set({ plans, isLoading: false, currentPlansOffset: 0, hasMorePlans: plans.length >= PLANS_PAGE_LIMIT })
+    );
+  },
+
+  fetchMorePlans: async (params) => {
+    const { isFetchingMorePlans, hasMorePlans, currentPlansOffset, plans } = get();
+    if (isFetchingMorePlans || !hasMorePlans) return;
+    set({ isFetchingMorePlans: true });
+    const nextOffset = currentPlansOffset + PLANS_PAGE_LIMIT;
+    const result = await repository.getPlans({ ...params, limit: PLANS_PAGE_LIMIT, offset: nextOffset });
+    result.fold(
+      (failure) => set({ error: failure.message, isFetchingMorePlans: false }),
+      (newPlans) => set({
+        plans: [...plans, ...newPlans],
+        isFetchingMorePlans: false,
+        currentPlansOffset: nextOffset,
+        hasMorePlans: newPlans.length >= PLANS_PAGE_LIMIT,
+      })
     );
   },
 

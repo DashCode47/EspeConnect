@@ -48,21 +48,9 @@ export class AuthRepositoryImpl implements IAuthRepository {
         return left({ message: authError.message });
       }
 
-      if (authData.user) {
-        const { error: profileError } = await supabase.from('profiles').upsert({
-          id: authData.user.id,
-          full_name: data.name,
-          career: data.career,
-          gender: data.gender,
-          interests: data.interests,
-          email: data.email,
-          updated_at: new Date().toISOString(),
-        });
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-        }
-      }
+      // Profile is created automatically via the handle_new_user DB trigger.
+      // Attempting a client-side upsert here would fail RLS when email
+      // confirmation is enabled (no session exists yet at this point).
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -163,6 +151,16 @@ export class AuthRepositoryImpl implements IAuthRepository {
   async verifyOtp(email: string, token: string): Promise<Either<Failure, void>> {
     try {
       const { error } = await supabase.auth.verifyOtp({ email, token, type: 'recovery' });
+      if (error) return left({ message: error.message });
+      return right(undefined);
+    } catch (error: any) {
+      return left({ message: error.message || 'Código inválido' });
+    }
+  }
+
+  async verifySignupOtp(email: string, token: string): Promise<Either<Failure, void>> {
+    try {
+      const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
       if (error) return left({ message: error.message });
       return right(undefined);
     } catch (error: any) {

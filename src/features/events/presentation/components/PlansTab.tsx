@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ErrorModal } from '../../../../components/modals/ErrorModal';
@@ -32,7 +33,7 @@ interface PlansTabProps {
 }
 
 export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, onMyPlansPress }) => {
-  const { plans, isLoading: plansLoading, joinPlan, leavePlan, fetchPlans, subscribeToPlans } = usePlanStore();
+  const { plans, isLoading: plansLoading, isFetchingMorePlans, hasMorePlans, joinPlan, leavePlan, fetchPlans, fetchMorePlans, subscribeToPlans } = usePlanStore();
   const [plansCategory, setPlansCategory] = useState<PlanCategory | 'ALL'>('ALL');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
@@ -154,17 +155,32 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
     );
 
     return (
-      <View style={styles.plansGrid}>
-        {sortedPlans.map((plan) => (
-          <View key={plan.id} style={styles.planCardWrapper}>
-            <PlanCard
-              plan={plan}
-              onPress={() => onPlanPress(plan.id)}
-              onJoin={() => handleJoinPlan(plan.id)}
-            />
-          </View>
-        ))}
-      </View>
+      <>
+        <View style={styles.plansGrid}>
+          {sortedPlans.map((plan) => (
+            <View key={plan.id} style={styles.planCardWrapper}>
+              <PlanCard
+                plan={plan}
+                onPress={() => onPlanPress(plan.id)}
+                onJoin={() => handleJoinPlan(plan.id)}
+              />
+            </View>
+          ))}
+        </View>
+        {hasMorePlans && (
+          <TouchableOpacity
+            style={styles.loadMoreButton}
+            onPress={() => fetchMorePlans({ category: plansCategory === 'ALL' ? undefined : plansCategory })}
+            disabled={isFetchingMorePlans}
+            activeOpacity={0.8}>
+            {isFetchingMorePlans ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Text style={styles.loadMoreText}>Ver más planes</Text>
+            )}
+          </TouchableOpacity>
+        )}
+      </>
     );
   };
 
@@ -438,6 +454,20 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     fontSize: 14,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: colors.white,
+  },
+  loadMoreButton: {
+    marginHorizontal: 20,
+    marginVertical: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadMoreText: {
+    fontSize: 15,
     fontFamily: FONT_FAMILY.BOLD,
     color: colors.white,
   },

@@ -37,6 +37,7 @@ interface AuthStore {
   updateAvatar: (params: { base64: string; fileExt: string }) => Promise<string>;
   forgotPassword: (email: string) => Promise<void>;
   verifyOtp: (email: string, token: string) => Promise<void>;
+  verifySignupOtp: (email: string, token: string) => Promise<void>;
   resetPassword: (newPassword: string) => Promise<void>;
   clearError: () => void;
 }
@@ -127,6 +128,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   verifyOtp: async (email: string, token: string) => {
     set({ isLoading: true, error: null });
     const result = await verifyOtpUseCase.execute({ email, token });
+    set({ isLoading: false });
+    if (result.isLeft()) {
+      set({ error: result.value.message });
+      throw new Error(result.value.message);
+    }
+  },
+
+  verifySignupOtp: async (email: string, token: string) => {
+    set({ isLoading: true, error: null });
+    const result = await repository.verifySignupOtp(email, token);
     set({ isLoading: false });
     if (result.isLeft()) {
       set({ error: result.value.message });

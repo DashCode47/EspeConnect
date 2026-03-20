@@ -12,6 +12,7 @@ export type AuthStackParamList = {
   Register: undefined;
   ForgotPassword: undefined;
   VerifyOtp: { email: string };
+  VerifySignup: { email: string };
   ResetPassword: undefined;
   WebViewScreen: { url: string; title: string };
 };

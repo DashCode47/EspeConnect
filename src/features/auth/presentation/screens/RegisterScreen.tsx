@@ -50,7 +50,6 @@ export const RegisterScreen = () => {
     const [showGenderModal, setShowGenderModal] = useState(false);
     const [showCareerModal, setShowCareerModal] = useState(false);
     const [careerSearch, setCareerSearch] = useState('');
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showDomainModal, setShowDomainModal] = useState(false);
     const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
     const [acceptTerms, setAcceptTerms] = useState(false);
@@ -118,15 +117,10 @@ export const RegisterScreen = () => {
                 gender,
                 interests
             });
-            setShowSuccessModal(true);
+            navigation.navigate('VerifySignup', { email });
         } catch (error: any) {
             showError('Error al registrarse', error.message || 'Ocurrió un error inesperado');
         }
-    };
-
-    const handleSuccessModalClose = () => {
-        setShowSuccessModal(false);
-        navigation.navigate('Login');
     };
 
     return (
@@ -496,31 +490,6 @@ export const RegisterScreen = () => {
                             onPress={() => setShowDomainModal(false)}
                             activeOpacity={0.8}>
                             <Text style={styles.successButtonText}>Entendido</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
-
-            {/* Success Modal */}
-            <Modal
-                visible={showSuccessModal}
-                transparent
-                animationType="fade"
-                onRequestClose={handleSuccessModalClose}>
-                <View style={styles.successModalOverlay}>
-                    <View style={styles.successModalContent}>
-                        <View style={styles.successIconContainer}>
-                            <MaterialCommunityIcons name="check-circle" size={64} color={colors.success} />
-                        </View>
-                        <Text style={styles.successTitle}>¡Registro Exitoso!</Text>
-                        <Text style={styles.successMessage}>
-                            Tu cuenta ha sido creada correctamente. Ahora puedes iniciar sesión.
-                        </Text>
-                        <TouchableOpacity
-                            style={styles.successButton}
-                            onPress={handleSuccessModalClose}
-                            activeOpacity={0.8}>
-                            <Text style={styles.successButtonText}>Continuar</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
