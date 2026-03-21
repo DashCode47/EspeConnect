@@ -1,3 +1,7 @@
+require 'openssl'
+OpenSSL::SSL.send(:remove_const, :VERIFY_PEER)
+OpenSSL::SSL.const_set(:VERIFY_PEER, OpenSSL::SSL::VERIFY_NONE)
+
 source 'https://rubygems.org'
 
 # You may use http://rbenv.org/ or https://rvm.io/ to install and use this version

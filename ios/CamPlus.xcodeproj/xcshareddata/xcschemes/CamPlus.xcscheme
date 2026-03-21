@@ -17,7 +17,7 @@
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
                BuildableName = "camPlus.app"
                BlueprintName = "camPlus"
-               ReferencedContainer = "container:camPlus.xcodeproj">
+               ReferencedContainer = "container:CamPlus.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -35,7 +35,7 @@
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
                BuildableName = "camPlusTests.xctest"
                BlueprintName = "camPlusTests"
-               ReferencedContainer = "container:camPlus.xcodeproj">
+               ReferencedContainer = "container:CamPlus.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "especonnectFront.app"
-            BlueprintName = "especonnectFront"
-            ReferencedContainer = "container:camPlus.xcodeproj">
+            BuildableName = "camPlus.app"
+            BlueprintName = "camPlus"
+            ReferencedContainer = "container:CamPlus.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "especonnectFront.app"
-            BlueprintName = "especonnectFront"
-            ReferencedContainer = "container:camPlus.xcodeproj">
+            BuildableName = "camPlus.app"
+            BlueprintName = "camPlus"
+            ReferencedContainer = "container:CamPlus.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
