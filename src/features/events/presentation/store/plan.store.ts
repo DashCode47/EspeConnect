@@ -15,6 +15,7 @@ interface PlanState {
   plans: Plan[];
   myPlans: Plan[];
   currentPlan: Plan | null;
+  /** Only true during fetchPlans / fetchMorePlans (the plans list). Never set by fetchPlanById or fetchMyPlans. */
   isLoading: boolean;
   isFetchingMorePlans: boolean;
   hasMorePlans: boolean;
@@ -36,10 +37,14 @@ interface PlanState {
   approveParticipant: (planId: string, userId: string) => Promise<boolean>;
   removeParticipant: (planId: string, userId: string) => Promise<boolean>;
   fetchChatMessages: (planId: string) => Promise<PlanChatMessage[]>;
-  
+
   // Real-time
-  subscribeToPlanChat: (planId: string, onMessage: (message: PlanChatMessage) => void) => () => void;
-  subscribeToPlans: () => () => void;
+  subscribeToPlanChat: (
+    planId: string,
+    onMessage: (message: PlanChatMessage) => void,
+    onRealtimeStatus?: (connected: boolean) => void,
+  ) => () => void;
+  subscribeToPlans: (getParams?: () => GetPlansParams | undefined) => () => void;
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -79,25 +84,27 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   },
 
   fetchMyPlans: async () => {
-    set({ isLoading: true, error: null });
+    // Does NOT touch isLoading — that flag is only for the plans list.
+    // Callers (MyPlansScreen) manage their own loading state.
     const result = await repository.getMyPlans();
     result.fold(
-      (failure) => set({ error: failure.message, isLoading: false }),
-      (myPlans) => set({ myPlans, isLoading: false })
+      (failure) => set({ error: failure.message }),
+      (myPlans) => set({ myPlans })
     );
   },
 
   fetchPlanById: async (planId) => {
-    set({ isLoading: true, error: null });
+    // Does NOT touch isLoading — that flag is only for the plans list.
+    // Callers (usePlanDetailSheet, PlanCommentsScreen) manage their own loading state.
     const result = await repository.getPlanById(planId);
     return result.fold(
       (failure) => {
-        set({ error: failure.message, isLoading: false });
+        set({ error: failure.message });
         return null;
       },
       (plan) => {
-        set({ currentPlan: plan, isLoading: false });
         set((state) => ({
+          currentPlan: plan,
           plans: state.plans.map((p) => (p.id === planId ? plan : p)),
         }));
         return plan;
@@ -247,18 +254,31 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     );
   },
 
-  subscribeToPlanChat: (planId, onMessage) => {
-    return repository.subscribeToPlanChat(planId, onMessage, (failure) => {
-      set({ error: failure.message });
-    });
+  subscribeToPlanChat: (planId, onMessage, onRealtimeStatus) => {
+    return repository.subscribeToPlanChat(
+      planId,
+      onMessage,
+      (failure) => set({ error: failure.message }),
+      onRealtimeStatus,
+    );
   },
 
-  subscribeToPlans: () => {
-    return repository.subscribeToPlans(() => {
-      get().fetchPlans();
-      get().fetchMyPlans();
-    }, (failure) => {
-      set({ error: failure.message });
-    });
+  subscribeToPlans: (getParams) => {
+    return repository.subscribeToPlans(
+      (planId) => {
+        if (planId) {
+          // Targeted: only one plan's participants changed — fetch just that plan.
+          // 100 users joining → 100 fetchPlanById calls (lightweight)
+          // vs the old: 100 × (fetchPlans + fetchMyPlans) = 200 heavy queries.
+          get().fetchPlanById(planId);
+        } else {
+          // Full refresh: a plan was created / cancelled / updated globally.
+          const params = getParams ? getParams() : undefined;
+          get().fetchPlans(params);
+          get().fetchMyPlans();
+        }
+      },
+      (failure) => set({ error: failure.message }),
+    );
   },
 }));

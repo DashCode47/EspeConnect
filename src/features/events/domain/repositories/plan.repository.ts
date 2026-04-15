@@ -52,8 +52,15 @@ export interface IPlanRepository {
   getParticipants(planId: string): Promise<Either<Failure, PlanParticipant[]>>;
   getChatMessages(planId: string): Promise<Either<Failure, PlanChatMessage[]>>;
   sendMessage(planId: string, messageData: SendMessageRequest): Promise<Either<Failure, PlanChatMessage>>;
-  subscribeToPlanChat(planId: string, onMessage: (message: PlanChatMessage) => void, onError?: (error: Failure) => void): () => void;
-  subscribeToPlans(onUpdate: () => void, onError?: (error: Failure) => void): () => void;
+  subscribeToPlanChat(
+    planId: string,
+    onMessage: (message: PlanChatMessage) => void,
+    onError?: (error: Failure) => void,
+    onRealtimeStatus?: (connected: boolean) => void,
+  ): () => void;
+  /** onUpdate receives planId when only one plan changed (participant join/leave),
+   *  or undefined when a full list refresh is needed (plan created/cancelled). */
+  subscribeToPlans(onUpdate: (planId?: string) => void, onError?: (error: Failure) => void): () => void;
   getMyPlans(): Promise<Either<Failure, Plan[]>>;
   approveParticipant(planId: string, userId: string): Promise<Either<Failure, void>>;
   removeParticipant(planId: string, userId: string): Promise<Either<Failure, void>>;

@@ -27,20 +27,20 @@ interface PlanDetailSheetProps {
   onViewComments?: (planId: string, planTitle: string) => void;
 }
 
-const getCategoryLabel = (category: PlanCategory): string => {
-  const labels: Record<PlanCategory, string> = {
-    [PlanCategory.CAFE]: 'Café',
-    [PlanCategory.FIESTA]: 'Fiesta',
-    [PlanCategory.ESTUDIO]: 'Estudio',
-    [PlanCategory.DEPORTE]: 'Deporte',
-    [PlanCategory.CINE]: 'Cine',
-    [PlanCategory.MUSICA]: 'Música',
-    [PlanCategory.VIAJE]: 'Viaje',
-    [PlanCategory.COMIDA]: 'Comida',
-    [PlanCategory.OTRO]: 'Otro',
-  };
-  return labels[category] || 'Otro';
+const CATEGORY_CONFIG: Record<PlanCategory, { label: string; bg: string; text: string }> = {
+  [PlanCategory.CAFE]:    { label: 'Café',    bg: '#FFF3D4', text: '#92400E' },
+  [PlanCategory.FIESTA]:  { label: 'Fiesta',  bg: '#FFE4F3', text: '#9D174D' },
+  [PlanCategory.ESTUDIO]: { label: 'Estudio', bg: '#DBEAFE', text: '#1E40AF' },
+  [PlanCategory.DEPORTE]: { label: 'Deporte', bg: '#DCFCE7', text: '#166534' },
+  [PlanCategory.CINE]:    { label: 'Cine',    bg: '#EDE9FE', text: '#5B21B6' },
+  [PlanCategory.MUSICA]:  { label: 'Música',  bg: '#F3E8FF', text: '#7E22CE' },
+  [PlanCategory.VIAJE]:   { label: 'Viaje',   bg: '#FFEDD5', text: '#9A3412' },
+  [PlanCategory.COMIDA]:  { label: 'Comida',  bg: '#FEE2E2', text: '#991B1B' },
+  [PlanCategory.OTRO]:    { label: 'Otro',    bg: '#F1F5F9', text: '#475569' },
 };
+
+const getCategoryConfig = (category: PlanCategory) =>
+  CATEGORY_CONFIG[category] ?? CATEGORY_CONFIG[PlanCategory.OTRO];
 
 export const PlanDetailSheet: React.FC<PlanDetailSheetProps> = ({
   planId,
@@ -62,6 +62,7 @@ export const PlanDetailSheet: React.FC<PlanDetailSheetProps> = ({
     additionalCount,
   } = usePlanDetailSheet(planId, visible, onClose, onJoin);
 
+  const catConfig = plan ? getCategoryConfig(plan.category as PlanCategory) : null;
   const canComment = !!(plan?.isParticipating || plan?.isCreator);
 
   const { comments, loading: commentsLoading } = usePlanComments({
@@ -113,9 +114,9 @@ export const PlanDetailSheet: React.FC<PlanDetailSheetProps> = ({
             </View>
 
             <View style={styles.storeInfo}>
-              <View style={styles.categoryChip}>
-                <Text style={styles.categoryText}>
-                  {getCategoryLabel(plan.category as PlanCategory)}
+              <View style={[styles.categoryChip, catConfig && { backgroundColor: catConfig.bg }]}>
+                <Text style={[styles.categoryText, catConfig && { color: catConfig.text }]}>
+                  {catConfig?.label ?? ''}
                 </Text>
               </View>
 

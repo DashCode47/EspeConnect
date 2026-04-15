@@ -46,7 +46,7 @@ export const EventsScreen = () => {
   const insets = useSafeAreaInsets();
 
   const { events, isLoading: loading, fetchEvents, attendEvent, cancelAttendance } = useEventStore();
-  const { joinPlan, leavePlan, plans } = usePlanStore();
+  const { joinPlan, leavePlan, plans, fetchPlans } = usePlanStore();
 
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -62,9 +62,9 @@ export const EventsScreen = () => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchEvents();
+    await Promise.all([fetchEvents(), fetchPlans()]);
     setRefreshing(false);
-  }, [fetchEvents]);
+  }, [fetchEvents, fetchPlans]);
 
   const featuredEvents = useMemo(() => {
     const now = new Date();

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -15,16 +15,26 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../../../../config/colors';
 import { FONT_FAMILY } from '../../../../config/globalStyles';
-import { PlanCategory } from '../../domain/entities/plan.entity';
+import { PlanCategory, PlanStatus } from '../../domain/entities/plan.entity';
 import { usePlanStore } from '../store/plan.store';
 import { PlanCard } from './PlanCard';
 import { PlansSkeletonLoader } from './PlansSkeletonLoader';
-import { useState } from 'react';
 import { track } from '../../../../analytics/track';
 import { AnalyticsEvents } from '../../../../analytics/events';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = (SCREEN_WIDTH - 60) / 2; // 2 columns with padding
+const CARD_WIDTH = (SCREEN_WIDTH - 60) / 2;
+
+// Stable reference — never recreated on render
+const PLAN_CATEGORIES: { key: PlanCategory | 'ALL'; label: string; icon: string }[] = [
+  { key: 'ALL', label: 'Todos', icon: 'view-grid' },
+  { key: PlanCategory.CAFE, label: 'Café', icon: 'coffee' },
+  { key: PlanCategory.ESTUDIO, label: 'Estudio', icon: 'book-open-variant' },
+  { key: PlanCategory.DEPORTE, label: 'Deporte', icon: 'basketball' },
+  { key: PlanCategory.FIESTA, label: 'Fiesta', icon: 'party-popper' },
+  { key: PlanCategory.CINE, label: 'Cine', icon: 'movie' },
+  { key: PlanCategory.COMIDA, label: 'Comida', icon: 'food' },
+];
 
 interface PlansTabProps {
   onPlanPress: (planId: string) => void;
@@ -37,6 +47,12 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
   const [plansCategory, setPlansCategory] = useState<PlanCategory | 'ALL'>('ALL');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
+
+  // Ref to avoid stale closure in subscription callback
+  const plansCategoryRef = useRef<PlanCategory | 'ALL'>(plansCategory);
+  useEffect(() => {
+    plansCategoryRef.current = plansCategory;
+  }, [plansCategory]);
 
   useEffect(() => {
     fetchPlans(plansCategory === 'ALL' ? undefined : { category: plansCategory });
@@ -51,12 +67,29 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
     });
   }, []);
 
+  // Real-time subscription respects the active category filter
   useEffect(() => {
-    const unsubscribe = subscribeToPlans();
+    const unsubscribe = subscribeToPlans(() => {
+      const cat = plansCategoryRef.current;
+      return cat === 'ALL' ? undefined : { category: cat };
+    });
     return unsubscribe;
   }, [subscribeToPlans]);
 
-  const handleJoinPlan = async (planId: string) => {
+  // Only show active, non-expired plans, sorted newest first
+  const filteredSortedPlans = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return [...plans]
+      .filter(plan => {
+        if (plan.status !== PlanStatus.ACTIVE) return false;
+        const planDate = new Date(plan.date + 'T00:00:00');
+        return planDate >= today;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [plans]);
+
+  const handleJoinPlan = useCallback(async (planId: string) => {
     const plan = plans.find(p => p.id === planId);
     if (!plan) return;
 
@@ -76,22 +109,16 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
     } catch (error: any) {
       setErrorMessage(error.message || 'No se pudo completar la acción. Intenta nuevamente.');
     }
-  };
+  }, [plans, joinPlan, leavePlan]);
 
-  const handleCategoryChange = (cat: PlanCategory | 'ALL') => {
+  const handleCategoryChange = useCallback((cat: PlanCategory | 'ALL') => {
     track(AnalyticsEvents.PLANS_CATEGORY_CHANGED, { category: cat });
     setPlansCategory(cat);
-  };
+  }, []);
 
-  const categories = [
-    { key: 'ALL', label: 'Todos', icon: 'view-grid' },
-    { key: PlanCategory.CAFE, label: 'Café', icon: 'coffee' },
-    { key: PlanCategory.ESTUDIO, label: 'Estudio', icon: 'book-open-variant' },
-    { key: PlanCategory.DEPORTE, label: 'Deporte', icon: 'basketball' },
-    { key: PlanCategory.FIESTA, label: 'Fiesta', icon: 'party-popper' },
-    { key: PlanCategory.CINE, label: 'Cine', icon: 'movie' },
-    { key: PlanCategory.COMIDA, label: 'Comida', icon: 'food' },
-  ];
+  const handleLoadMore = useCallback(() => {
+    fetchMorePlans({ category: plansCategory === 'ALL' ? undefined : plansCategory });
+  }, [fetchMorePlans, plansCategory]);
 
   const renderCategoryFilter = () => (
     <View style={styles.categoriesSection}>
@@ -100,14 +127,14 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.categoriesContainer}>
-        {categories.map((cat) => (
+        {PLAN_CATEGORIES.map((cat) => (
           <TouchableOpacity
             key={cat.key}
             style={[
               styles.categoryChip,
               plansCategory === cat.key && styles.categoryChipActive,
             ]}
-            onPress={() => handleCategoryChange(cat.key as PlanCategory | 'ALL')}
+            onPress={() => handleCategoryChange(cat.key)}
             activeOpacity={0.7}>
             <MaterialCommunityIcons
               name={cat.icon as any}
@@ -131,14 +158,20 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
       return <PlansSkeletonLoader />;
     }
 
-    if (plans.length === 0) {
+    if (filteredSortedPlans.length === 0) {
+      const activeCategoryLabel = PLAN_CATEGORIES.find(c => c.key === plansCategory)?.label;
+      const emptyTitle = plansCategory === 'ALL'
+        ? 'No hay planes disponibles'
+        : `No hay planes de ${activeCategoryLabel}`;
+      const emptySubtitle = plansCategory === 'ALL'
+        ? 'Sé el primero en crear un plan para compartir con otros estudiantes'
+        : `Todavía no hay planes de ${activeCategoryLabel}. ¡Crea el primero!`;
+
       return (
         <View style={styles.emptyContainer}>
           <MaterialCommunityIcons name="calendar-heart" size={64} color="#D1D5DB" />
-          <Text style={styles.emptyTitle}>No hay planes disponibles</Text>
-          <Text style={styles.emptySubtitle}>
-            Sé el primero en crear un plan para compartir con otros estudiantes
-          </Text>
+          <Text style={styles.emptyTitle}>{emptyTitle}</Text>
+          <Text style={styles.emptySubtitle}>{emptySubtitle}</Text>
           <TouchableOpacity
             style={styles.createButton}
             onPress={() => { track(AnalyticsEvents.PLANS_CREATE_TAPPED); onCreatePress(); }}
@@ -150,14 +183,10 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
       );
     }
 
-    const sortedPlans = [...plans].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-
     return (
       <>
         <View style={styles.plansGrid}>
-          {sortedPlans.map((plan) => (
+          {filteredSortedPlans.map((plan) => (
             <View key={plan.id} style={styles.planCardWrapper}>
               <PlanCard
                 plan={plan}
@@ -170,7 +199,7 @@ export const PlansTab: React.FC<PlansTabProps> = ({ onPlanPress, onCreatePress, 
         {hasMorePlans && (
           <TouchableOpacity
             style={styles.loadMoreButton}
-            onPress={() => fetchMorePlans({ category: plansCategory === 'ALL' ? undefined : plansCategory })}
+            onPress={handleLoadMore}
             disabled={isFetchingMorePlans}
             activeOpacity={0.8}>
             {isFetchingMorePlans ? (
@@ -364,18 +393,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
   },
 
-  // Loading & Empty states
-  loadingContainer: {
-    paddingVertical: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    fontFamily: FONT_FAMILY.MEDIUM,
-    color: '#9CA3AF',
-  },
+  // Empty state
   emptyContainer: {
     paddingVertical: 60,
     paddingHorizontal: 32,

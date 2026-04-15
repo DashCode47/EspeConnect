@@ -372,7 +372,16 @@ export class PlanRepositoryImpl implements IPlanRepository {
     }
   }
 
-  subscribeToPlanChat(planId: string, onMessage: (message: PlanChatMessage) => void, onError?: (error: Failure) => void): () => void {
+  // Profile cache: avoids 1 extra SELECT per realtime chat message for known senders.
+  // Scoped to the class instance — shared across all chat subscriptions.
+  private profileCache = new Map<string, { id: string; name: string; avatarUrl: string | null }>();
+
+  subscribeToPlanChat(
+    planId: string,
+    onMessage: (message: PlanChatMessage) => void,
+    onError?: (error: Failure) => void,
+    onRealtimeStatus?: (connected: boolean) => void,
+  ): () => void {
     const channel = supabase
       .channel(`plan-chat:${planId}`)
       .on(
@@ -385,60 +394,84 @@ export class PlanRepositoryImpl implements IPlanRepository {
         },
         async (payload) => {
           try {
-            const { data, error } = await supabase
-              .from('plan_chat_messages')
-              .select(`
-                *,
-                sender:profiles!sender_id(id, full_name, avatar_url)
-              `)
-              .eq('id', payload.new.id)
-              .single();
+            const raw = payload.new as PlanChatMessageRow;
+            const senderId: string = raw.sender_id;
 
-            if (error) throw error;
-            if (data) {
-              const message = PlanMapper.toChatMessageEntity(data as unknown as PlanChatMessageRow);
-              onMessage(message);
+            // Check cache before doing a DB round-trip for the sender profile
+            let senderProfile = this.profileCache.get(senderId);
+            if (!senderProfile) {
+              const { data } = await supabase
+                .from('profiles')
+                .select('id, full_name, avatar_url')
+                .eq('id', senderId)
+                .single();
+              if (data) {
+                senderProfile = { id: data.id, name: data.full_name, avatarUrl: data.avatar_url };
+                this.profileCache.set(senderId, senderProfile);
+              }
             }
+
+            const message: PlanChatMessage = {
+              id: raw.id,
+              planId: raw.plan_id,
+              senderId: raw.sender_id,
+              message: raw.message,
+              messageType: raw.message_type as PlanMessageType,
+              createdAt: raw.created_at,
+              user: senderProfile
+                ? { id: senderProfile.id, name: senderProfile.name, avatarUrl: senderProfile.avatarUrl }
+                : undefined,
+            };
+            onMessage(message);
           } catch (error: any) {
             if (onError) onError(new ServerFailure(error.message));
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        onRealtimeStatus?.(status === 'SUBSCRIBED');
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }
 
-  subscribeToPlans(onUpdate: () => void, onError?: (error: Failure) => void): () => void {
+  subscribeToPlans(onUpdate: (planId?: string) => void, onError?: (error: Failure) => void): () => void {
+    // Plan-level events (create / cancel / update) → full list refresh (debounced).
+    // These are infrequent but affect everyone.
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedFullUpdate = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => onUpdate(undefined), 600);
+    };
+
     const channel = supabase
       .channel('plans-updates')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'plans',
-        },
-        () => {
-          onUpdate();
-        }
+        { event: '*', schema: 'public', table: 'plans' },
+        debouncedFullUpdate
       )
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'plan_participants',
-        },
-        () => {
-          onUpdate();
+        { event: '*', schema: 'public', table: 'plan_participants' },
+        (payload) => {
+          // Targeted: only refresh the specific plan whose participants changed.
+          // This avoids refetching the entire list for every join/leave across the app.
+          const planId: string | undefined =
+            (payload.new as any)?.plan_id ?? (payload.old as any)?.plan_id;
+          if (planId) {
+            onUpdate(planId);
+          } else {
+            debouncedFullUpdate();
+          }
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }

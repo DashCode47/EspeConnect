@@ -87,6 +87,14 @@ export const PlanCard: React.FC<PlanCardProps> = ({ plan, onPress, onJoin }) => 
             {plan.participantsCount}{plan.maxParticipants ? `/${plan.maxParticipants}` : ''}
           </Text>
         </View>
+
+        {/* Requires approval badge — top left corner */}
+        {plan.requiresApproval && (
+          <View style={styles.approvalBadge}>
+            <MaterialCommunityIcons name="shield-lock-outline" size={11} color="#B45309" />
+            <Text style={styles.approvalBadgeText}>Solicitud</Text>
+          </View>
+        )}
       </View>
 
       {/* ── Body ── */}
@@ -161,16 +169,33 @@ export const PlanCard: React.FC<PlanCardProps> = ({ plan, onPress, onJoin }) => 
             onPress={onJoin}
             disabled={plan.isFull && !plan.isParticipating && !plan.isRequested}
             activeOpacity={0.8}>
+              <MaterialCommunityIcons
+              name={
+                plan.isParticipating ? 'check' :
+                plan.isRequested     ? 'clock-outline' :
+                plan.isFull          ? 'account-off-outline' :
+                plan.requiresApproval ? 'send' :
+                'plus'
+              }
+              size={13}
+              color={
+                plan.isParticipating ? colors.primary :
+                plan.isRequested     ? '#B45309' :
+                plan.isFull          ? '#94A3B8' :
+                colors.primaryDark
+              }
+            />
             <Text style={[
               styles.btnText,
               plan.isParticipating && styles.btnTextJoined,
               plan.isRequested  && styles.btnTextRequested,
               plan.isFull && !plan.isParticipating && !plan.isRequested && styles.btnTextFull,
             ]}>
-              {plan.isParticipating ? '✓ Unido'
-                : plan.isRequested  ? '⏳ Pedido'
+              {plan.isParticipating ? 'Unido'
+                : plan.isRequested  ? 'Pedido'
                 : plan.isFull       ? 'Lleno'
-                : '¡Me uno!'}
+                : plan.requiresApproval ? 'Solicitar'
+                : 'Me uno'}
             </Text>
           </TouchableOpacity>
         )}
@@ -314,10 +339,32 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
+  // ── Approval badge ────────────────────
+  approvalBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  approvalBadgeText: {
+    fontSize: 10,
+    fontFamily: FONT_FAMILY.BOLD,
+    color: '#B45309',
+  },
+
   // ── Join button ───────────────────────
   btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: colors.accent,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 10,
     shadowColor: colors.accent,
